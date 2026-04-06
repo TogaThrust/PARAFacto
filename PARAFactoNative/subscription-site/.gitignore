@@ -1,0 +1,6 @@
+node_modules/
+.netlify/
+
+# Installateur souvent > 100 Mo : GitHub refuse. Ne pas committer.
+# Déposez l’exe sur Netlify (déploiement local) ou GitHub Releases / lien de téléchargement.
+public/files/*.exe

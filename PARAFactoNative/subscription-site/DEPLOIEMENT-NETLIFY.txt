@@ -1,0 +1,74 @@
+================================================================================
+  PARAFacto — Dossier à connecter à Netlify (racine = ce dossier subscription-site)
+================================================================================
+
+CONTENU
+-------
+  netlify.toml          Paramètres build / functions
+  package.json          Dépendance stripe (npm install au build)
+  netlify/functions/    API license-check + session-customer
+  public/               Site statique (index, success, installateur)
+
+AVANT LE PREMIER DÉPLOIEMENT
+----------------------------
+  1. Copiez votre installateur Windows dans :
+       public/files/PARAFactoNative_Installer.exe
+     (même nom que le lien dans public/index.html)
+
+  2. Dans public/index.html, remplacez l’URL du bouton « Souscrire » :
+       https://buy.stripe.com/REMPLACEZ_VOTRE_LIEN
+     par votre vrai Payment Link ou lien Checkout Stripe.
+
+  3. Dans Stripe, URL de succès du paiement :
+       https://VOTRE-SITE.netlify.app/success.html?session_id={CHECKOUT_SESSION_ID}
+
+MÉTHODE RECOMMANDÉE (Git + Netlify)
+-----------------------------------
+  - Poussez le dépôt sur GitHub/GitLab.
+  - Netlify : Add new site > Import from Git.
+  - Base directory : subscription-site
+    (dépôt github.com/TogaThrust/PARAFacto : la racine du repo contient subscription-site)
+  - Build command : npm install
+  - Publish directory : public
+  - Les functions sont prises depuis netlify/functions (voir netlify.toml).
+
+  - Site settings > Environment variables :
+      STRIPE_SECRET_KEY = sk_live_... (ou sk_test_... en test)
+
+IMPORTANT — GLISSER-DÉPOSER SEUL
+---------------------------------
+  Un déploiement manuel en ne déposant QUE le dossier « public » ne publie PAS
+  les fonctions serverless (license-check, session-customer). L’app Windows ne
+  pourra pas vérifier l’abonnement. Utilisez Git ou la CLI Netlify (voir ci-dessous).
+
+INSTALLATEUR .EXE (> 100 Mo) — NE PAS METTRE DANS LE DÉPÔT GIT
+--------------------------------------------------------------
+  GitHub refuse les fichiers > 100 Mo dans le code. Le .exe est ignoré par Git
+  (voir .gitignore : public/files/*.exe).
+
+  Solution simple — GitHub Releases (fichier joint, hors arborescence du repo) :
+    1. Sur github.com/TogaThrust/PARAFacto → Releases → Create a new release.
+    2. Tag ex. v1.0.0, joindre PARAFactoNative_Installer.exe en « binaire ».
+    3. Après publication, copiez l’URL directe du fichier (bouton droit sur le
+       nom du .exe dans la release → copier l’adresse du lien).
+    4. Dans public/index.html, remplacez le href du bouton « Télécharger » par
+       cette URL (au lieu de ./files/...).
+
+  Variante : lien OneDrive / Google Drive / autre hébergeur de fichiers.
+
+CLI NETLIFY (alternative)
+-------------------------
+  Depuis ce dossier (subscription-site), après npm install :
+    npx netlify login
+    npx netlify init
+    npx netlify deploy --build --prod
+
+URL À METTRE DANS subscription_config.json (application Windows)
+-----------------------------------------------------------------
+  licenseCheckApiUrl :
+    https://VOTRE-SITE.netlify.app/.netlify/functions/license-check
+
+  paymentPageUrl :
+    le même lien Stripe que le bouton « Souscrire » sur index.html
+
+================================================================================

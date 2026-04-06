@@ -1,0 +1,5 @@
+Renommez ou copiez votre installateur ici sous le nom exact :
+
+  PARAFactoNative_Installer.exe
+
+Ensuite supprimez ce fichier .txt avant la mise en ligne si vous voulez.
