@@ -1,0 +1,39 @@
+<Window x:Class="PARAFactoNative.Views.InvoiceDateWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Factures - Période et date" Height="280" Width="420" WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="White"
+        ShowInTaskbar="False">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Style="{StaticResource DialogCaptionTextBlock}"
+                   Text="Choisir le mois et la date des factures"
+                   Margin="0,0,0,12"/>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Margin="0,0,12,0" Text="Période :"/>
+            <ComboBox x:Name="MonthComboBox" Width="160" Margin="0,0,12,0" SelectionChanged="Period_SelectionChanged"/>
+            <ComboBox x:Name="YearComboBox" Width="90" SelectionChanged="Period_SelectionChanged"/>
+        </StackPanel>
+
+        <TextBlock x:Name="PeriodTextBlock" Grid.Row="2" Style="{StaticResource DialogMessageTextBlock}" Margin="0,0,0,6"/>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,16">
+            <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Margin="0,0,12,0" Text="Date des factures :"/>
+            <DatePicker x:Name="InvoiceDatePicker" Width="140"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+            <Button Style="{StaticResource DialogChoiceButton}" Margin="0,0,8,0" Content="Annuler" IsCancel="True"/>
+            <Button Style="{StaticResource DialogPrimaryChoiceButton}" Content="Générer" IsDefault="True" Click="Ok_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

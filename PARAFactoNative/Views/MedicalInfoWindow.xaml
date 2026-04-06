@@ -1,0 +1,98 @@
+<Window x:Class="PARAFactoNative.Views.MedicalInfoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Informations médicales" Height="560" Width="760"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="White"
+        ShowInTaskbar="False">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Style="{StaticResource DialogCaptionTextBlock}" FontSize="15" Text="Informations médicales"/>
+
+        <ScrollViewer Grid.Row="1" Margin="0,12,0,0" Style="{StaticResource DialogFormScrollViewer}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Text="NISS"/>
+                    <TextBox Text="{Binding Niss, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,10">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Text="MUTUELLE"/>
+                    <TextBox Text="{Binding MutualName, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Text="STATUT"/>
+                    <ComboBox SelectedValuePath="Content"
+                              SelectedValue="{Binding Statut, UpdateSourceTrigger=PropertyChanged}">
+                        <ComboBoxItem Content="BIM"/>
+                        <ComboBoxItem Content="NON BIM"/>
+                        <ComboBoxItem Content="PLEIN"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource DialogSectionHeaderTextBlock}" Text="Médecin et prescriptions" Margin="0,6,0,6"/>
+
+                <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,10,10">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Text="NOM"/>
+                    <TextBox Text="{Binding PrescriberLastName, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,0,0,10">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Text="PRÉNOM"/>
+                    <TextBox Text="{Binding PrescriberFirstName, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,10">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Text="CODE"/>
+                    <TextBox Text="{Binding PrescriberCode, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="5" Grid.Column="0" Margin="0,0,10,10">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Text="DATE PRESCRIPTION"/>
+                    <TextBox Text="{Binding DatePrescription, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="5" Grid.Column="1" Margin="0,0,0,10">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Text="DATE ACCORD"/>
+                    <TextBox Text="{Binding DateAccord, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,10">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Text="PÉRIODE ACCORD"/>
+                    <TextBox Text="{Binding PeriodeAccord, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Text="NOMENCLATURE"/>
+                    <TextBox Text="{Binding Nomenclature, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Style="{StaticResource DialogChoiceButton}" Margin="0,0,8,0" Content="Annuler" IsCancel="True"/>
+            <Button Style="{StaticResource DialogPrimaryChoiceButton}" Content="Enregistrer" Click="Save_Click" IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

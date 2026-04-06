@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paiement confirmé</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+    code { display: block; background: #f1f5f9; padding: 1rem; border-radius: 8px; word-break: break-all; margin: 1rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Merci pour votre souscription</h1>
+  <p>Identifiant à copier dans PARAFacto Native (menu ou fenêtre au premier lancement) :</p>
+  <code id="out">Chargement…</code>
+  <p><a href="/">Retour</a></p>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var sid = params.get("session_id");
+      var el = document.getElementById("out");
+      if (!sid) {
+        el.textContent = "Aucune session (ajoutez ?session_id={CHECKOUT_SESSION_ID} à l’URL de succès Stripe).";
+        return;
+      }
+      fetch("/.netlify/functions/session-customer?session_id=" + encodeURIComponent(sid))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          el.textContent = data.customerId || ("Erreur : " + (data.error || JSON.stringify(data)));
+        })
+        .catch(function (e) {
+          el.textContent = "Erreur réseau : " + e;
+        });
+    })();
+  </script>
+</body>
+</html>

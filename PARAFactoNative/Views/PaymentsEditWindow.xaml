@@ -1,0 +1,56 @@
+<Window x:Class="PARAFactoNative.Views.PaymentsEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Paiements" Height="420" Width="760" WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        Background="White"
+        ShowInTaskbar="False">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Style="{StaticResource DialogCaptionTextBlock}" Text="Éditer les paiements"/>
+
+        <TextBlock Grid.Row="1" Margin="0,6,0,10" Style="{StaticResource DialogMessageTextBlock}" Text="{Binding InvoiceLabel}"/>
+
+        <DockPanel Grid.Row="2">
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                <Button Width="120" Margin="0,0,8,0" Content="Ajouter ligne" Click="AddRow_Click"/>
+                <Button Width="120" Content="Supprimer ligne" Click="RemoveRow_Click"/>
+            </StackPanel>
+
+            <DataGrid x:Name="Grid"
+                      ItemsSource="{Binding Rows}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      SelectionMode="Single"
+                      HeadersVisibility="Column"
+                      Margin="0,0,0,0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Date (YYYY-MM-DD)" Binding="{Binding PaidDateIso, UpdateSourceTrigger=PropertyChanged}" Width="140"/>
+                    <DataGridTextColumn Header="Montant (€)" Binding="{Binding AmountEuroText, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
+                    <DataGridTemplateColumn Header="Méthode" Width="140">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <ComboBox ItemsSource="{Binding Methods, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          SelectedItem="{Binding Method, UpdateSourceTrigger=PropertyChanged}"
+                                          MinWidth="120"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Référence" Binding="{Binding Reference, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </DockPanel>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Style="{StaticResource DialogChoiceButton}" Margin="0,0,8,0" Content="Annuler" IsCancel="True"/>
+            <Button Style="{StaticResource DialogPrimaryChoiceButton}" Content="Enregistrer" IsDefault="True" Click="Save_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

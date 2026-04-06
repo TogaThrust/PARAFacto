@@ -1,0 +1,36 @@
+<Window x:Class="PARAFactoNative.Views.DurationCustomWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Durée du rendez-vous"
+        Height="230" Width="380"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="White"
+        ShowInTaskbar="False">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Style="{StaticResource DialogMessageTextBlock}"
+                   Text="Heures : 0 (moins d’1 h) ou 1 à 10. Minutes : 0 à 55 par pas de 5 (maximum 55)."/>
+        <Grid Grid.Row="1" Margin="0,14,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="100"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Style="{StaticResource DialogFieldLabelTextBlock}" Text="Heures :" Margin="0,0,8,0"/>
+            <ComboBox Grid.Column="1" x:Name="HoursCombo" VerticalContentAlignment="Center"/>
+            <TextBlock Grid.Column="2" Style="{StaticResource DialogFieldLabelTextBlock}" Text="Minutes :" Margin="16,0,8,0"/>
+            <ComboBox Grid.Column="3" x:Name="MinutesCombo" VerticalContentAlignment="Center"/>
+        </Grid>
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Style="{StaticResource DialogChoiceButton}" Margin="0,0,8,0" Content="Annuler" IsCancel="True"/>
+            <Button Style="{StaticResource DialogPrimaryChoiceButton}" Content="OK" IsDefault="True" Click="Ok_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

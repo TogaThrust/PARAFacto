@@ -1,0 +1,70 @@
+<UserControl x:Class="PARAFactoNative.Views.SeancesView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:local="clr-namespace:PARAFactoNative.Views" mc:Ignorable="d">
+    <UserControl.Resources>
+        <local:CentsToEuroConverter x:Key="CentsToEuro"/>
+    </UserControl.Resources>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Border BorderBrush="#DDD" BorderThickness="1" Padding="10" CornerRadius="6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="105"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="105"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Mode:" VerticalAlignment="Center"/>
+                <ComboBox Grid.Column="1" ItemsSource="{Binding Seances.ModeOptions}" SelectedItem="{Binding Seances.Mode}"/>
+                <TextBlock Grid.Column="2" Text="Jour:" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                <DatePicker Grid.Column="3" SelectedDate="{Binding Seances.Day}" IsEnabled="{Binding Seances.IsDayEnabled}"/>
+                <TextBlock Grid.Column="4" Text="Année:" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                <ComboBox Grid.Column="5" ItemsSource="{Binding Seances.AvailableYears}" SelectedItem="{Binding Seances.Year}" IsEnabled="{Binding Seances.IsYearEnabled}" MinWidth="80"/>
+                <TextBlock Grid.Column="6" Text="Mois:" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                <ComboBox Grid.Column="7" ItemsSource="{Binding Seances.AvailableMonths}" SelectedItem="{Binding Seances.Month}" Width="60" HorizontalAlignment="Left" IsEnabled="{Binding Seances.IsMonthEnabled}"/>
+                <StackPanel Grid.Column="7" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="Recherche:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBox MinWidth="260" Width="320" Text="{Binding Seances.Search, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+                <Button Grid.Column="8" Content="Rafraîchir" Padding="12,6" Margin="12,0,0,0" Command="{Binding Seances.RefreshCommand}"/>
+            </Grid>
+        </Border>
+        <TextBlock Grid.Row="1" Margin="0,10,0,6" Foreground="#666" Text="{Binding Seances.SelectedLockMessage}" TextWrapping="Wrap"/>
+        <DataGrid x:Name="SeancesDataGrid" Grid.Row="1" Margin="0,36,0,10"
+                  ItemsSource="{Binding Seances.Items}" SelectedItem="{Binding Seances.Selected}"
+                  AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" GridLinesVisibility="All"
+                  IsReadOnly="True" EnableColumnVirtualization="False"
+                  MouseDoubleClick="SeancesDataGrid_OnMouseDoubleClick">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Date" Binding="{Binding DateIso}" Width="Auto" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Code" Binding="{Binding Code3}" Width="Auto" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Patient" Binding="{Binding PatientDisplay}" Width="*" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Tarif" Binding="{Binding TarifLabel}" Width="Auto" IsReadOnly="True"/>
+                <DataGridCheckBoxColumn Header="Cash" Binding="{Binding IsCash}" Width="Auto" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Part patient" Binding="{Binding PartPatientCents, Converter={StaticResource CentsToEuro}}" Width="Auto" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Part mutuelle" Binding="{Binding PartMutuelleCents, Converter={StaticResource CentsToEuro}}" Width="Auto" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Lien agenda (RDV)" Binding="{Binding RdvAgendaMarkerPrefix}" Width="140" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Commentaire" Binding="{Binding Commentaire}" Width="*" IsReadOnly="True"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,8">
+            <Button Content="Supprimer la ligne sélectionnée" Command="{Binding Seances.DeleteSelectedCommand}"/>
+        </StackPanel>
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+            <TextBlock Text="Total patient:" Margin="0,0,6,0" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Seances.TotalPatient}" FontWeight="Bold" Margin="0,0,14,0" VerticalAlignment="Center"/>
+            <TextBlock Text="Total mutuelle:" Margin="0,0,6,0" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Seances.TotalMutuelle}" FontWeight="Bold" Margin="0,0,14,0" VerticalAlignment="Center"/>
+            <TextBlock Text="Total général:" Margin="0,0,6,0" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Seances.TotalGeneral}" FontWeight="Bold" VerticalAlignment="Center"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

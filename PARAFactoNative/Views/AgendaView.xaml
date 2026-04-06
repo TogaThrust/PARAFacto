@@ -1,0 +1,414 @@
+<UserControl x:Class="PARAFactoNative.Views.AgendaView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="640" d:DesignWidth="1100">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <Style x:Key="AgendaRdvButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="2,2"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Background" Value="#DBEAFE"/>
+                    <Setter Property="BorderBrush" Value="#2563EB"/>
+                    <Setter Property="BorderThickness" Value="1"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="NavBtn" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="MinWidth" Value="36"/>
+        </Style>
+        <!-- Ligne RDV ou créneau libre (vert) : Mois, Semaine, Jour -->
+        <DataTemplate x:Key="AgendaLineRowTemplate">
+            <Border Padding="3,2" Margin="0,0,0,1" CornerRadius="3">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="BorderBrush" Value="Transparent"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsAvailableGap}" Value="True">
+                                <Setter Property="Background" Value="#DCFCE7"/>
+                                <Setter Property="BorderBrush" Value="#86EFAC"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsUnavailability}" Value="True">
+                                <Setter Property="Background" Value="#FEE2E2"/>
+                                <Setter Property="BorderBrush" Value="#DC2626"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsLunchBreak}" Value="True">
+                                <Setter Property="Background" Value="#FEF9C3"/>
+                                <Setter Property="BorderBrush" Value="#EAB308"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsHistoricalReadOnlyDay}" Value="True">
+                                <Setter Property="Opacity" Value="0.7"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <TextBlock FontSize="11" VerticalAlignment="Center" Foreground="#166534" FontWeight="SemiBold"
+                               Text="{Binding LineText}" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAvailableGap}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock FontSize="11" VerticalAlignment="Center" Foreground="#991B1B" FontWeight="SemiBold"
+                               Text="{Binding LineText}" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsUnavailability}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock FontSize="11" VerticalAlignment="Center" Foreground="#A16207" FontWeight="SemiBold"
+                               Text="{Binding LineText}" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsLunchBreak}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <Button Content="{Binding LineText}" FontSize="11"
+                            Command="{Binding DataContext.SelectAppointmentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="{Binding AppointmentId}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource AgendaRdvButton}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAvailableGap}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsUnavailability}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsLunchBreak}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsHistoricalReadOnlyDay}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                        <Setter Property="Cursor" Value="Arrow"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Formulaire -->
+        <Border Grid.Column="0" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,10,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock FontWeight="Bold" FontSize="15" Text="Rendez-vous"/>
+
+                    <TextBlock Margin="0,12,0,2" FontWeight="SemiBold" Text="Début de journée (premier RDV possible)"/>
+                    <ComboBox ItemsSource="{Binding AgendaQuarterHourChoices}"
+                              SelectedItem="{Binding WorkdaySettingStart, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Margin="0,10,0,2" FontWeight="SemiBold" Text="Fin de journée (dernière fin de séance autorisée)"/>
+                    <ComboBox ItemsSource="{Binding AgendaQuarterHourChoices}"
+                              SelectedItem="{Binding WorkdaySettingClosing, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Margin="0,4,0,8" Foreground="#64748B" FontSize="11" TextWrapping="Wrap"
+                               Text="Ces horaires sont mémorisés au lancement suivant. La liste « Heure de début » s’y adapte. Les RDV déjà enregistrés hors plage restent inchangés jusqu’à modification manuelle."/>
+
+                    <CheckBox Margin="0,8,0,0" Content="Arrêt lunch ?" VerticalContentAlignment="Center"
+                              IsChecked="{Binding LunchBreakEnabled, Mode=TwoWay}"/>
+
+                    <TextBlock Margin="0,12,0,2" Text="Patient"/>
+                    <ComboBox ItemsSource="{Binding Patients}"
+                              SelectedItem="{Binding SelectedPatient}"
+                              DisplayMemberPath="Display"/>
+
+                    <TextBlock Margin="0,10,0,2" Text="Tarif (BIM / NON BIM / PLEIN…)"/>
+                    <ComboBox ItemsSource="{Binding TarifChoices}"
+                              SelectedItem="{Binding SelectedTarif}"
+                              DisplayMemberPath="Label"/>
+
+                    <TextBlock Margin="0,10,0,2" Text="Date"/>
+                    <DatePicker x:Name="AppointmentDatePicker"
+                                SelectedDate="{Binding AppointmentDate}"
+                                Loaded="AppointmentDatePicker_OnLoaded"/>
+                    <Button Margin="0,6,0,0" HorizontalAlignment="Left" Padding="10,5"
+                            Content="Retour au lunch récurrent"
+                            Command="{Binding ResetLunchToRecurringCommand}"
+                            Visibility="{Binding ShowResetLunchForSelectedDay, Converter={StaticResource BoolToVisibility}}"/>
+
+                    <TextBlock Margin="0,10,0,2" Text="Heure de début"/>
+                    <ComboBox ItemsSource="{Binding TimeSlots}"
+                              SelectedItem="{Binding SelectedTime}"
+                              IsEditable="True"/>
+
+                    <TextBlock Margin="0,10,0,2" Text="Durée de la séance"/>
+                    <ComboBox ItemsSource="{Binding DurationPresets}"
+                              SelectedItem="{Binding SelectedDurationChoice, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Label}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <WrapPanel Margin="0,16,0,0">
+                        <Button Content="Nouveau" Command="{Binding NewCommand}" Padding="12,6" Margin="0,0,8,8"/>
+                        <Button Content="Enregistrer" Command="{Binding SaveCommand}" Padding="12,6" Margin="0,0,8,8"/>
+                        <Button Content="Supprimer" Command="{Binding DeleteCommand}" Padding="12,6" Margin="0,0,8,8"/>
+                        <Button Content="Encodage récurrent" Command="{Binding EncodeRecurringCommand}" Padding="12,6" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                    <TextBlock Foreground="#64748B" FontSize="11" TextWrapping="Wrap"
+                               Text="Le tarif est prérempli selon le statut du patient (fiche). Vous pouvez le changer."/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Calendrier -->
+        <Border Grid.Column="1" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" LastChildFill="False">
+                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                        <TextBlock Text="Vue :" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ComboBox Width="110" VerticalAlignment="Center"
+                                  ItemsSource="{Binding ViewModes}"
+                                  SelectedItem="{Binding ViewMode}"/>
+                        <Button Style="{StaticResource NavBtn}" Content="◀" Command="{Binding PrevCommand}" Margin="12,0,4,0"/>
+                        <Button Content="Aujourd'hui" Command="{Binding TodayCommand}" Padding="10,4" Margin="0,0,4,0"/>
+                        <Button Style="{StaticResource NavBtn}" Content="▶" Command="{Binding NextCommand}"/>
+                        <Button Content="Indisponibilité" Command="{Binding IndisponibiliteCommand}" Padding="10,4" Margin="14,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding HeaderTitle}" FontWeight="Bold" FontSize="15"
+                               VerticalAlignment="Center" TextAlignment="Right"/>
+                </DockPanel>
+
+                <Grid Grid.Row="1" Margin="0,8,0,4" Visibility="{Binding IsMonthView, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="lun." FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#64748B"/>
+                    <TextBlock Grid.Column="1" Text="mar." FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#64748B"/>
+                    <TextBlock Grid.Column="2" Text="mer." FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#64748B"/>
+                    <TextBlock Grid.Column="3" Text="jeu." FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#64748B"/>
+                    <TextBlock Grid.Column="4" Text="ven." FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#64748B"/>
+                    <TextBlock Grid.Column="5" Text="sam." FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#64748B"/>
+                    <TextBlock Grid.Column="6" Text="dim." FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#64748B"/>
+                </Grid>
+
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid MinHeight="320">
+                        <!-- Mois : 6 x 7 -->
+                        <ItemsControl ItemsSource="{Binding MonthCells}" Visibility="{Binding IsMonthView, Converter={StaticResource BoolToVisibility}}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="6" Columns="7"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="#E5E7EB" BorderThickness="1" MinHeight="88" Margin="1" CornerRadius="2"
+                                            ToolTip="{Binding HolidayTooltip}">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#F1F5F9"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCurrentMonth}" Value="True">
+                                                        <Setter Property="Background" Value="White"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsBelgianHoliday}" Value="True">
+                                                        <Setter Property="Background" Value="#FEE2E2"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsPastDay}" Value="True">
+                                                        <Setter Property="Background" Value="#E2E8F0"/>
+                                                        <Setter Property="BorderBrush" Value="#CBD5E1"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid Margin="4">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+                                            <Grid Grid.Row="0" VerticalAlignment="Center">
+                                                <Button Command="{Binding DataContext.SelectCalendarDayCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding CellDate}"
+                                                        IsEnabled="{Binding CanSelectCalendarDay}"
+                                                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                                        Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                                                        Padding="0" Margin="0" Cursor="Hand"/>
+                                                <Grid IsHitTestVisible="False">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"
+                                                               HorizontalAlignment="Left"
+                                                               Text="{Binding CellDate, StringFormat=\{0:dd\}}"/>
+                                                    <Ellipse Grid.Column="1" Width="22" Height="22" Fill="#2563EB" VerticalAlignment="Center"
+                                                             HorizontalAlignment="Right" Margin="4,0,0,0"
+                                                             Visibility="{Binding IsToday, Converter={StaticResource BoolToVisibility}}"/>
+                                                </Grid>
+                                            </Grid>
+                                            <TextBlock Grid.Row="1" Text="{Binding HolidayName}" TextWrapping="Wrap"
+                                                       FontSize="9" FontWeight="SemiBold" Foreground="#B91C1C" Margin="0,1,0,2"
+                                                       Visibility="{Binding IsBelgianHoliday, Converter={StaticResource BoolToVisibility}}"/>
+                                            <ItemsControl Grid.Row="2" ItemsSource="{Binding Lines}" Margin="0,2,0,0"
+                                                          ItemTemplate="{StaticResource AgendaLineRowTemplate}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Semaine -->
+                        <ItemsControl ItemsSource="{Binding WeekColumns}" Visibility="{Binding IsWeekView, Converter={StaticResource BoolToVisibility}}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="1" Columns="7"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="#E5E7EB" BorderThickness="1" Margin="2" MinHeight="280" CornerRadius="4"
+                                            ToolTip="{Binding HolidayTooltip}">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="White"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsBelgianHoliday}" Value="True">
+                                                        <Setter Property="Background" Value="#FEE2E2"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsPastDay}" Value="True">
+                                                        <Setter Property="Background" Value="#E2E8F0"/>
+                                                        <Setter Property="BorderBrush" Value="#CBD5E1"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <DockPanel Margin="6">
+                                            <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                <Button Command="{Binding DataContext.SelectCalendarDayCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding Day}"
+                                                        IsEnabled="{Binding CanSelectCalendarDay}"
+                                                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                                        Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                                                        Padding="0" Margin="0" Cursor="Hand"/>
+                                                <StackPanel IsHitTestVisible="False">
+                                                    <Grid VerticalAlignment="Center">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" FontWeight="Bold" Text="{Binding Header}" VerticalAlignment="Center"
+                                                                   HorizontalAlignment="Left" TextWrapping="Wrap"/>
+                                                        <Ellipse Grid.Column="1" Width="22" Height="22" Fill="#2563EB" VerticalAlignment="Center"
+                                                                 HorizontalAlignment="Right" Margin="6,0,0,0"
+                                                                 Visibility="{Binding IsToday, Converter={StaticResource BoolToVisibility}}"/>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding HolidayName}" TextWrapping="Wrap"
+                                                               FontSize="11" FontWeight="SemiBold" Foreground="#B91C1C" Margin="0,4,0,0"
+                                                               Visibility="{Binding IsBelgianHoliday, Converter={StaticResource BoolToVisibility}}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <ItemsControl ItemsSource="{Binding Lines}"
+                                                              ItemTemplate="{StaticResource AgendaLineRowTemplate}"/>
+                                            </ScrollViewer>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Jour -->
+                        <Grid Visibility="{Binding IsDayView, Converter={StaticResource BoolToVisibility}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid Grid.Row="0" Margin="0,0,0,8"
+                                  Visibility="{Binding DayViewIsToday, Converter={StaticResource BoolToVisibility}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Aujourd'hui" VerticalAlignment="Center"
+                                           FontWeight="SemiBold" Foreground="#2563EB" FontSize="13" HorizontalAlignment="Left"/>
+                                <Ellipse Grid.Column="1" Width="22" Height="22" Fill="#2563EB" VerticalAlignment="Center"
+                                         HorizontalAlignment="Right" Margin="8,0,0,0"/>
+                            </Grid>
+                            <Border Grid.Row="1" Margin="0,0,0,8" Padding="8,6" CornerRadius="4" Background="#FEE2E2"
+                                    BorderBrush="#FECACA" BorderThickness="1"
+                                    Visibility="{Binding IsDayViewHoliday, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{Binding DayHolidayBanner}" FontWeight="SemiBold" Foreground="#991B1B" FontSize="13"/>
+                            </Border>
+                            <Border Grid.Row="2" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="4" Padding="8">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="White"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsDayViewPastDay}" Value="True">
+                                                <Setter Property="Background" Value="#E2E8F0"/>
+                                                <Setter Property="BorderBrush" Value="#CBD5E1"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding DayLines}"
+                                                  ItemTemplate="{StaticResource AgendaLineRowTemplate}"/>
+                                </ScrollViewer>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

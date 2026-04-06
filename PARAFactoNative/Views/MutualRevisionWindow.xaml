@@ -1,0 +1,44 @@
+<Window x:Class="PARAFactoNative.Views.MutualRevisionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Modification mutuelle" Height="300" Width="650" WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="White"
+        ShowInTaskbar="False">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="170"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Style="{StaticResource DialogCaptionTextBlock}"
+                   Text="Correction mutuelle"
+                   Margin="0,0,0,4"/>
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource DialogFieldLabelTextBlock}" Margin="0,10,8,0" Text="Facture :"/>
+        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource DialogReadOnlyValueTextBlock}" Margin="0,10,0,0" Text="{Binding InvoiceLabel}"/>
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource DialogFieldLabelTextBlock}" Margin="0,10,8,0" Text="Nouveau montant (€) :"/>
+        <TextBox Grid.Row="2" Grid.Column="1" Margin="0,10,0,0" Width="120" HorizontalAlignment="Left"
+                 Text="{Binding NewTotalEuroText, UpdateSourceTrigger=PropertyChanged}"/>
+
+        <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource DialogFieldLabelTextBlock}" Margin="0,10,8,0" Text="Raison :"/>
+        <TextBox Grid.Row="3" Grid.Column="1" Margin="0,10,0,0" Text="{Binding Reason, UpdateSourceTrigger=PropertyChanged}"/>
+
+        <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource DialogFieldLabelTextBlock}" Margin="0,10,8,0" Text="Réf. document mutuelle :"/>
+        <TextBox Grid.Row="4" Grid.Column="1" Margin="0,10,0,0" Text="{Binding ReferenceDoc, UpdateSourceTrigger=PropertyChanged}"/>
+
+        <StackPanel Grid.Row="5" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Style="{StaticResource DialogChoiceButton}" Margin="0,0,8,0" Content="Annuler" IsCancel="True"/>
+            <Button Style="{StaticResource DialogPrimaryChoiceButton}" Content="Valider" IsDefault="True" Click="Ok_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

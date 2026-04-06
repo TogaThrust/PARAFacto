@@ -1,0 +1,49 @@
+<Window x:Class="PARAFactoNative.Views.RecurrenceDeleteScopeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Agenda — récurrence"
+        Height="320"
+        Width="540"
+        MinWidth="480"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="White"
+        ShowInTaskbar="False">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Ce rendez-vous fait partie d'une série récurrente."
+                   Style="{StaticResource DialogCaptionTextBlock}"/>
+
+        <TextBlock Grid.Row="1"
+                   Margin="0,10,0,0"
+                   Style="{StaticResource DialogMessageTextBlock}"
+                   Text="Choisissez la portée de la suppression :"/>
+
+        <StackPanel Grid.Row="2" Margin="0,14,0,0">
+            <Button Content="Supprimer uniquement ce créneau"
+                    Style="{StaticResource DialogStackActionButton}"
+                    Click="DeleteOnly_OnClick"/>
+            <Button Content="Supprimer ce créneau et tous les suivants de la série"
+                    Style="{StaticResource DialogStackActionButton}"
+                    Margin="0,0,0,0"
+                    Click="DeleteFromHere_OnClick"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="4"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,16,0,0">
+            <Button Content="Annuler"
+                    Style="{StaticResource DialogChoiceButton}"
+                    IsCancel="True"
+                    Click="Cancel_OnClick"/>
+        </StackPanel>
+    </Grid>
+</Window>

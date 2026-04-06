@@ -1,0 +1,200 @@
+<UserControl x:Class="PARAFactoNative.Views.FacturesView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:views="clr-namespace:PARAFactoNative.Views" mc:Ignorable="d">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <Style x:Key="RecipientCellStyle" TargetType="TextBlock">
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="views:TrimmedTextToolTipBehavior.EnableForTrimmedText" Value="True"/>
+        </Style>
+    </UserControl.Resources>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Border BorderBrush="#DDD" BorderThickness="1" Padding="10" CornerRadius="6">
+            <WrapPanel VerticalAlignment="Center">
+                <TextBlock VerticalAlignment="Center" Text="Type:"/>
+                <ComboBox Width="140" ItemsSource="{Binding Factures.Types}" SelectedItem="{Binding Factures.SelectedType}"/>
+                <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="Statut:"/>
+                <ComboBox Width="140" ItemsSource="{Binding Factures.Statuses}" SelectedItem="{Binding Factures.SelectedStatus}"/>
+                <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="Recherche:"/>
+                <TextBox Width="260" Text="{Binding Factures.Search, UpdateSourceTrigger=PropertyChanged}"/>
+                <Button Margin="12,0,0,0" Content="Rafraîchir" Command="{Binding Factures.RefreshCommand}"/>
+            </WrapPanel>
+        </Border>
+        <Grid Grid.Row="1" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="4.3*"/>
+                <ColumnDefinition Width="1.35*"/>
+            </Grid.ColumnDefinitions>
+            <DataGrid x:Name="InvoicesGrid" ItemsSource="{Binding Factures.Items}" SelectedItem="{Binding Factures.Selected}" AutoGenerateColumns="False" CanUserAddRows="False" EnableColumnVirtualization="False" HorizontalScrollBarVisibility="Auto" IsReadOnly="False" BeginningEdit="InvoicesGrid_BeginningEdit" CellEditEnding="InvoicesGrid_CellEditEnding" MouseDoubleClick="InvoicesGrid_MouseDoubleClick">
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding StatusLower}" Value="paid">
+                                <Setter Property="Background" Value="LightGreen"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding StatusLower}" Value="unpaid">
+                                <Setter Property="Background" Value="Orange"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding StatusLower}" Value="acquittee">
+                                <Setter Property="Background" Value="#E6E6FA"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding StatusLower}" Value="partial">
+                                <Setter Property="Background" Value="LightPink"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding StatusLower}" Value="loss">
+                                <Setter Property="Background" Value="LightCoral"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding StatusLower}" Value="modified">
+                                <Setter Property="Background" Value="LightYellow"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding StatusLower}" Value="superseded">
+                                <Setter Property="Background" Value="LightGray"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="N°" Binding="{Binding InvoiceNoDisplay}" Width="SizeToCells" MinWidth="92" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Date" Binding="{Binding IssuedDate}" Width="Auto" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Date paiement" Binding="{Binding PaymentDateDisplay}" Width="Auto" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Facturé à" Binding="{Binding Recipient}" Width="220" ElementStyle="{StaticResource RecipientCellStyle}" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Statut" Binding="{Binding StatusFr}" Width="SizeToCells" MinWidth="84" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Total" Binding="{Binding TotalEuro}" Width="76" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="PAYE" Binding="{Binding PaidEuro}" Width="76" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="NC" Binding="{Binding NcEuro}" Width="76" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Perte" Binding="{Binding LossEuro}" Width="76" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Solde" Binding="{Binding BalanceEuro}" Width="76" IsReadOnly="True"/>
+                    <DataGridTemplateColumn Header="PDF" Width="Auto">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="📄" Padding="6,0" Click="OpenPdf_Click"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Commentaires" Binding="{Binding UserComment, UpdateSourceTrigger=LostFocus}" Width="*" IsReadOnly="False"/>
+                </DataGrid.Columns>
+            </DataGrid>
+            <Border Grid.Column="1" BorderBrush="#DDD" BorderThickness="1" Padding="10" CornerRadius="6" Margin="10,0,0,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock FontSize="14" FontWeight="Bold" Text="Actions"/>
+                        <WrapPanel Margin="0,6,0,0">
+                            <Button Content="Paiement" Command="{Binding Factures.AddPaymentCommand}" Margin="0,0,8,8"/>
+                            <Button Content="Perte" Command="{Binding Factures.AddLossCommand}" Margin="0,0,8,8"/>
+                            <Button Content="Annuler perte" Command="{Binding Factures.ClearLossCommand}" Margin="0,0,8,8"/>
+                        </WrapPanel>
+                        <WrapPanel>
+                            <Button Content="Note de crédit" Command="{Binding Factures.CreateCreditNoteCommand}" Margin="0,0,8,8"/>
+                            <Button Content="Modif mutuelle" Command="{Binding Factures.CreateMutualRevisionCommand}" Margin="0,0,8,8"/>
+                        </WrapPanel>
+                        <WrapPanel>
+                            <Button Content="Ouvrir dossier" Command="{Binding Factures.OpenFolderCommand}" Margin="0,0,8,8"/>
+                        </WrapPanel>
+                        <Separator Margin="0,8,0,8"/>
+                        <TextBlock FontWeight="Bold" Text="Suppression du mois"/>
+                        <TextBlock Margin="0,6,0,8" Foreground="#666" Text="{Binding Factures.SelectedPeriodLabel}" TextWrapping="Wrap"/>
+                        <Button Content="Supprimer toutes les factures du mois" Command="{Binding Factures.DeleteMonthInvoicesCommand}" Margin="0,0,0,8"/>
+                        <Separator Margin="0,8,0,8"/>
+                        <Button Content="Indexer destinataires (PDF)" Command="{Binding Factures.RelinkPatientsCommand}" />
+                        <Separator Margin="0,8,0,8"/>
+                        <TextBlock FontSize="14" FontWeight="Bold" Text="Détails"/>
+                        <TextBlock Margin="0,8,0,0" Text="{Binding Factures.SelectedDetails}" TextWrapping="Wrap"/>
+                        <Separator Margin="0,14,0,10"/>
+                        <TextBlock FontWeight="Bold" FontSize="13" Text="Période"/>
+                        <ComboBox Margin="0,6,0,10" ItemsSource="{Binding Factures.PeriodKinds}" SelectedItem="{Binding Factures.PeriodKind}"/>
+                        <StackPanel Visibility="{Binding Factures.ShowPeriodDateRange, Converter={StaticResource BoolToVis}}" Margin="0,0,0,10">
+                            <TextBlock Text="De"/>
+                            <DatePicker SelectedDate="{Binding Factures.PeriodDateFrom}" Margin="0,2,0,0"/>
+                            <TextBlock Text="À" Margin="0,4,0,0"/>
+                            <DatePicker SelectedDate="{Binding Factures.PeriodDateTo}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel Visibility="{Binding Factures.ShowPeriodYearOnly, Converter={StaticResource BoolToVis}}" Margin="0,0,0,10">
+                            <TextBlock Text="Année"/>
+                            <ComboBox ItemsSource="{Binding Factures.AvailableYears}" SelectedItem="{Binding Factures.PeriodYear}" Width="80" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel Visibility="{Binding Factures.ShowPeriodYearWeek, Converter={StaticResource BoolToVis}}" Margin="0,0,0,10" Orientation="Horizontal">
+                            <StackPanel>
+                                <TextBlock Text="Année"/>
+                                <ComboBox ItemsSource="{Binding Factures.AvailableYears}" SelectedItem="{Binding Factures.PeriodYear}" Width="80" Margin="0,4,0,0"/>
+                            </StackPanel>
+                            <StackPanel Margin="12,0,0,0">
+                                <TextBlock Text="Semaine (1-52)"/>
+                                <ComboBox ItemsSource="{Binding Factures.WeekNumbers}" SelectedValue="{Binding Factures.PeriodWeek}" Width="60" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Visibility="{Binding Factures.ShowPeriodYearMonth, Converter={StaticResource BoolToVis}}" Margin="0,0,0,10" Orientation="Horizontal">
+                            <StackPanel>
+                                <TextBlock Text="Année"/>
+                                <ComboBox ItemsSource="{Binding Factures.AvailableYears}" SelectedItem="{Binding Factures.PeriodYear}" Width="80" Margin="0,4,0,0"/>
+                            </StackPanel>
+                            <StackPanel Margin="12,0,0,0">
+                                <TextBlock Text="Mois"/>
+                                <ComboBox ItemsSource="{Binding Factures.MonthNumbers}" SelectedValue="{Binding Factures.PeriodMonth}" Width="60" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Visibility="{Binding Factures.ShowPeriodYearQuarter, Converter={StaticResource BoolToVis}}" Margin="0,0,0,10" Orientation="Horizontal">
+                            <StackPanel>
+                                <TextBlock Text="Année"/>
+                                <ComboBox ItemsSource="{Binding Factures.AvailableYears}" SelectedItem="{Binding Factures.PeriodYear}" Width="80" Margin="0,4,0,0"/>
+                            </StackPanel>
+                            <StackPanel Margin="12,0,0,0">
+                                <TextBlock Text="Trimestre (1-4)"/>
+                                <ComboBox ItemsSource="{Binding Factures.QuarterNumbers}" SelectedValue="{Binding Factures.PeriodQuarter}" Width="60" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <TextBlock Margin="0,10,0,6" Text="{Binding Factures.PeriodLabel}" Foreground="#666" FontStyle="Italic"/>
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Margin="0,0,0,8" FontWeight="Bold" FontSize="13" Text="Période sélectionnée"/>
+                                <TextBlock Margin="0,2,0,0"><Run Text="{Binding Factures.PayeLabel, Mode=OneWay}"/><Run Text=" : "/><Run Text="{Binding Factures.StatsFiltered.PayeEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="IMPAYÉS : "/><Run Text="{Binding Factures.StatsFiltered.ImpayeEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="PARTIEL : "/><Run Text="{Binding Factures.StatsFiltered.PartielEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="TOTAL REÇU : "/><Run Text="{Binding Factures.StatsFiltered.TotalRecuEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="EN ATTENTE : "/><Run Text="{Binding Factures.StatsFiltered.EnAttenteEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="NOTES DE CRÉDIT : "/><Run Text="{Binding Factures.StatsFiltered.NcEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="PERTES : "/><Run Text="{Binding Factures.StatsFiltered.PertesEuro, Mode=OneWay}"/></TextBlock>
+                            </StackPanel>
+                            <Border Grid.Column="1" Width="1" Margin="12,0" BorderBrush="#CCC" BorderThickness="1,0,0,0" VerticalAlignment="Stretch"/>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Margin="0,0,0,8" FontWeight="Bold" FontSize="13" Text="TOTAL ENREGISTRÉ"/>
+                                <TextBlock Margin="0,2,0,0"><Run Text="PAYE : "/><Run Text="{Binding Factures.StatsTotal.PayeEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="IMPAYÉS : "/><Run Text="{Binding Factures.StatsTotal.ImpayeEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="PARTIEL : "/><Run Text="{Binding Factures.StatsTotal.PartielEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="TOTAL REÇU : "/><Run Text="{Binding Factures.StatsTotal.TotalRecuEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="EN ATTENTE : "/><Run Text="{Binding Factures.StatsTotal.EnAttenteEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="NOTES DE CRÉDIT : "/><Run Text="{Binding Factures.StatsTotal.NcEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="PERTES : "/><Run Text="{Binding Factures.StatsTotal.PertesEuro, Mode=OneWay}"/></TextBlock>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Margin="0,14,0,0"
+                                Padding="8"
+                                BorderBrush="#DDD"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Visibility="{Binding Factures.HasSelectedComment, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <TextBlock FontWeight="Bold" Text="Commentaire de la facture sélectionnée"/>
+                                <TextBox Margin="0,6,0,0"
+                                         Text="{Binding Factures.SelectedCommentText, Mode=OneWay}"
+                                         IsReadOnly="True"
+                                         TextWrapping="Wrap"
+                                         AcceptsReturn="True"
+                                         VerticalScrollBarVisibility="Auto"
+                                         MinHeight="80"
+                                         MaxHeight="160"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,95 @@
+<Window x:Class="PARAFactoNative.Views.PatientMedicalWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Informations médicales" Height="520" Width="560"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="White"
+        ShowInTaskbar="False">
+
+    <Window.Resources>
+        <x:Array x:Key="StatutChoices" Type="sys:String" xmlns:sys="clr-namespace:System;assembly=mscorlib">
+            <sys:String>BIM</sys:String>
+            <sys:String>NON BIM</sys:String>
+            <sys:String>PLEIN</sys:String>
+        </x:Array>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Style="{StaticResource DialogCaptionTextBlock}" FontSize="15" Text="Infos médicales"/>
+            <TextBlock Margin="0,4,0,0" Style="{StaticResource DialogMessageTextBlock}" Text="Complétez les données médicales du patient."/>
+
+            <DockPanel Margin="0,10,0,0">
+                <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Width="140" DockPanel.Dock="Left" Text="Code 3 :"/>
+                <TextBlock Style="{StaticResource DialogReadOnlyValueTextBlock}" Text="{Binding Code3}" VerticalAlignment="Center"/>
+            </DockPanel>
+            <DockPanel Margin="0,6,0,0">
+                <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Width="140" DockPanel.Dock="Left" Text="Nom / prénom :"/>
+                <TextBlock Style="{StaticResource DialogReadOnlyValueTextBlock}" Text="{Binding Display}" VerticalAlignment="Center"/>
+            </DockPanel>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" Margin="0,12,0,12" Style="{StaticResource DialogFormScrollViewer}">
+            <StackPanel>
+                <DockPanel Margin="0,0,0,6">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Width="140" DockPanel.Dock="Left" Text="Statut :"/>
+                    <ComboBox ItemsSource="{StaticResource StatutChoices}" SelectedItem="{Binding Statut}" Width="180" HorizontalAlignment="Left"/>
+                </DockPanel>
+
+                <DockPanel Margin="0,0,0,6">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Width="140" DockPanel.Dock="Left" Text="Mutuelle :"/>
+                    <TextBox Text="{Binding MutualName}"/>
+                </DockPanel>
+                <DockPanel Margin="0,0,0,6">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Width="140" DockPanel.Dock="Left" Text="NISS :"/>
+                    <TextBox Text="{Binding Niss}"/>
+                </DockPanel>
+
+                <Separator Margin="0,10,0,10"/>
+
+                <DockPanel Margin="0,0,0,6">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Width="140" DockPanel.Dock="Left" Text="Nom médecin :"/>
+                    <TextBox Text="{Binding PrescriberLastName}"/>
+                </DockPanel>
+                <DockPanel Margin="0,0,0,6">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Width="140" DockPanel.Dock="Left" Text="Prénom médecin :"/>
+                    <TextBox Text="{Binding PrescriberFirstName}"/>
+                </DockPanel>
+                <DockPanel Margin="0,0,0,6">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Width="140" DockPanel.Dock="Left" Text="Code médecin :"/>
+                    <TextBox Text="{Binding PrescriberCode}"/>
+                </DockPanel>
+
+                <Separator Margin="0,10,0,10"/>
+
+                <DockPanel Margin="0,0,0,6">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Width="140" DockPanel.Dock="Left" Text="Date prescription :"/>
+                    <TextBox Text="{Binding DatePrescription}"/>
+                </DockPanel>
+                <DockPanel Margin="0,0,0,6">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Width="140" DockPanel.Dock="Left" Text="Date accord :"/>
+                    <TextBox Text="{Binding DateAccord}"/>
+                </DockPanel>
+                <DockPanel Margin="0,0,0,6">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Width="140" DockPanel.Dock="Left" Text="Période accord :"/>
+                    <TextBox Text="{Binding PeriodeAccord}"/>
+                </DockPanel>
+                <DockPanel Margin="0,0,0,6">
+                    <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Width="140" DockPanel.Dock="Left" Text="Nomenclature :"/>
+                    <TextBox Text="{Binding Nomenclature}"/>
+                </DockPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Style="{StaticResource DialogChoiceButton}" Margin="0,0,8,0" Content="Annuler" IsCancel="True"/>
+            <Button Style="{StaticResource DialogPrimaryChoiceButton}" Content="Enregistrer" Click="Save_Click" IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,7 @@
+{
+  "licenseCheckApiUrl": " https://parafacto.netlify.app/.netlify/functions/license-check
+",
+  "paymentPageUrl": "https://buy.stripe.com/test_6oU4gr8oadvp96D9lN38400",
+  "skipValidation": true,
+  "renewalWarningDays": 7
+}

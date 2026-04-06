@@ -1,0 +1,42 @@
+<Window x:Class="PARAFactoNative.Views.RecurringOccurrenceConflictWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Récurrence — chevauchement"
+        Height="520" Width="480"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="White"
+        ShowInTaskbar="False">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock x:Name="TitleLine" Style="{StaticResource DialogCaptionTextBlock}" TextWrapping="Wrap"/>
+        <TextBlock x:Name="DetailLine" Grid.Row="1" Margin="0,10,0,0" Style="{StaticResource DialogMessageTextBlock}"/>
+        <TextBlock Grid.Row="2" Margin="0,16,0,4" Style="{StaticResource DialogSectionHeaderTextBlock}" Text="Téléphones (prévenir la personne responsable)"/>
+        <Border Grid.Row="3" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="10">
+            <StackPanel>
+                <TextBlock x:Name="PhoneRecurringLabel" Style="{StaticResource DialogMutedLabelTextBlock}" Text="Patient de la série récurrente"/>
+                <TextBlock x:Name="PhoneRecurringLine" Margin="0,2,0,10" Style="{StaticResource DialogReadOnlyValueTextBlock}" FontWeight="SemiBold"/>
+                <TextBlock x:Name="PhoneOtherLabel" Style="{StaticResource DialogMutedLabelTextBlock}" Text="Patient du RDV déjà encodé"/>
+                <TextBlock x:Name="PhoneOtherLine" Margin="0,2,0,0" Style="{StaticResource DialogReadOnlyValueTextBlock}" FontWeight="SemiBold"/>
+            </StackPanel>
+        </Border>
+        <TextBlock Grid.Row="4" Margin="0,14,0,8" Style="{StaticResource DialogMessageTextBlock}"
+                   Text="Choisissez une action pour ce jour précis :"/>
+        <StackPanel Grid.Row="5" VerticalAlignment="Top">
+            <Button x:Name="BtnMoveRecurring" Content="Déplacer la récurrence à un autre horaire (ce jour)" Style="{StaticResource DialogStackActionButton}" Click="BtnMoveRecurring_OnClick"/>
+            <Button x:Name="BtnMoveBlocking" Style="{StaticResource DialogStackActionButton}" Click="BtnMoveBlocking_OnClick"/>
+            <Button x:Name="BtnSkip" Content="Ne pas créer ce créneau dans la série" Style="{StaticResource DialogStackActionButton}" Margin="0" Click="BtnSkip_OnClick"/>
+        </StackPanel>
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Fermer" Style="{StaticResource DialogChoiceButton}" IsCancel="True" Click="BtnClose_OnClick"/>
+        </StackPanel>
+    </Grid>
+</Window>

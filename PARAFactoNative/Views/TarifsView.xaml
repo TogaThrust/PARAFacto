@@ -1,0 +1,38 @@
+<UserControl x:Class="PARAFactoNative.Views.TarifsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <WrapPanel Margin="0,0,0,8">
+            <Button Content="Nouveau tarif" Command="{Binding Tarifs.NewCommand}"/>
+            <Button Content="Modifier" Command="{Binding Tarifs.EditCommand}"/>
+            <Button Content="Supprimer" Command="{Binding Tarifs.DeleteCommand}"/>
+        </WrapPanel>
+
+        <DataGrid x:Name="TarifsGrid"
+                  Grid.Row="1"
+                  EnableColumnVirtualization="False"
+                  ItemsSource="{Binding Tarifs.Items}"
+                  SelectedItem="{Binding Tarifs.Selected}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  IsReadOnly="True"
+                  BeginningEdit="TarifsGrid_BeginningEdit"
+                  PreviewMouseDoubleClick="TarifsGrid_PreviewMouseDoubleClick">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Libellé" Binding="{Binding Label, Mode=OneWay}" Width="*"/>
+                <DataGridTextColumn Header="Part patient" Binding="{Binding PartPatientEuro, Mode=OneWay}" Width="Auto"/>
+                <DataGridTextColumn Header="Part mutuelle" Binding="{Binding PartMutuelleEuro, Mode=OneWay}" Width="Auto"/>
+                <DataGridCheckBoxColumn Header="Actif" Binding="{Binding Active}" Width="Auto"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PARAFacto Native — Téléchargement</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    h1 { font-size: 1.5rem; }
+    .btn { display: inline-block; padding: 0.6rem 1rem; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; margin: 0.5rem 0.5rem 0.5rem 0; }
+    .btn.secondary { background: #334155; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>PARAFacto Native</h1>
+  <p>Téléchargez l’installateur, puis souscrivez un abonnement mensuel. Après paiement, copiez votre identifiant client (<code>cus_…</code>) affiché sur la page de confirmation et collez-le dans l’application.</p>
+  <p>
+    <a class="btn" href="./files/PARAFactoNative_Installer.exe" download>Télécharger l’installateur</a>
+    <!-- Remplacez l’URL ci-dessous par votre Payment Link Stripe (https://buy.stripe.com/...) -->
+    <a class="btn secondary" href="https://buy.stripe.com/test_6oU4gr8oadvp96D9lN38400" target="_blank" rel="noopener noreferrer">Souscrire (Stripe)</a>
+  </p>
+  <p><small>Si le téléchargement échoue, vérifiez que <code>public/files/PARAFactoNative_Installer.exe</code> est bien présent avant déploiement.</small></p>
+</body>
+</html>
