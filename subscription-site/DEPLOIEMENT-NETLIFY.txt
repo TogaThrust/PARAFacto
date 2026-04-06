@@ -1,0 +1,59 @@
+================================================================================
+  PARAFacto — Dossier à connecter à Netlify (racine = ce dossier subscription-site)
+================================================================================
+
+CONTENU
+-------
+  netlify.toml          Paramètres build / functions
+  package.json          Dépendance stripe (npm install au build)
+  netlify/functions/    API license-check + session-customer
+  public/               Site statique (index, success, installateur)
+
+AVANT LE PREMIER DÉPLOIEMENT
+----------------------------
+  1. Copiez votre installateur Windows dans :
+       public/files/PARAFactoNative_Installer.exe
+     (même nom que le lien dans public/index.html)
+
+  2. Dans public/index.html, remplacez l’URL du bouton « Souscrire » :
+       https://buy.stripe.com/REMPLACEZ_VOTRE_LIEN
+     par votre vrai Payment Link ou lien Checkout Stripe.
+
+  3. Dans Stripe, URL de succès du paiement :
+       https://VOTRE-SITE.netlify.app/success.html?session_id={CHECKOUT_SESSION_ID}
+
+MÉTHODE RECOMMANDÉE (Git + Netlify)
+-----------------------------------
+  - Poussez le dépôt sur GitHub/GitLab.
+  - Netlify : Add new site > Import from Git.
+  - Base directory : PARAFactoNative/subscription-site
+    (ou le chemin relatif vers ce dossier dans votre repo)
+  - Build command : npm install
+  - Publish directory : public
+  - Les functions sont prises depuis netlify/functions (voir netlify.toml).
+
+  - Site settings > Environment variables :
+      STRIPE_SECRET_KEY = sk_live_... (ou sk_test_... en test)
+
+IMPORTANT — GLISSER-DÉPOSER SEUL
+---------------------------------
+  Un déploiement manuel en ne déposant QUE le dossier « public » ne publie PAS
+  les fonctions serverless (license-check, session-customer). L’app Windows ne
+  pourra pas vérifier l’abonnement. Utilisez Git ou la CLI Netlify (voir ci-dessous).
+
+CLI NETLIFY (alternative)
+-------------------------
+  Depuis ce dossier (subscription-site), après npm install :
+    npx netlify login
+    npx netlify init
+    npx netlify deploy --build --prod
+
+URL À METTRE DANS subscription_config.json (application Windows)
+-----------------------------------------------------------------
+  licenseCheckApiUrl :
+    https://VOTRE-SITE.netlify.app/.netlify/functions/license-check
+
+  paymentPageUrl :
+    le même lien Stripe que le bouton « Souscrire » sur index.html
+
+================================================================================
