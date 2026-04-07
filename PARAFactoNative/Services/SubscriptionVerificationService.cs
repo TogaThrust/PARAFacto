@@ -77,13 +77,49 @@ public static class SubscriptionVerificationService
                 return true;
             }
 
-            var gate = SubscriptionGateWindow.ShowBlocked(
-                owner,
-                result.UserMessage ?? "Votre abonnement n'est pas actif ou n'a pas été renouvelé.",
-                paymentUrl,
-                customerId);
-            if (!gate.RetryRequested)
-                return false;
+            // Code refusé ou abonnement inactif : rester dans l'app avec message clair + paiement, sans exiger un redémarrage.
+            for (;;)
+            {
+                var invalidWin = new ActionChoiceWindow(
+                    "PARAFacto Native — Abonnement",
+                    "Ce code n'est pas ou plus valable, merci de bien vouloir vous rendre sur la page des paiements.",
+                    "Ouvrir la page de paiements",
+                    "Corriger l'identifiant",
+                    "Quitter l'application");
+                ApplyGateOwner(invalidWin, owner);
+
+                if (invalidWin.ShowDialog() != true)
+                    return false;
+
+                if (invalidWin.Choice == ActionChoiceResult.Primary)
+                    OpenPaymentPage(paymentUrl);
+
+                var retry = SubscriptionGateWindow.ShowSetup(
+                    owner,
+                    paymentUrl,
+                    prefilledCustomerId: customerId,
+                    titleOverride: "Corriger l'identifiant",
+                    bodyOverride:
+                    "Saisissez l'identifiant client Stripe (cus_...) reçu après paiement, ou ouvrez la page des paiements depuis l'écran précédent.");
+
+                if (retry.SaveRequested)
+                    break;
+            }
+
+            continue;
+        }
+    }
+
+    private static void ApplyGateOwner(Window dialog, Window? owner)
+    {
+        if (owner != null)
+        {
+            dialog.Owner = owner;
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+        else
+        {
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         }
     }
 
