@@ -11,15 +11,11 @@ CONTENU
 
 AVANT LE PREMIER DÉPLOIEMENT
 ----------------------------
-  1. Copiez votre installateur Windows dans :
-       public/files/PARAFactoNative_Installer.exe
-     (même nom que le lien dans public/index.html)
-
-  2. Dans public/index.html, remplacez l’URL du bouton « Souscrire » :
+  1. Dans public/index.html, remplacez l’URL du bouton « Souscrire » :
        https://buy.stripe.com/REMPLACEZ_VOTRE_LIEN
      par votre vrai Payment Link ou lien Checkout Stripe.
 
-  3. Dans Stripe, URL de succès du paiement :
+  2. Dans Stripe, URL de succès du paiement :
        https://VOTRE-SITE.netlify.app/success.html?session_id={CHECKOUT_SESSION_ID}
 
 MÉTHODE RECOMMANDÉE (Git + Netlify)
@@ -40,6 +36,18 @@ IMPORTANT — GLISSER-DÉPOSER SEUL
   Un déploiement manuel en ne déposant QUE le dossier « public » ne publie PAS
   les fonctions serverless (license-check, session-customer). L’app Windows ne
   pourra pas vérifier l’abonnement. Utilisez Git ou la CLI Netlify (voir ci-dessous).
+
+INSTALLATEUR .EXE (RECOMMANDÉ : GITHUB RELEASES)
+------------------------------------------------
+  Le bouton "Télécharger" pointe vers :
+    https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe
+
+  Workflow conseillé à chaque version :
+    1) Exécuter .\CreerInstalleur.ps1
+    2) Récupérer : PARAFactoNative\installer_output\PARAFactoNative_Installer.exe
+    3) Créer une GitHub Release (tag vX.Y.Z)
+    4) Joindre ce fichier comme asset avec le NOM EXACT :
+         PARAFactoNative_Installer.exe
 
 CLI NETLIFY (alternative)
 -------------------------

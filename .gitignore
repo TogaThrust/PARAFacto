@@ -4,3 +4,4 @@ node_modules/
 .vs/
 *.user
 PARAFactoNative/publish_output/
+PARAFactoNative/installer_output/
