@@ -5,3 +5,5 @@ node_modules/
 *.user
 PARAFactoNative/publish_output/
 PARAFactoNative/installer_output/
+# Local Netlify folder
+.netlify
