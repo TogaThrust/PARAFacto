@@ -1,17 +1,14 @@
 ================================================================================
 CONDITIONS GÉNÉRALES D’UTILISATION (CGU) – LOGICIEL PARAFACTO NATIVE
-Version document : 2026-04-08
+Version document : 2026-04-08-02
 ================================================================================
-
-AVERTISSEMENT : le présent modèle doit être validé par votre conseil juridique.
-Les mentions entre crochets [ ] sont à compléter.
 
 --------------------------------------------------------------------------------
 1. OBJET ET ACCEPTATION
 --------------------------------------------------------------------------------
 Les présentes Conditions Générales d’Utilisation (« CGU ») régissent l’accès et
 l’utilisation du logiciel « PARAFacto Native » (le « Logiciel »), édité par
-[À COMPLÉTER : dénomination de l’éditeur, adresse, contact].
+Toga Thrust - Mons - Belgique".
 
 En installant, lançant ou utilisant le Logiciel, l’utilisateur professionnel
 (ci-après « Vous ») confirme avoir pris connaissance des présentes CGU et de la
@@ -149,7 +146,7 @@ mesure permise par la loi.
 --------------------------------------------------------------------------------
 14. CONTACT
 --------------------------------------------------------------------------------
-Pour toute question relative aux présentes CGU : [À COMPLÉTER : contact éditeur].
+Pour toute question relative aux présentes CGU : parafacto@parafacto.be].
 
 ================================================================================
 FIN DU DOCUMENT

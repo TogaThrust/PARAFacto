@@ -10,8 +10,8 @@ namespace PARAFactoNative.Services;
 /// </summary>
 public static class LegalDocuments
 {
-    public const string PrivacyPolicyVersion = "2026-04-08";
-    public const string TermsOfServiceVersion = "2026-04-08";
+    public const string PrivacyPolicyVersion = "2026-04-08-02";
+    public const string TermsOfServiceVersion = "2026-04-08-02";
 
     public const string PrivacyFileName = "PolitiqueConfidentialite.txt";
     public const string TermsFileName = "ConditionsUtilisation.txt";

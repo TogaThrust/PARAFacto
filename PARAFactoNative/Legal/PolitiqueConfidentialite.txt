@@ -1,11 +1,7 @@
 ================================================================================
 POLITIQUE DE CONFIDENTIALITÉ – LOGICIEL PARAFACTO NATIVE
-Version document : 2026-04-08
+Version document : 2026-04-08-02
 ================================================================================
-
-AVERTISSEMENT : le présent modèle est fourni à titre d’information et doit être
-relu et adapté par votre conseil juridique ou votre DPO avant toute utilisation
-opérationnelle. Les mentions entre crochets [ ] sont à compléter.
 
 --------------------------------------------------------------------------------
 1. OBJET
@@ -23,13 +19,8 @@ de santé et aux mineurs.
 --------------------------------------------------------------------------------
 Le responsable du traitement des données introduites et gérées par vous dans le
 Logiciel est le professionnel de santé / paramédical ou l’entité qui exploite le
-Logiciel dans le cadre de son activité professionnelle :
+Logiciel dans le cadre de son activité professionnelle.
 
-  [À COMPLÉTER : dénomination sociale ou nom professionnel]
-  [À COMPLÉTER : forme juridique le cas échéant]
-  [À COMPLÉTER : adresse du siège / du cabinet]
-  [À COMPLÉTER : adresse e-mail de contact données personnelles]
-  [À COMPLÉTER : numéro BCE/TVA le cas échéant]
 
 L’éditeur du Logiciel (développeur / société éditrice) agit, sauf stipulation
 contractuelle contraire, en qualité de sous-traitant limité à la fourniture du
@@ -200,8 +191,7 @@ en tête de document fait foi.
 --------------------------------------------------------------------------------
 15. CONTACT
 --------------------------------------------------------------------------------
-Pour toute question relative à cette politique : [À COMPLÉTER : même contact
-que section 2].
+Pour toute question relative à cette politique : parafacto@parafacto.be.
 
 ================================================================================
 FIN DU DOCUMENT
