@@ -1,3 +1,4 @@
+using System.IO;
 using PARAFactoNative.Services;
 
 namespace PARAFactoNative.ViewModels;
@@ -21,7 +22,10 @@ public sealed class MainViewModel : NotifyBase
 
     public MainViewModel()
     {
-        Legal = new LegalComplianceViewModel(new AppSettingsStore(), AppContext.BaseDirectory);
+        var appBase = AppContext.BaseDirectory;
+        if (string.IsNullOrWhiteSpace(appBase))
+            appBase = AppDomain.CurrentDomain.BaseDirectory;
+        Legal = new LegalComplianceViewModel(new AppSettingsStore(), appBase.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
 
         // Prime lists
         Patients.Reload();

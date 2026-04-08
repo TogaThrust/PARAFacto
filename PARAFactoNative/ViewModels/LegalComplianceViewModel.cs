@@ -64,7 +64,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
         set
         {
             if (Set(ref _acceptPrivacy, value))
-                SaveAcceptanceCommand.RaiseCanExecuteChanged();
+                SaveAcceptanceCommand?.RaiseCanExecuteChanged();
         }
     }
 
@@ -74,7 +74,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
         set
         {
             if (Set(ref _acceptTerms, value))
-                SaveAcceptanceCommand.RaiseCanExecuteChanged();
+                SaveAcceptanceCommand?.RaiseCanExecuteChanged();
         }
     }
 
@@ -141,12 +141,12 @@ public sealed class LegalComplianceViewModel : NotifyBase
                 "Veuillez lire les documents ci-dessous, cocher les deux cases puis enregistrer votre acceptation.";
         }
 
-        SaveAcceptanceCommand.RaiseCanExecuteChanged();
+        SaveAcceptanceCommand?.RaiseCanExecuteChanged();
     }
 
     private bool CanSaveAcceptance()
         => AcceptPrivacy && AcceptTerms && string.IsNullOrEmpty(DocumentsLoadError)
-           && PrivacyText.Length > 0 && TermsText.Length > 0;
+           && !string.IsNullOrEmpty(PrivacyText) && !string.IsNullOrEmpty(TermsText);
 
     private void SaveAcceptance()
     {
