@@ -4,9 +4,11 @@ const Stripe = require("stripe");
  * POST body JSON: { customerId, deviceId }
  * Env: STRIPE_SECRET_KEY
  *
- * Parrainage / mois gratuits : sur le client Stripe, renseigner metadata.free_access_until (ISO 8601 UTC).
- * Le serveur prend le max entre fin de période d'abonnement et free_access_until.
- * Jusqu'à 6 mois : à gérer manuellement ou via webhook (incrément referral_count, recalcul date).
+ * Un abonnement actif n'est accepté que depuis l'appareil enregistré une première fois :
+ * metadata Stripe du client : parafacto_native_device = deviceId (fixé au premier accès OK).
+ * Support : vider cette clé dans le dashboard Stripe (client > Métadonnées) pour transférer de PC.
+ *
+ * Parrainage / mois gratuits : metadata.free_access_until (ISO 8601 UTC).
  */
 exports.handler = async (event) => {
   const headers = {
@@ -42,6 +44,15 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers, body: JSON.stringify({ ok: false, error: "invalid_customer" }) };
   }
 
+  const deviceId = typeof body.deviceId === "string" ? body.deviceId.trim() : "";
+  if (!deviceId || deviceId.length < 8) {
+    return {
+      statusCode: 400,
+      headers,
+      body: JSON.stringify({ ok: false, error: "device_required", reason: "device_required" }),
+    };
+  }
+
   const stripe = new Stripe(secret);
 
   let customer;
@@ -73,8 +84,8 @@ exports.handler = async (event) => {
     }
   }
 
-  let accessUntilSec = periodEndSec;
   const md = customer.metadata || {};
+  let accessUntilSec = periodEndSec;
   if (md.free_access_until) {
     const t = Date.parse(md.free_access_until) / 1000;
     if (!Number.isNaN(t)) {
@@ -83,18 +94,48 @@ exports.handler = async (event) => {
   }
 
   const nowSec = Math.floor(Date.now() / 1000);
-  const ok = accessUntilSec > nowSec;
+  const subscriptionOk = accessUntilSec > nowSec;
   const accessUntil =
     accessUntilSec > 0 ? new Date(accessUntilSec * 1000).toISOString() : null;
+
+  if (!subscriptionOk) {
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        ok: false,
+        accessUntil,
+        hasActiveSubscription: periodEndSec > nowSec,
+        reason: "no_active_period",
+      }),
+    };
+  }
+
+  const bound = (md.parafacto_native_device || "").trim();
+  if (!bound) {
+    await stripe.customers.update(customerId, {
+      metadata: { parafacto_native_device: deviceId },
+    });
+  } else if (bound !== deviceId) {
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        ok: false,
+        accessUntil,
+        hasActiveSubscription: true,
+        reason: "device_already_bound",
+      }),
+    };
+  }
 
   return {
     statusCode: 200,
     headers,
     body: JSON.stringify({
-      ok,
+      ok: true,
       accessUntil,
       hasActiveSubscription: periodEndSec > nowSec,
-      reason: ok ? undefined : "no_active_period",
     }),
   };
 };

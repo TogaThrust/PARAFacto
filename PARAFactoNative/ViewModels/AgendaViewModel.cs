@@ -468,6 +468,8 @@ public sealed class AgendaViewModel : NotifyBase
     public RelayCommand<object?> SelectCalendarDayCommand { get; }
     public RelayCommand ResetLunchToRecurringCommand { get; }
     public RelayCommand EncodeRecurringCommand { get; }
+    public RelayCommand CopyDayRecurringCommand { get; }
+    public RelayCommand DeleteDayCommand { get; }
 
     public AgendaViewModel()
     {
@@ -501,6 +503,8 @@ public sealed class AgendaViewModel : NotifyBase
         SelectCalendarDayCommand = new RelayCommand<object?>(SelectCalendarDay);
         ResetLunchToRecurringCommand = new RelayCommand(ResetLunchToRecurring, () => ShowResetLunchForSelectedDay);
         EncodeRecurringCommand = new RelayCommand(EncodeRecurring, CanEncodeRecurring);
+        CopyDayRecurringCommand = new RelayCommand(CopyDayRecurringUntilDate, CanCopyOrDeleteSelectedDay);
+        DeleteDayCommand = new RelayCommand(DeleteSelectedDay, CanCopyOrDeleteSelectedDay);
 
         _suppressTimeSuggest = true;
         _suppressDurationChoice = true;
@@ -548,10 +552,14 @@ public sealed class AgendaViewModel : NotifyBase
         return d.Date >= DateTime.Today;
     }
 
+    private bool CanCopyOrDeleteSelectedDay() => AppointmentDate.Date >= DateTime.Today;
+
     private void RefreshLunchResetButtonVisibility()
     {
         var iso = AppointmentDate.ToString("yyyy-MM-dd");
         ShowResetLunchForSelectedDay = ResolveLunchOverrideRow(iso) is not null;
+        CopyDayRecurringCommand.RaiseCanExecuteChanged();
+        DeleteDayCommand.RaiseCanExecuteChanged();
     }
 
     /// <summary>Lunch récurrent (paramètres globaux), sans exception jour — pour contrôle avant « retour au récurrent ».</summary>
@@ -808,17 +816,33 @@ ORDER BY nom, prenom;
     {
         if (SelectedPatient is null || TarifChoices.Count == 0) return;
         var s = (SelectedPatient.Statut ?? "").Trim().ToUpperInvariant();
-        AgendaTarifPick? pick = null;
+        AgendaTarifPick? pick;
+
+        // Priorité stricte demandée : BIM/NON BIM/PLEIN -> "... CABINET 30".
         if (s.Contains("NON") && s.Contains("BIM"))
-            pick = TarifChoices.FirstOrDefault(t => t.Label.ToUpperInvariant().Contains("NON") && t.Label.ToUpperInvariant().Contains("BIM"));
+        {
+            pick = TarifChoices.FirstOrDefault(t => string.Equals(t.Label.Trim(), "NON BIM CABINET 30", StringComparison.OrdinalIgnoreCase))
+                   ?? TarifChoices.FirstOrDefault(t => t.Label.ToUpperInvariant().Contains("NON") && t.Label.ToUpperInvariant().Contains("BIM"));
+        }
         else if (s.Contains("PLEIN"))
-            pick = TarifChoices.FirstOrDefault(t => t.Label.ToUpperInvariant().Contains("PLEIN"));
+        {
+            pick = TarifChoices.FirstOrDefault(t => string.Equals(t.Label.Trim(), "PLEIN CABINET 30", StringComparison.OrdinalIgnoreCase))
+                   ?? TarifChoices.FirstOrDefault(t => t.Label.ToUpperInvariant().Contains("PLEIN"));
+        }
         else if (s == "BIM" || (s.Contains("BIM") && !s.Contains("NON")))
-            pick = TarifChoices.FirstOrDefault(t =>
-            {
-                var u = t.Label.ToUpperInvariant();
-                return u.Contains("BIM") && !u.Contains("NON");
-            });
+        {
+            pick = TarifChoices.FirstOrDefault(t => string.Equals(t.Label.Trim(), "BIM CABINET 30", StringComparison.OrdinalIgnoreCase))
+                   ?? TarifChoices.FirstOrDefault(t =>
+                   {
+                       var u = t.Label.ToUpperInvariant();
+                       return u.Contains("BIM") && !u.Contains("NON");
+                   });
+        }
+        else
+        {
+            pick = null;
+        }
+
         SelectedTarif = pick ?? TarifChoices.FirstOrDefault();
     }
 
@@ -2172,6 +2196,185 @@ ORDER BY nom, prenom;
         }
     }
 
+    private void CopyDayRecurringUntilDate()
+    {
+        var sourceDay = AppointmentDate.Date;
+        if (sourceDay < DateTime.Today)
+            return;
+
+        var sourceRows = _repo.ListForDay(sourceDay).OrderBy(r => r.StartTime).ToList();
+        if (sourceRows.Count == 0)
+        {
+            MessageBox.Show("Aucun rendez-vous à copier pour cette journée.", "Agenda — copie journée", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var picker = new CopyDayUntilDateWindow(sourceDay)
+        {
+            Owner = Application.Current?.MainWindow
+        };
+        if (picker.ShowDialog() != true)
+            return;
+
+        var endDate = picker.EndDateInclusive.Date;
+        if (endDate <= sourceDay)
+        {
+            MessageBox.Show("La date de fin doit être postérieure à la journée source.", "Agenda — copie journée", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var created = 0;
+        var skipped = 0;
+        var checkedDays = 0;
+
+        try
+        {
+            for (var day = sourceDay.AddDays(7); day <= endDate; day = day.AddDays(7))
+            {
+                checkedDays++;
+                if (day.Date < DateTime.Today)
+                {
+                    skipped += sourceRows.Count;
+                    continue;
+                }
+
+                if (day.DayOfWeek == DayOfWeek.Sunday || BelgianHolidayHelper.TryGetName(day.Date, out _))
+                {
+                    skipped += sourceRows.Count;
+                    continue;
+                }
+
+                var sameDayAppts = _repo.ListForDay(day);
+                var dayUnav = _unavailRepo.ListForDay(day);
+                var dayIso = day.ToString("yyyy-MM-dd");
+                var dayBusy = new List<AppointmentRow>(sameDayAppts);
+
+                foreach (var src in sourceRows)
+                {
+                    if (!AppointmentScheduling.TryParseTimeToMinutes(src.StartTime, out var startMin))
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    var dur = src.DurationMinutes > 0 ? src.DurationMinutes : 30;
+                    if (startMin < _workdayStartMin || startMin + dur > _workdayClosingMin)
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    if (AppointmentScheduling.HasOverlap(dayBusy, startMin, dur, null)
+                        || AppointmentScheduling.OverlapsUnavailability(dayUnav, startMin, dur)
+                        || (TryGetEffectiveLunchForDay(day.Date, out var ls, out var le)
+                            && AppointmentScheduling.OverlapsHalfOpenBlock(startMin, dur, ls, le)))
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    var hhmm = AppointmentScheduling.FormatMinutesAsHhMm(startMin);
+                    var newId = _repo.Insert(src.PatientId, src.TarifId, dayIso, hhmm, dur, src.RecurrenceSeriesId);
+                    created++;
+                    dayBusy.Add(new AppointmentRow
+                    {
+                        Id = newId,
+                        PatientId = src.PatientId,
+                        TarifId = src.TarifId,
+                        DateIso = dayIso,
+                        StartTime = hhmm,
+                        DurationMinutes = dur,
+                        PatientNom = src.PatientNom,
+                        PatientPrenom = src.PatientPrenom,
+                        RecurrenceSeriesId = src.RecurrenceSeriesId
+                    });
+                }
+            }
+
+            RefreshCalendar();
+            MessageBox.Show(
+                $"Copie terminée.\n\n• Jours traités : {checkedDays}\n• Rendez-vous copiés : {created}\n• Entrées ignorées (conflit / indisponibilité / lunch / hors plage / férié-dimanche) : {skipped}",
+                "Agenda — copie journée",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Agenda — copie journée", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void DeleteSelectedDay()
+    {
+        var selectedDay = AppointmentDate.Date;
+        if (selectedDay < DateTime.Today)
+            return;
+
+        var dayRows = _repo.ListForDay(selectedDay).ToList();
+        if (dayRows.Count == 0)
+        {
+            MessageBox.Show("Aucun rendez-vous à supprimer sur cette journée.", "Agenda — suppression journée", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var scope = ShowActionChoice(
+            "Agenda — suppression journée",
+            "Choisissez la portée :\n\n- Supprimer uniquement cette journée\n- Supprimer aussi les occurrences récurrentes futures liées à cette journée",
+            "Supprimer uniquement cette journée",
+            "Supprimer la journée + récurrences futures");
+
+        if (scope == ActionChoiceResult.Cancel)
+            return;
+
+        var idsToDelete = new HashSet<long>();
+        foreach (var row in dayRows)
+            idsToDelete.Add(row.Id);
+
+        if (scope == ActionChoiceResult.Secondary)
+        {
+            var fromIso = selectedDay.ToString("yyyy-MM-dd");
+            var distinctSeries = dayRows
+                .Select(r => r.RecurrenceSeriesId)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            foreach (var seriesId in distinctSeries)
+            {
+                foreach (var id in _repo.ListIdsInRecurrenceSeriesFromDate(seriesId, fromIso))
+                    idsToDelete.Add(id);
+            }
+        }
+
+        if (idsToDelete.Count == 0)
+            return;
+
+        if (ShowActionChoice(
+                "Agenda — confirmation",
+                $"Confirmer la suppression de {idsToDelete.Count} rendez-vous ?",
+                "Confirmer",
+                "Annuler") != ActionChoiceResult.Primary)
+            return;
+
+        try
+        {
+            foreach (var id in idsToDelete)
+            {
+                _repo.Delete(id);
+                _seanceSvc.DeleteSeancesLinkedToAppointment(id);
+            }
+
+            AgendaAppointmentDeleted?.Invoke(selectedDay);
+            RefreshCalendar();
+            ClearForm();
+            MessageBox.Show("Suppression effectuée.", "Agenda — suppression journée", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Agenda — suppression journée", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void Save()
     {
         if (SelectedPatient is null || SelectedTarif is null) return;
@@ -2261,10 +2464,55 @@ ORDER BY nom, prenom;
         var patientIdForNotify = SelectedPatient.Id;
         try
         {
+            var splitOneHourInTwo = false;
+            if (EditingId == 0 && DurationMinutes == 60)
+            {
+                splitOneHourInTwo =
+                    ShowActionChoice(
+                        "Agenda — séance 1 heure",
+                        "Souhaitez-vous scinder cette séance d'1 heure en 2 séances consécutives de 30 minutes pour le même patient ?",
+                        "Scinder en 2 x 30 min",
+                        "Garder 1 séance de 1 h") == ActionChoiceResult.Primary;
+            }
+
             if (EditingId > 0)
             {
                 var existing = _repo.GetById(EditingId);
                 _repo.Update(EditingId, SelectedPatient.Id, SelectedTarif.Id, iso, timeStr, DurationMinutes, existing?.RecurrenceSeriesId);
+            }
+            else if (splitOneHourInTwo)
+            {
+                var secondStartMin = startMin + 30;
+                var secondTime = AppointmentScheduling.FormatMinutesAsHhMm(secondStartMin);
+
+                // Double sécurité avant insertion des 2 créneaux 30 min.
+                if (AppointmentScheduling.HasOverlap(sameDay, startMin, 30, null)
+                    || AppointmentScheduling.HasOverlap(sameDay, secondStartMin, 30, null)
+                    || AppointmentScheduling.OverlapsUnavailability(unavailDay, startMin, 30)
+                    || AppointmentScheduling.OverlapsUnavailability(unavailDay, secondStartMin, 30))
+                {
+                    MessageBox.Show(
+                        "Impossible de scinder : un conflit est détecté sur au moins un des deux créneaux de 30 minutes.",
+                        "Agenda",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (TryGetEffectiveLunchForDay(AppointmentDate.Date, out var ls2, out var le2)
+                    && (AppointmentScheduling.OverlapsHalfOpenBlock(startMin, 30, ls2, le2)
+                        || AppointmentScheduling.OverlapsHalfOpenBlock(secondStartMin, 30, ls2, le2)))
+                {
+                    MessageBox.Show(
+                        "Impossible de scinder : au moins un des deux créneaux de 30 minutes chevauche la pause lunch.",
+                        "Agenda",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                _repo.Insert(SelectedPatient.Id, SelectedTarif.Id, iso, timeStr, 30);
+                _repo.Insert(SelectedPatient.Id, SelectedTarif.Id, iso, secondTime, 30);
             }
             else
                 _repo.Insert(SelectedPatient.Id, SelectedTarif.Id, iso, timeStr, DurationMinutes);

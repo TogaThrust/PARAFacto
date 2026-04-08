@@ -3,34 +3,123 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Paiement confirmé</title>
+  <title>Paiement confirmé — PARAFacto Native</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
-    code { display: block; background: #f1f5f9; padding: 1rem; border-radius: 8px; word-break: break-all; margin: 1rem 0; }
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    .masked {
+      display: block;
+      background: #f1f5f9;
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      font-family: ui-monospace, monospace;
+      letter-spacing: 0.15em;
+      color: #64748b;
+      user-select: none;
+    }
+    .btn {
+      display: inline-block;
+      padding: 0.65rem 1.25rem;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 0.5rem 0.5rem 0.5rem 0;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .muted { color: #64748b; font-size: 0.9rem; margin-top: 0.75rem; }
+    .ok { color: #15803d; font-size: 0.9rem; margin-top: 0.5rem; }
+    .err { color: #b91c1c; font-size: 0.9rem; margin-top: 0.5rem; }
+    a { color: #2563eb; }
   </style>
 </head>
 <body>
   <h1>Merci pour votre souscription</h1>
-  <p>Identifiant à copier dans PARAFacto Native (menu ou fenêtre au premier lancement) :</p>
-  <code id="out">Chargement…</code>
-  <p><a href="/">Retour</a></p>
+  <p>Votre identifiant d’activation pour <strong>PARAFacto Native</strong> n’est pas affiché (confidentialité). Utilisez le bouton ci-dessous pour le <strong>copier</strong>, puis collez-le dans l’application au premier lancement.</p>
+
+  <span class="masked" id="masked" aria-hidden="true">••••••••••••••••••••••••</span>
+  <div>
+    <button type="button" class="btn" id="copyBtn" disabled>Copier l’identifiant</button>
+  </div>
+  <p id="copyStatus" class="ok" style="display:none;"></p>
+
+  <p class="muted">Ensuite : installez l’application et collez l’identifiant dans le champ masqué au démarrage.</p>
+  <p><a href="/">← Retour à l’accueil (téléchargement PARAFacto Native)</a></p>
+
   <script>
     (function () {
+      var fullId = null;
       var params = new URLSearchParams(window.location.search);
       var sid = params.get("session_id");
-      var el = document.getElementById("out");
+      var copyBtn = document.getElementById("copyBtn");
+      var copyStatus = document.getElementById("copyStatus");
+
+      function setError(msg) {
+        copyBtn.disabled = true;
+        document.getElementById("masked").textContent = "(erreur)";
+        var p = document.createElement("p");
+        p.className = "err";
+        p.textContent = msg;
+        copyBtn.parentNode.insertBefore(p, copyBtn);
+      }
+
       if (!sid) {
-        el.textContent = "Aucune session (ajoutez ?session_id={CHECKOUT_SESSION_ID} à l’URL de succès Stripe).";
+        setError("URL de succès incomplète : ajoutez ?session_id={CHECKOUT_SESSION_ID} dans Stripe (URL après paiement).");
         return;
       }
+
       fetch("/.netlify/functions/session-customer?session_id=" + encodeURIComponent(sid))
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          el.textContent = data.customerId || ("Erreur : " + (data.error || JSON.stringify(data)));
+          var id = data.customerId;
+          if (!id || typeof id !== "string" || !id.startsWith("cus_")) {
+            setError("Erreur : " + (data.error || JSON.stringify(data)));
+            return;
+          }
+          fullId = id;
+          copyBtn.disabled = false;
         })
         .catch(function (e) {
-          el.textContent = "Erreur réseau : " + e;
+          setError("Erreur réseau : " + e);
         });
+
+      copyBtn.addEventListener("click", function () {
+        if (!fullId) return;
+        copyStatus.style.display = "none";
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(fullId).then(function () {
+            copyStatus.textContent = "Copié. Ouvrez PARAFacto Native et collez (Ctrl+V) dans le champ d’activation.";
+            copyStatus.style.display = "block";
+          }).catch(function () {
+            fallbackCopy(fullId);
+          });
+        } else {
+          fallbackCopy(fullId);
+        }
+      });
+
+      function fallbackCopy(text) {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand("copy");
+          copyStatus.textContent = "Copié. Collez dans PARAFacto Native.";
+          copyStatus.style.display = "block";
+        } catch (e) {
+          copyStatus.textContent = "Copie impossible : sélectionnez ce texte technique — " + text;
+          copyStatus.className = "err";
+          copyStatus.style.display = "block";
+        }
+        document.body.removeChild(ta);
+      }
     })();
   </script>
 </body>

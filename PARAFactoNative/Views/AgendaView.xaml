@@ -192,6 +192,8 @@
                         <Button Content="Enregistrer" Command="{Binding SaveCommand}" Padding="12,6" Margin="0,0,8,8"/>
                         <Button Content="Supprimer" Command="{Binding DeleteCommand}" Padding="12,6" Margin="0,0,8,8"/>
                         <Button Content="Encodage récurrent" Command="{Binding EncodeRecurringCommand}" Padding="12,6" Margin="0,0,8,8"/>
+                        <Button Content="Copier journée jusqu'à date" Command="{Binding CopyDayRecurringCommand}" Padding="12,6" Margin="0,0,8,8"/>
+                        <Button Content="Supprimer journée" Command="{Binding DeleteDayCommand}" Padding="12,6" Margin="0,0,8,8"/>
                     </WrapPanel>
                     <TextBlock Foreground="#64748B" FontSize="11" TextWrapping="Wrap"
                                Text="Le tarif est prérempli selon le statut du patient (fiche). Vous pouvez le changer."/>

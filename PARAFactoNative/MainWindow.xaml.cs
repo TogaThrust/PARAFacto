@@ -615,6 +615,29 @@ public partial class MainWindow
         return d.ToString("MMMM yyyy", CultureInfo.GetCultureInfo("fr-BE"));
     }
 
+    private const string StripeCustomerPortalUrl =
+        "https://billing.stripe.com/p/login/00waEQ7sSc84cEabmeak000";
+
+    private void StripeCustomerPortal_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = StripeCustomerPortalUrl,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Impossible d'ouvrir le portail clients : {ex.Message}",
+                "PARAFacto Native",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+    }
+
         private void DiagDb_Click(object sender, RoutedEventArgs e)
         {
             // Ouvre le dossier AppData\Local\PARAFactoNative (où se trouve parafacto.sqlite)

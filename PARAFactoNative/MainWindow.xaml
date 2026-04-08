@@ -300,108 +300,155 @@
                 <views:AgendaView DataContext="{Binding Agenda}" />
             </TabItem>
             <TabItem Header="Données techniques">
-                <ScrollViewer Margin="10" VerticalScrollBarVisibility="Auto">
-                    <Border BorderBrush="#DDD" BorderThickness="1" Padding="12" CornerRadius="6">
-                        <StackPanel HorizontalAlignment="Right" Width="560">
-                            <TextBlock Text="Email d'envoi de sauvegarde des fichiers journaliers et factures"
-                                       HorizontalAlignment="Right"
-                                       TextAlignment="Right"
-                                       TextWrapping="Wrap"
-                                       Margin="0,0,0,10"/>
+                <ScrollViewer Margin="10"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto">
+                    <!-- DockPanel : panneau gauche largeur fixe (évite qu'il disparaisse avec certaines mesures de grille *). -->
+                    <DockPanel LastChildFill="True"
+                               MaxWidth="1180"
+                               HorizontalAlignment="Left"
+                               UseLayoutRounding="True">
 
-                            <Grid HorizontalAlignment="Right" Width="560">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="180"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Email :" Margin="0,0,8,0" TextAlignment="Right"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding Console.RecipientEmail, UpdateSourceTrigger=PropertyChanged}"
-                                         HorizontalContentAlignment="Left"
-                                         TextAlignment="Left"/>
-                            </Grid>
-
-                            <CheckBox Content="Utiliser SMTP (Gmail/Autre) si Outlook absent"
-                                      IsChecked="{Binding Console.UseSmtp}"
-                                      HorizontalAlignment="Right"
-                                      Margin="0,10,0,0"/>
-
-                            <StackPanel Margin="0,10,0,0" HorizontalAlignment="Right" Width="560">
-                                <StackPanel.Style>
-                                    <Style TargetType="StackPanel">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Console.UseSmtp}" Value="True">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </StackPanel.Style>
-
-                                <Grid HorizontalAlignment="Right" Margin="0,0,0,4" Width="560">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="180"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="SMTP host :" Margin="0,0,8,0" TextAlignment="Right"/>
-                                    <TextBox Grid.Column="1"
-                                             Text="{Binding Console.SmtpHost, UpdateSourceTrigger=PropertyChanged}"
-                                             HorizontalContentAlignment="Left"
-                                             TextAlignment="Left"/>
-                                </Grid>
-
-                                <Grid HorizontalAlignment="Right" Margin="0,0,0,4" Width="560">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="180"/>
-                                        <ColumnDefinition Width="90"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Port :" Margin="0,0,8,0" TextAlignment="Right"/>
-                                    <TextBox Grid.Column="1"
-                                             Text="{Binding Console.SmtpPort, UpdateSourceTrigger=PropertyChanged}"
-                                             Width="90"
-                                             HorizontalContentAlignment="Left"
-                                             TextAlignment="Left"/>
-                                    <CheckBox Grid.Column="2" Content="SSL/TLS" IsChecked="{Binding Console.SmtpEnableSsl}" Margin="12,0,0,0" VerticalAlignment="Center"/>
-                                </Grid>
-
-                                <Grid HorizontalAlignment="Right" Margin="0,0,0,4" Width="560">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="180"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Utilisateur :" Margin="0,0,8,0" TextAlignment="Right"/>
-                                    <TextBox Grid.Column="1"
-                                             Text="{Binding Console.SmtpUsername, UpdateSourceTrigger=PropertyChanged}"
-                                             HorizontalContentAlignment="Left"
-                                             TextAlignment="Left"/>
-                                </Grid>
-
-                                <Grid HorizontalAlignment="Right" Margin="0,0,0,4" Width="560">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="180"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="From (optionnel) :" Margin="0,0,8,0" TextAlignment="Right"/>
-                                    <TextBox Grid.Column="1"
-                                             Text="{Binding Console.SmtpFromEmail, UpdateSourceTrigger=PropertyChanged}"
-                                             HorizontalContentAlignment="Left"
-                                             TextAlignment="Left"/>
-                                </Grid>
-
-                                <Grid HorizontalAlignment="Right" Width="560">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="180"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Mot de passe app :" Margin="0,0,8,0" TextAlignment="Right"/>
-                                    <PasswordBox Grid.Column="1"
-                                                 views:PasswordBoxAssistant.BindPassword="True"
-                                                 views:PasswordBoxAssistant.BoundPassword="{Binding Console.SmtpPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                </Grid>
+                        <!-- Gauche : portail clients Stripe -->
+                        <Border DockPanel.Dock="Left"
+                                Width="380"
+                                MinWidth="300"
+                                Margin="0,0,24,0"
+                                BorderBrush="#DDD"
+                                BorderThickness="1"
+                                Padding="16"
+                                CornerRadius="6"
+                                VerticalAlignment="Top"
+                                Background="#FAFAFA">
+                            <StackPanel>
+                                <TextBlock Text="Abonnement PARAFacto"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,6"/>
+                                <TextBlock Text="Portail clients Stripe"
+                                           FontSize="13"
+                                           Foreground="#475569"
+                                           Margin="0,0,0,12"/>
+                                <TextBlock TextWrapping="Wrap"
+                                           Foreground="#334155"
+                                           LineHeight="20"
+                                           Margin="0,0,0,16"
+                                           Text="Permet aux abonnés de gérer leur carte bancaire, leurs factures et leur abonnement (selon les options activées dans Stripe)."/>
+                                <Button Content="Accès portail clients"
+                                        Click="StripeCustomerPortal_Click"
+                                        HorizontalAlignment="Stretch"
+                                        Padding="18,10"
+                                        MinHeight="40"
+                                        FontSize="13"/>
                             </StackPanel>
-                        </StackPanel>
-                    </Border>
+                        </Border>
+
+                        <!-- Droite : e-mail et SMTP -->
+                        <Border MinWidth="360"
+                                BorderBrush="#DDD"
+                                BorderThickness="1"
+                                Padding="12"
+                                CornerRadius="6"
+                                VerticalAlignment="Top">
+                            <StackPanel>
+                                <TextBlock Text="Email d'envoi de sauvegarde des fichiers journaliers et factures"
+                                           TextWrapping="Wrap"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,10"/>
+
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Email :" Margin="0,0,10,0"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding Console.RecipientEmail, UpdateSourceTrigger=PropertyChanged}"
+                                             HorizontalContentAlignment="Left"
+                                             TextAlignment="Left"/>
+                                </Grid>
+
+                                <CheckBox Content="Utiliser SMTP (Gmail/Autre) si Outlook absent"
+                                          IsChecked="{Binding Console.UseSmtp}"
+                                          Margin="0,12,0,0"/>
+
+                                <StackPanel Margin="0,10,0,0">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Console.UseSmtp}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="SMTP host :" Margin="0,0,10,0"/>
+                                        <TextBox Grid.Column="1"
+                                                 Text="{Binding Console.SmtpHost, UpdateSourceTrigger=PropertyChanged}"
+                                                 HorizontalContentAlignment="Left"
+                                                 TextAlignment="Left"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="90"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Port :" Margin="0,0,10,0"/>
+                                        <TextBox Grid.Column="1"
+                                                 Text="{Binding Console.SmtpPort, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="90"
+                                                 HorizontalContentAlignment="Left"
+                                                 TextAlignment="Left"/>
+                                        <CheckBox Grid.Column="2" Content="SSL/TLS" IsChecked="{Binding Console.SmtpEnableSsl}" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Utilisateur :" Margin="0,0,10,0"/>
+                                        <TextBox Grid.Column="1"
+                                                 Text="{Binding Console.SmtpUsername, UpdateSourceTrigger=PropertyChanged}"
+                                                 HorizontalContentAlignment="Left"
+                                                 TextAlignment="Left"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="From (optionnel) :" Margin="0,0,10,0"/>
+                                        <TextBox Grid.Column="1"
+                                                 Text="{Binding Console.SmtpFromEmail, UpdateSourceTrigger=PropertyChanged}"
+                                                 HorizontalContentAlignment="Left"
+                                                 TextAlignment="Left"/>
+                                    </Grid>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Mot de passe app :" Margin="0,0,10,0"/>
+                                        <PasswordBox Grid.Column="1"
+                                                     views:PasswordBoxAssistant.BindPassword="True"
+                                                     views:PasswordBoxAssistant.BoundPassword="{Binding Console.SmtpPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DockPanel>
                 </ScrollViewer>
             </TabItem>
         </TabControl>

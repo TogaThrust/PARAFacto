@@ -1,0 +1,49 @@
+<Window x:Class="PARAFactoNative.Views.CopyDayUntilDateWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Agenda — copie journée"
+        Height="240"
+        Width="460"
+        MinWidth="420"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="White"
+        ShowInTaskbar="False">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Copier cette journée complète sur les semaines suivantes."
+                   Style="{StaticResource DialogCaptionTextBlock}"/>
+
+        <TextBlock Grid.Row="1"
+                   Margin="0,10,0,0"
+                   TextWrapping="Wrap"
+                   Style="{StaticResource DialogMessageTextBlock}"
+                   Text="{Binding SourceDayLabel}"/>
+
+        <StackPanel Grid.Row="2" Margin="0,14,0,0">
+            <TextBlock Text="Jusqu'à la date (incluse) :" Margin="0,0,0,6"/>
+            <DatePicker SelectedDate="{Binding EndDateInclusive, UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="4"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,16,0,0">
+            <Button Content="Annuler"
+                    Style="{StaticResource DialogChoiceButton}"
+                    IsCancel="True"
+                    Click="Cancel_OnClick"/>
+            <Button Content="Copier"
+                    Style="{StaticResource DialogChoiceButton}"
+                    Margin="8,0,0,0"
+                    Click="Confirm_OnClick"/>
+        </StackPanel>
+    </Grid>
+</Window>

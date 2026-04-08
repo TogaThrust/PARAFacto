@@ -97,7 +97,15 @@
                         <TextBlock Margin="0,6,0,8" Foreground="#666" Text="{Binding Factures.SelectedPeriodLabel}" TextWrapping="Wrap"/>
                         <Button Content="Supprimer toutes les factures du mois" Command="{Binding Factures.DeleteMonthInvoicesCommand}" Margin="0,0,0,8"/>
                         <Separator Margin="0,8,0,8"/>
-                        <Button Content="Indexer destinataires (PDF)" Command="{Binding Factures.RelinkPatientsCommand}" />
+                        <WrapPanel VerticalAlignment="Top" Margin="0,0,0,2">
+                            <Button Content="Indexer destinataires (PDF)"
+                                    Command="{Binding Factures.RelinkPatientsCommand}" />
+                            <TextBlock Margin="14,4,0,0"
+                                       MaxWidth="260"
+                                       Foreground="#555"
+                                       TextWrapping="Wrap"
+                                       Text="Un double clic sur une facture impayée vous permet d'envoyer un message Whatsapp ou mail à la personne concernée (si encodé dans la DB)"/>
+                        </WrapPanel>
                         <Separator Margin="0,8,0,8"/>
                         <TextBlock FontSize="14" FontWeight="Bold" Text="Détails"/>
                         <TextBlock Margin="0,8,0,0" Text="{Binding Factures.SelectedDetails}" TextWrapping="Wrap"/>

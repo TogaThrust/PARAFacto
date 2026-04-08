@@ -19,6 +19,7 @@ public sealed class InvoicePdfService
     private const string ProviderAddress1 = "132, Rue Jules Destrée";
     private const string ProviderAddress2 = "7390 Quaregnon";
     private const string ProviderInami = "6-09258-96-801";
+    private const string ProviderVat = "BE1033.597.257";
     private const string ProviderBce = "BE 1033.597.257";
     private const string ProviderPhone = "0470/17.95.17";
     private const string ProviderEmail = "lauragrenier.logo@gmail.com";
@@ -137,6 +138,7 @@ public sealed class InvoicePdfService
                             left.Item().Text(ProviderAddress1);
                             left.Item().Text(ProviderAddress2);
                             left.Item().Text($"INAMI {ProviderInami}");
+                            left.Item().Text($"Num TVA : {ProviderVat}");
                             left.Item().Text($"Téléphone {ProviderPhone}");
                             left.Item().Text($"Email : {ProviderEmail}");
                             left.Item().Text($"IBAN {ProviderIban}");
@@ -314,6 +316,7 @@ public sealed class InvoicePdfService
                             left.Item().Text($"{ProviderAddress2}   Réf. facture : {refInvoice.InvoiceNo}");
                             left.Item().Text($"{ProviderBce}   Échéance : {dueDate:dd-MM-yyyy}");
                             left.Item().Text($"INAMI {ProviderInami}   Période : {MonthName(refInvoice.Period)}");
+                            left.Item().Text($"Num TVA : {ProviderVat}");
                             left.Item().Text($"Téléphone {ProviderPhone}");
                             left.Item().Text($"Email : {ProviderEmail}");
                             left.Item().Text($"IBAN {ProviderIbanCredit} - LAURA GRENIER - LOGOPEDE SCOMM");

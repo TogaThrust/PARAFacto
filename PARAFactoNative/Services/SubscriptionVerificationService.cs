@@ -123,6 +123,35 @@ public static class SubscriptionVerificationService
         }
     }
 
+    private static string ResolveBlockedUserMessage(LicenseCheckResponseDto dto)
+    {
+        var r = (dto.Reason ?? "").Trim();
+        if (string.Equals(r, "device_already_bound", StringComparison.OrdinalIgnoreCase))
+        {
+            return
+                "Cet abonnement est déjà activé sur un autre ordinateur (un seul appareil par abonnement). " +
+                "Pour changer de PC, contactez le support PARAFacto.";
+        }
+
+        if (string.Equals(r, "device_required", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Identifiant d'appareil manquant. Réessayez ou réinstallez l'application.";
+        }
+
+        if (string.Equals(r, "customer_not_found", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(r, "deleted", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Identifiant client inconnu ou supprimé. Vérifiez le code reçu après paiement.";
+        }
+
+        if (string.Equals(r, "no_active_period", StringComparison.OrdinalIgnoreCase))
+        {
+            return "L'abonnement n'est pas à jour ou aucune période payée n'est active. Régularisez le paiement pour continuer.";
+        }
+
+        return "L'abonnement n'est pas à jour ou aucune période payée n'est active. Régularisez le paiement pour continuer.";
+    }
+
     private static bool ShouldSkipValidation()
     {
         var env = Environment.GetEnvironmentVariable("PARAFACTO_SKIP_SUBSCRIPTION");
@@ -213,7 +242,7 @@ public static class SubscriptionVerificationService
             return new VerifyOutcome(
                 VerifyStatus.Blocked,
                 accessUntil,
-                "L'abonnement n'est pas à jour ou aucune période payée n'est active. Régularisez le paiement pour continuer.");
+                ResolveBlockedUserMessage(dto));
         }
         catch (Exception)
         {

@@ -32,10 +32,14 @@
                    Margin="0,0,0,12"/>
 
         <StackPanel Grid.Row="2" Margin="0,0,0,12">
-            <TextBlock Text="Identifiant client Stripe (cus_…)" Margin="0,0,0,4" Opacity="0.85"/>
-            <TextBox x:Name="CustomerIdBox"
-                     FontFamily="Consolas"
-                     Padding="8,6"/>
+            <TextBlock TextWrapping="Wrap" Margin="0,0,0,4" Opacity="0.85">
+                <Run Text="Identifiant d'activation (cus_…) : saisie masquée. Vous pouvez "/>
+                <Run FontWeight="SemiBold" Text="coller"/>
+                <Run Text=" depuis l'e-mail ; l'identifiant n'apparaît pas à l'écran et n'est pas lisible par copie depuis ce champ."/>
+            </TextBlock>
+            <PasswordBox x:Name="CustomerIdPasswordBox"
+                         FontFamily="Consolas"
+                         Padding="8,6"/>
         </StackPanel>
 
         <StackPanel Grid.Row="3"

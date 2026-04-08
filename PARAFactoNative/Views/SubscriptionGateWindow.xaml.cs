@@ -16,7 +16,8 @@ public partial class SubscriptionGateWindow : Window
         _paymentPageUrl = paymentPageUrl;
         TitleText.Text = title;
         BodyText.Text = body;
-        CustomerIdBox.Text = existingCustomerId ?? "";
+        if (!string.IsNullOrWhiteSpace(existingCustomerId))
+            CustomerIdPasswordBox.Password = existingCustomerId.Trim();
 
         if (string.IsNullOrWhiteSpace(paymentPageUrl))
             PaymentButton.Visibility = Visibility.Collapsed;
@@ -35,8 +36,8 @@ public partial class SubscriptionGateWindow : Window
         var w = new SubscriptionGateWindow(
             titleOverride ?? "Configurer l'abonnement",
             bodyOverride ?? (
-                "Après souscription sur le site, vous recevez un identifiant client Stripe (commençant par cus_). " +
-                "Collez-le ci-dessous pour activer l'application sur cet ordinateur."),
+                "Après souscription sur le site, vous recevez un identifiant (cus_…). Collez-le dans le champ masqué ci-dessous. " +
+                "Chaque abonnement n'est utilisable que sur un seul ordinateur ; le lien avec cet appareil est enregistré côté serveur PARAFacto / Stripe."),
             paymentPageUrl,
             prefilledCustomerId);
         if (owner != null)
@@ -52,7 +53,7 @@ public partial class SubscriptionGateWindow : Window
 
     private void Save_OnClick(object sender, RoutedEventArgs e)
     {
-        var id = CustomerIdBox.Text?.Trim() ?? "";
+        var id = CustomerIdPasswordBox.Password?.Trim() ?? "";
         if (string.IsNullOrEmpty(id) || !id.StartsWith("cus_", StringComparison.Ordinal))
         {
             MessageBox.Show(

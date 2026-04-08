@@ -13,6 +13,11 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Important pour le flux d'activation:
+        // tant que la MainWindow n'est pas créée, l'app ne doit pas se fermer
+        // automatiquement quand une boîte de dialogue se ferme.
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
             LogAndShow("Erreur non gérée", args.ExceptionObject as Exception);
         DispatcherUnhandledException += (_, args) =>
@@ -104,6 +109,7 @@ public partial class App : Application
         {
             var main = new MainWindow();
             MainWindow = main;
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
             main.Show();
         }
         catch (Exception ex)
