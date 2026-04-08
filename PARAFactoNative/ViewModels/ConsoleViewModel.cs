@@ -23,6 +23,7 @@ namespace PARAFactoNative.ViewModels;
 /// </summary>
 public sealed class ConsoleViewModel : NotifyBase
 {
+    private const string InstallerDownloadUrl = "https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe";
     private bool _isInitializing;
     // Navigation/events (consommés par MainWindow.xaml.cs)
     public event Action? RequestNewPatientRequested;
@@ -394,6 +395,7 @@ public sealed class ConsoleViewModel : NotifyBase
     public RelayCommand OpenMonthFolderCommand { get; }
     public RelayCommand OpenLastMutualMonthFolderCommand { get; }
     public RelayCommand ImportAgendaCommand { get; }
+    public RelayCommand OpenInstallerDownloadCommand { get; }
 
     public ConsoleViewModel()
     {
@@ -416,6 +418,7 @@ OpenWorkspaceFolderCommand = new RelayCommand(() => RequestOpenWorkspaceFolderRe
 OpenMonthFolderCommand = new RelayCommand(() => RequestOpenMonthFolderRequested?.Invoke(CurrentPeriod), () => !IsBusy);
 OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualMonthFolderRequested?.Invoke(), () => !IsBusy);
         ImportAgendaCommand = new RelayCommand(ImportAgendaForSelectedDay, () => !IsBusy);
+        OpenInstallerDownloadCommand = new RelayCommand(OpenInstallerDownloadPage, () => !IsBusy);
 
         var ms = _settings.LoadMailSettings();
         _recipientEmail = ms.RecipientEmail;
@@ -952,6 +955,26 @@ Voulez-vous l'imprimer maintenant ?",
         catch (Exception ex)
         {
             MessageBox.Show($"Le PDF a bien été généré, mais l'impression n'a pas pu être lancée.\n\n{ex.Message}", "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void OpenInstallerDownloadPage()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = InstallerDownloadUrl,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Impossible d'ouvrir la page de téléchargement : {ex.Message}",
+                "PARAFacto",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
         }
     }
 

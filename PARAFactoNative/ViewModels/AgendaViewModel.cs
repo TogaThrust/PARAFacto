@@ -776,16 +776,37 @@ ORDER BY nom, prenom;
     private void LoadTarifChoices()
     {
         TarifChoices.Clear();
-        foreach (var p in BuildStatutTarifPicks(_tarifs.GetAll().Where(t => t.Active).ToList()))
+        foreach (var p in BuildStatutTarifPicks(_tarifs.GetAll().ToList()))
             TarifChoices.Add(p);
 
         SelectedTarif ??= TarifChoices.FirstOrDefault();
     }
 
-    /// <summary>Ordre : NON BIM, BIM, PLEIN — aligné sur les libellés en base.</summary>
+    /// <summary>Ordre : NON BIM/BIM/PLEIN en priorisant les variantes CABINET 30.</summary>
     private static IEnumerable<AgendaTarifPick> BuildStatutTarifPicks(List<Tarif> tarifs)
     {
         AgendaTarifPick? nonBim = null, bim = null, plein = null;
+
+        static bool IsCabinet30(string label)
+        {
+            var u = (label ?? "").ToUpperInvariant();
+            return u.Contains("CABINET") && u.Contains("30");
+        }
+
+        // 1) priorité stricte aux libellés CABINET 30
+        foreach (var t in tarifs)
+        {
+            var u = (t.Label ?? "").ToUpperInvariant();
+            if (!IsCabinet30(t.Label ?? "")) continue;
+            if (u.Contains("NON") && u.Contains("BIM"))
+                nonBim ??= new AgendaTarifPick { Id = t.Id, Label = t.Label ?? "" };
+            else if (u.Contains("PLEIN"))
+                plein ??= new AgendaTarifPick { Id = t.Id, Label = t.Label ?? "" };
+            else if (u.Contains("BIM") && !u.Contains("NON"))
+                bim ??= new AgendaTarifPick { Id = t.Id, Label = t.Label ?? "" };
+        }
+
+        // 2) fallback historique
         foreach (var t in tarifs)
         {
             var u = (t.Label ?? "").ToUpperInvariant();
@@ -818,20 +839,41 @@ ORDER BY nom, prenom;
         var s = (SelectedPatient.Statut ?? "").Trim().ToUpperInvariant();
         AgendaTarifPick? pick;
 
+        static bool IsCabinet30Label(string label)
+        {
+            var u = (label ?? "").ToUpperInvariant();
+            return u.Contains("CABINET") && u.Contains("30");
+        }
+
         // Priorité stricte demandée : BIM/NON BIM/PLEIN -> "... CABINET 30".
         if (s.Contains("NON") && s.Contains("BIM"))
         {
             pick = TarifChoices.FirstOrDefault(t => string.Equals(t.Label.Trim(), "NON BIM CABINET 30", StringComparison.OrdinalIgnoreCase))
+                   ?? TarifChoices.FirstOrDefault(t =>
+                   {
+                       var u = t.Label.ToUpperInvariant();
+                       return u.Contains("NON") && u.Contains("BIM") && IsCabinet30Label(t.Label);
+                   })
                    ?? TarifChoices.FirstOrDefault(t => t.Label.ToUpperInvariant().Contains("NON") && t.Label.ToUpperInvariant().Contains("BIM"));
         }
         else if (s.Contains("PLEIN"))
         {
             pick = TarifChoices.FirstOrDefault(t => string.Equals(t.Label.Trim(), "PLEIN CABINET 30", StringComparison.OrdinalIgnoreCase))
+                   ?? TarifChoices.FirstOrDefault(t =>
+                   {
+                       var u = t.Label.ToUpperInvariant();
+                       return u.Contains("PLEIN") && IsCabinet30Label(t.Label);
+                   })
                    ?? TarifChoices.FirstOrDefault(t => t.Label.ToUpperInvariant().Contains("PLEIN"));
         }
         else if (s == "BIM" || (s.Contains("BIM") && !s.Contains("NON")))
         {
             pick = TarifChoices.FirstOrDefault(t => string.Equals(t.Label.Trim(), "BIM CABINET 30", StringComparison.OrdinalIgnoreCase))
+                   ?? TarifChoices.FirstOrDefault(t =>
+                   {
+                       var u = t.Label.ToUpperInvariant();
+                       return u.Contains("BIM") && !u.Contains("NON") && IsCabinet30Label(t.Label);
+                   })
                    ?? TarifChoices.FirstOrDefault(t =>
                    {
                        var u = t.Label.ToUpperInvariant();
@@ -2343,6 +2385,29 @@ ORDER BY nom, prenom;
             {
                 foreach (var id in _repo.ListIdsInRecurrenceSeriesFromDate(seriesId, fromIso))
                     idsToDelete.Add(id);
+            }
+
+            // Fallback pour les RDV copiés sans serie explicite :
+            // supprimer les occurrences futures "liées" par même patient/tarif/heure/durée.
+            var futureRows = _repo.ListBetweenInclusive(fromIso, "9999-12-31")
+                .Where(r =>
+                {
+                    if (!DateTime.TryParseExact(r.DateIso, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
+                        return false;
+                    return d.Date >= selectedDay && d.Date >= DateTime.Today;
+                })
+                .ToList();
+
+            foreach (var src in dayRows)
+            {
+                foreach (var fr in futureRows)
+                {
+                    if (fr.PatientId != src.PatientId) continue;
+                    if (fr.TarifId != src.TarifId) continue;
+                    if (!string.Equals(NormalizeTime(fr.StartTime), NormalizeTime(src.StartTime), StringComparison.Ordinal)) continue;
+                    if ((fr.DurationMinutes > 0 ? fr.DurationMinutes : 30) != (src.DurationMinutes > 0 ? src.DurationMinutes : 30)) continue;
+                    idsToDelete.Add(fr.Id);
+                }
             }
         }
 
