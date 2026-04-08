@@ -177,6 +177,7 @@
                                            Text="Nouvelle version disponible, cliquez ici pour télécharger le fichier d'installation"
                                            Cursor="Hand"
                                            TextDecorations="Underline"
+                                           Visibility="{Binding Console.IsUpdateAvailable, Converter={StaticResource BoolToVisibility}}"
                                            ToolTip="Ouvrir la page de téléchargement de l'installateur">
                                     <TextBlock.InputBindings>
                                         <MouseBinding Gesture="LeftClick" Command="{Binding Console.OpenInstallerDownloadCommand}"/>

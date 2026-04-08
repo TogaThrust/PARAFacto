@@ -7,6 +7,9 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.IO;
+using System.Net.Http;
+using System.Reflection;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -24,6 +27,8 @@ namespace PARAFactoNative.ViewModels;
 public sealed class ConsoleViewModel : NotifyBase
 {
     private const string InstallerDownloadUrl = "https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe";
+    private const string VersionInfoUrl = "https://parafacto.netlify.app/app-version.json";
+    private static readonly HttpClient UpdateHttpClient = new();
     private bool _isInitializing;
     // Navigation/events (consommés par MainWindow.xaml.cs)
     public event Action? RequestNewPatientRequested;
@@ -397,6 +402,13 @@ public sealed class ConsoleViewModel : NotifyBase
     public RelayCommand ImportAgendaCommand { get; }
     public RelayCommand OpenInstallerDownloadCommand { get; }
 
+    private bool _isUpdateAvailable;
+    public bool IsUpdateAvailable
+    {
+        get => _isUpdateAvailable;
+        private set => Set(ref _isUpdateAvailable, value);
+    }
+
     public ConsoleViewModel()
     {
         _isInitializing = true;
@@ -450,6 +462,35 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
         OnPropertyChanged(nameof(SmtpPassword));
 
         ReloadRefs();
+        _ = CheckForUpdateAsync();
+    }
+
+    private async Task CheckForUpdateAsync()
+    {
+        try
+        {
+            var localVersion = Assembly.GetExecutingAssembly().GetName().Version;
+            if (localVersion is null) return;
+
+            using var stream = await UpdateHttpClient.GetStreamAsync(VersionInfoUrl).ConfigureAwait(false);
+            using var doc = await JsonDocument.ParseAsync(stream).ConfigureAwait(false);
+            if (!doc.RootElement.TryGetProperty("latestVersion", out var latestProp)) return;
+
+            var latestRaw = latestProp.GetString();
+            if (string.IsNullOrWhiteSpace(latestRaw)) return;
+            if (!Version.TryParse(latestRaw.Trim(), out var latestVersion)) return;
+
+            // Retour UI thread pour notifier WPF proprement.
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                IsUpdateAvailable = latestVersion > localVersion;
+                OpenInstallerDownloadCommand.RaiseCanExecuteChanged();
+            });
+        }
+        catch
+        {
+            // Vérification silencieuse : en cas d'échec réseau, on n'affiche pas de faux positif.
+        }
     }
 
     private void PersistMailSettings()

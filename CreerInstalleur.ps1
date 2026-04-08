@@ -54,6 +54,65 @@ function Resolve-Project {
     return $null
 }
 
+function Get-ProjectVersion {
+    param([string]$CsprojPath)
+    $raw = Get-Content -Path $CsprojPath -Raw -Encoding UTF8
+    $m = [regex]::Match($raw, "<Version>\s*([^<\s]+)\s*</Version>", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    if (-not $m.Success) {
+        return [Version]::new(1, 0, 0)
+    }
+    $txt = $m.Groups[1].Value.Trim()
+    $v = $null
+    if (-not [Version]::TryParse($txt, [ref]$v)) {
+        throw "Version invalide dans le csproj: '$txt'. Format attendu: major.minor.patch"
+    }
+    return $v
+}
+
+function Format-Version3 {
+    param([Version]$VersionValue)
+    $build = if ($VersionValue.Build -ge 0) { $VersionValue.Build } else { 0 }
+    return "{0}.{1}.{2}" -f $VersionValue.Major, $VersionValue.Minor, $build
+}
+
+function Increment-VersionPatch {
+    param([Version]$VersionValue)
+    $build = if ($VersionValue.Build -ge 0) { $VersionValue.Build } else { 0 }
+    return [Version]::new($VersionValue.Major, $VersionValue.Minor, $build + 1)
+}
+
+function Set-ProjectVersion {
+    param(
+        [string]$CsprojPath,
+        [string]$VersionText
+    )
+    $raw = Get-Content -Path $CsprojPath -Raw -Encoding UTF8
+    if ([regex]::IsMatch($raw, "<Version>\s*[^<]+\s*</Version>", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+        $updated = [regex]::Replace(
+            $raw,
+            "<Version>\s*[^<]+\s*</Version>",
+            "<Version>$VersionText</Version>",
+            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    }
+    else {
+        $updated = $raw -replace "</PropertyGroup>", "    <Version>$VersionText</Version>`r`n  </PropertyGroup>"
+    }
+    Set-Content -Path $CsprojPath -Value $updated -Encoding UTF8
+}
+
+function Set-AppVersionJson {
+    param(
+        [string]$JsonPath,
+        [string]$VersionText
+    )
+    $dir = Split-Path -Parent $JsonPath
+    if (-not (Test-Path $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+    $content = "{`n  `"latestVersion`": `"$VersionText`"`n}`n"
+    Set-Content -Path $JsonPath -Value $content -Encoding ASCII
+}
+
 $scriptDir = $PSScriptRoot
 $csproj = Resolve-Project -BaseDir $scriptDir
 if (-not $csproj) {
@@ -61,6 +120,7 @@ if (-not $csproj) {
 }
 
 $projectDir = Split-Path $csproj -Parent
+$repoRoot = Split-Path $projectDir -Parent
 $publishDir = Join-Path $projectDir "publish_output\win-x64"
 $installerDir = Join-Path $projectDir "installer_output"
 $issPath = Join-Path $installerDir "PARAFactoNative_Setup.iss"
@@ -75,8 +135,21 @@ https://jrsoftware.org/isdl.php
 }
 
 if ([string]::IsNullOrWhiteSpace($AppVersion)) {
-    $AppVersion = Get-Date -Format "yyyy.MM.dd.HHmm"
+    $currentVersion = Get-ProjectVersion -CsprojPath $csproj
+    $nextVersion = Increment-VersionPatch -VersionValue $currentVersion
+    $AppVersion = Format-Version3 -VersionValue $nextVersion
 }
+else {
+    $parsed = $null
+    if (-not [Version]::TryParse($AppVersion.Trim(), [ref]$parsed)) {
+        throw "AppVersion invalide: '$AppVersion'. Format attendu: major.minor.patch"
+    }
+    $AppVersion = Format-Version3 -VersionValue $parsed
+}
+
+Set-ProjectVersion -CsprojPath $csproj -VersionText $AppVersion
+Set-AppVersionJson -JsonPath (Join-Path $repoRoot "subscription-site\public\app-version.json") -VersionText $AppVersion
+Set-AppVersionJson -JsonPath (Join-Path $projectDir "subscription-site\public\app-version.json") -VersionText $AppVersion
 
 Write-Host "Projet       : $csproj"
 Write-Host "Publish dir  : $publishDir"
