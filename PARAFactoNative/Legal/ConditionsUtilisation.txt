@@ -1,0 +1,156 @@
+================================================================================
+CONDITIONS GÉNÉRALES D’UTILISATION (CGU) – LOGICIEL PARAFACTO NATIVE
+Version document : 2026-04-08
+================================================================================
+
+AVERTISSEMENT : le présent modèle doit être validé par votre conseil juridique.
+Les mentions entre crochets [ ] sont à compléter.
+
+--------------------------------------------------------------------------------
+1. OBJET ET ACCEPTATION
+--------------------------------------------------------------------------------
+Les présentes Conditions Générales d’Utilisation (« CGU ») régissent l’accès et
+l’utilisation du logiciel « PARAFacto Native » (le « Logiciel »), édité par
+[À COMPLÉTER : dénomination de l’éditeur, adresse, contact].
+
+En installant, lançant ou utilisant le Logiciel, l’utilisateur professionnel
+(ci-après « Vous ») confirme avoir pris connaissance des présentes CGU et de la
+Politique de confidentialité, et les accepter sans réserve. Si Vous n’acceptez
+pas ces documents, Vous ne devez pas utiliser le Logiciel.
+
+--------------------------------------------------------------------------------
+2. DESCRIPTION DU SERVICE
+--------------------------------------------------------------------------------
+Le Logiciel est une application de bureau destinée aux professionnels de santé
+ou paramédicaux pour la gestion de cabinet : patients, agenda, séances,
+facturation, export de documents (notamment PDF), et fonctions connexes
+(configurables). Le Logiciel est fourni « en l’état », sous réserve des
+évolutions publiées par l’éditeur.
+
+--------------------------------------------------------------------------------
+3. LICENCE D’UTILISATION
+--------------------------------------------------------------------------------
+Sous réserve du paiement éventuel de l’abonnement ou de la licence et de leur
+validité, l’éditeur Vous concède une licence personnelle, non exclusive, non
+transférable, révocable, pour installer et utiliser le Logiciel sur le nombre
+d’postes autorisés par votre contrat ou abonnement. Toute utilisation au-delà
+des droits acquis constitue une contrefaçon contractuelle.
+
+Il est interdit de : décompiler (sauf exceptions légales impératives), modifier
+le code objet, contourner les mécanismes de licence, louer, prêter ou mettre à
+disposition le Logiciel à des tiers non autorisés, ou l’utiliser pour développer
+un produit concurrent direct dérivé du Logiciel.
+
+--------------------------------------------------------------------------------
+4. CONDITIONS D’ACCÈS ET COMPTE
+--------------------------------------------------------------------------------
+L’accès peut être conditionné par la validation d’une licence ou d’un abonnement
+(vérification en ligne périodique selon les paramètres de l’éditeur). Vous êtes
+responsable de la confidentialité de vos identifiants et de la sécurité de votre
+poste de travail.
+
+--------------------------------------------------------------------------------
+5. OBLIGATIONS DE L’UTILISATEUR PROFESSIONNEL
+--------------------------------------------------------------------------------
+Vous déclarez être un professionnel qualifié utilisant le Logiciel dans le
+cadre de votre activité. Vous vous engagez notamment à :
+
+  (a) Respecter le RGPD, la législation belge en matière de données à caractère
+      personnel, le secret professionnel et les règles déontologiques
+      applicables à votre profession ;
+
+  (b) Obtenir et documenter les bases légales nécessaires à la collecte et au
+      traitement des données patients, y compris pour les mineurs (accord des
+      représentants légaux lorsque requis) ;
+
+  (c) Ne saisir que des données adéquates, pertinentes et limitées au
+      nécessaire ;
+
+  (d) Assurer la sécurité des postes, sauvegardes et accès au cabinet ;
+
+  (e) Ne pas utiliser le Logiciel à des fins illégales, frauduleuses ou
+      contraires aux droits des tiers ;
+
+  (f) Vérifier l’exactitude des données avant toute facturation ou transmission
+      à des tiers (mutuelles, patients, autorités).
+
+--------------------------------------------------------------------------------
+6. DONNÉES HÉBERGÉES ET TRAITEMENTS TIERS
+--------------------------------------------------------------------------------
+Vous demeurez seul responsable des données que Vous introduisez dans le
+Logiciel. L’activation de fonctions d’envoi d’e-mails, de synchronisation ou de
+services tiers relève de votre choix et de votre obligation d’informer les
+personnes concernées et de conclure les contrats de sous-traitance requis.
+
+--------------------------------------------------------------------------------
+7. DISPONIBILITÉ ET MAINTENANCE
+--------------------------------------------------------------------------------
+L’éditeur s’efforce d’assurer le bon fonctionnement du Logiciel mais ne garantit
+pas une disponibilité ininterrompue ni l’absence totale d’erreurs. Des mises à
+jour peuvent être proposées ; certaines peuvent être obligatoires pour des
+raisons de sécurité ou de conformité.
+
+--------------------------------------------------------------------------------
+8. PROPRIÉTÉ INTELLECTUELLE
+--------------------------------------------------------------------------------
+Le Logiciel, sa documentation, ses marques et éléments graphiques restent la
+propriété exclusive de l’éditeur ou de ses concédants. Aucun droit autre que la
+licence limitée prévue aux présentes n’est concédé.
+
+--------------------------------------------------------------------------------
+9. LIMITATION DE RESPONSABILITÉ
+--------------------------------------------------------------------------------
+Dans les limites autorisées par le droit belge et européen impératif :
+
+  • L’éditeur ne saurait être tenu responsable des dommages indirects,
+    perte de données, perte de chiffre d’affaires, manque à gagner ou préjudice
+    commercial, sauf faute lourde ou dol prouvé ;
+
+  • La responsabilité globale de l’éditeur, toutes causes confondues, liée à
+    l’utilisation du Logiciel sur une période de douze mois, pourra être
+    limitée au montant des sommes effectivement payées par Vous à l’éditeur
+    pour la période concernée, sauf dispositions légales impératives
+    contraires (dommages corporels, fraude, etc.) ;
+
+  • Vous restez seul responsable des décisions de soins, facturation et
+    conformité réglementaire prises sur la base des informations du Logiciel.
+
+--------------------------------------------------------------------------------
+10. FORCE MAJEURE
+--------------------------------------------------------------------------------
+L’éditeur ne pourra être tenu responsable en cas d’événements échappant à son
+contrôle raisonnable (catastrophes, conflits sociaux, pannes de réseaux publics,
+attaques informatiques majeures, etc.).
+
+--------------------------------------------------------------------------------
+11. DURÉE ET RÉSILIATION
+--------------------------------------------------------------------------------
+Les CGU s’appliquent pendant toute la durée d’utilisation du Logiciel. En cas
+de manquement grave aux CGU, l’éditeur pourra suspendre ou résilier l’accès,
+sans préjudice des autres recours. À la résiliation, Vous devez cesser toute
+utilisation et, le cas échéant, détruire les copies du Logiciel selon les
+modalités prévues par la loi et votre contrat d’abonnement.
+
+--------------------------------------------------------------------------------
+12. DROIT APPLICABLE ET LITIGES
+--------------------------------------------------------------------------------
+Les présentes CGU sont régies par le droit belge, sans égard aux règles de
+conflit de lois. En l’absence de règlement amiable, les tribunaux de
+[À COMPLÉTER : arrondissement judiciaire compétent] seront seuls compétents,
+sous réserve des dispositions impératives applicables aux consommateurs le cas
+échéant.
+
+--------------------------------------------------------------------------------
+13. NULLITÉ PARTIELLE
+--------------------------------------------------------------------------------
+Si une clause est jugée invalide, les autres demeurent en vigueur dans toute la
+mesure permise par la loi.
+
+--------------------------------------------------------------------------------
+14. CONTACT
+--------------------------------------------------------------------------------
+Pour toute question relative aux présentes CGU : [À COMPLÉTER : contact éditeur].
+
+================================================================================
+FIN DU DOCUMENT
+================================================================================

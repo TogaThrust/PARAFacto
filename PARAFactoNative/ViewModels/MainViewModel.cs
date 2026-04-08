@@ -5,6 +5,7 @@ namespace PARAFactoNative.ViewModels;
 public sealed class MainViewModel : NotifyBase
 {
     public ConsoleViewModel Console { get; } = new();
+    public LegalComplianceViewModel Legal { get; }
     public PatientsViewModel Patients { get; } = new();
     public TarifsViewModel Tarifs { get; } = new();
     public SeancesViewModel Seances { get; } = new();
@@ -20,6 +21,8 @@ public sealed class MainViewModel : NotifyBase
 
     public MainViewModel()
     {
+        Legal = new LegalComplianceViewModel(new AppSettingsStore(), AppContext.BaseDirectory);
+
         // Prime lists
         Patients.Reload();
         Tarifs.Reload();

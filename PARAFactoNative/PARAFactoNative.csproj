@@ -11,7 +11,7 @@
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <RootNamespace>PARAFactoNative</RootNamespace>
     <AssemblyName>PARAFactoNative</AssemblyName>
-    <Version>1.0.9</Version>
+    <Version>1.0.10</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -32,6 +32,8 @@
     <None Include="schema\parafacto_schema_v1.sql" Link="schema\parafacto_schema_v1.sql" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\AppIcon.ico" Link="AppIcon.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="subscription_config.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Legal\PolitiqueConfidentialite.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Legal\ConditionsUtilisation.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

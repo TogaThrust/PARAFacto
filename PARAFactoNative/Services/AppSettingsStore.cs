@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text;
@@ -28,6 +31,12 @@ public sealed class AppSettingsStore
         public bool AgendaLunchEnabled { get; set; }
         public string? AgendaLunchStart { get; set; }
         public string? AgendaLunchEnd { get; set; }
+        /// <summary>Horodatage ISO 8601 (UTC) de l'acceptation de la politique de confidentialité.</summary>
+        public string? PrivacyAcceptedAtUtc { get; set; }
+        /// <summary>Horodatage ISO 8601 (UTC) de l'acceptation des CGU.</summary>
+        public string? TermsAcceptedAtUtc { get; set; }
+        public string? PrivacyDocVersionAccepted { get; set; }
+        public string? TermsDocVersionAccepted { get; set; }
     }
 
     private static string SettingsFolder
@@ -35,6 +44,11 @@ public sealed class AppSettingsStore
 
     private static string SettingsPath
         => Path.Combine(SettingsFolder, "settings.json");
+
+    private static string LegalAuditPath
+        => Path.Combine(SettingsFolder, "legal_acceptance_audit.json");
+
+    private static readonly JsonSerializerOptions AuditJsonOptions = new() { WriteIndented = true };
 
     public string? LoadRecipientEmail()
     {
@@ -226,6 +240,116 @@ public sealed class AppSettingsStore
         }
     }
 
+    public LegalAcceptanceState LoadLegalAcceptance()
+    {
+        lock (Gate)
+        {
+            var s = LoadAllInternal();
+            if (s is null)
+                return default;
+
+            DateTimeOffset? pAt = TryParseRoundtripUtc(s.PrivacyAcceptedAtUtc);
+            DateTimeOffset? tAt = TryParseRoundtripUtc(s.TermsAcceptedAtUtc);
+
+            return new LegalAcceptanceState
+            {
+                PrivacyAcceptedAtUtc = pAt,
+                TermsAcceptedAtUtc = tAt,
+                PrivacyDocVersionAccepted = string.IsNullOrWhiteSpace(s.PrivacyDocVersionAccepted) ? null : s.PrivacyDocVersionAccepted.Trim(),
+                TermsDocVersionAccepted = string.IsNullOrWhiteSpace(s.TermsDocVersionAccepted) ? null : s.TermsDocVersionAccepted.Trim(),
+            };
+        }
+    }
+
+    /// <summary>
+    /// Enregistre l'acceptation des deux documents, met à jour settings.json et ajoute une entrée d'audit
+    /// (empreintes SHA-256 des textes acceptés, version d'app, utilisateur Windows).
+    /// </summary>
+    public void SaveLegalAcceptanceWithProof(string privacyFullText, string termsFullText)
+    {
+        lock (Gate)
+        {
+            try
+            {
+                Directory.CreateDirectory(SettingsFolder);
+                var now = DateTimeOffset.UtcNow;
+                var nowIso = now.ToString("O", CultureInfo.InvariantCulture);
+
+                var s = LoadAllInternal() ?? new AppSettings();
+                s.PrivacyAcceptedAtUtc = nowIso;
+                s.TermsAcceptedAtUtc = nowIso;
+                s.PrivacyDocVersionAccepted = LegalDocuments.PrivacyPolicyVersion;
+                s.TermsDocVersionAccepted = LegalDocuments.TermsOfServiceVersion;
+
+                var settingsJson = JsonSerializer.Serialize(s, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(SettingsPath, settingsJson);
+
+                var privacyHash = Sha256HexUtf8(privacyFullText);
+                var termsHash = Sha256HexUtf8(termsFullText);
+                var appVer = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
+
+                AppendLegalAuditEvent(new LegalAcceptanceAuditEvent
+                {
+                    RecordedAtUtc = nowIso,
+                    PrivacyDocumentVersion = LegalDocuments.PrivacyPolicyVersion,
+                    TermsDocumentVersion = LegalDocuments.TermsOfServiceVersion,
+                    PrivacyContentSha256 = privacyHash,
+                    TermsContentSha256 = termsHash,
+                    AppAssemblyVersion = appVer,
+                    WindowsUser = Environment.UserName,
+                    MachineName = Environment.MachineName,
+                });
+            }
+            catch
+            {
+                /* ignore */
+            }
+        }
+    }
+
+    private static void AppendLegalAuditEvent(LegalAcceptanceAuditEvent entry)
+    {
+        LegalAcceptanceAuditRoot root;
+        try
+        {
+            if (File.Exists(LegalAuditPath))
+            {
+                var existing = File.ReadAllText(LegalAuditPath);
+                root = JsonSerializer.Deserialize<LegalAcceptanceAuditRoot>(existing) ?? new LegalAcceptanceAuditRoot();
+            }
+            else
+                root = new LegalAcceptanceAuditRoot();
+        }
+        catch
+        {
+            root = new LegalAcceptanceAuditRoot();
+        }
+
+        root.Events ??= new List<LegalAcceptanceAuditEvent>();
+        root.Events.Add(entry);
+        const int max = 40;
+        if (root.Events.Count > max)
+            root.Events = root.Events.Skip(root.Events.Count - max).ToList();
+
+        var json = JsonSerializer.Serialize(root, AuditJsonOptions);
+        File.WriteAllText(LegalAuditPath, json);
+    }
+
+    private static DateTimeOffset? TryParseRoundtripUtc(string? iso)
+    {
+        if (string.IsNullOrWhiteSpace(iso)) return null;
+        return DateTimeOffset.TryParse(iso, null, DateTimeStyles.RoundtripKind, out var dto)
+            ? dto.ToUniversalTime()
+            : null;
+    }
+
+    private static string Sha256HexUtf8(string text)
+    {
+        var bytes = Encoding.UTF8.GetBytes(text ?? "");
+        var hash = SHA256.HashData(bytes);
+        return Convert.ToHexString(hash);
+    }
+
     private static string? ProtectStringOrNull(string? plain)
     {
         plain = (plain ?? "").Trim();
@@ -270,5 +394,23 @@ public sealed class AppMailSettings
     public string? SmtpUsername { get; set; }
     public string? SmtpFromEmail { get; set; }
     public string? SmtpPassword { get; set; }
+}
+
+public sealed class LegalAcceptanceAuditRoot
+{
+    public List<LegalAcceptanceAuditEvent> Events { get; set; } = new();
+}
+
+/// <summary>Entrée d'audit locale (preuve d'acceptation : horodatage, versions, empreintes des textes).</summary>
+public sealed class LegalAcceptanceAuditEvent
+{
+    public string RecordedAtUtc { get; set; } = "";
+    public string PrivacyDocumentVersion { get; set; } = "";
+    public string TermsDocumentVersion { get; set; } = "";
+    public string PrivacyContentSha256 { get; set; } = "";
+    public string TermsContentSha256 { get; set; } = "";
+    public string AppAssemblyVersion { get; set; } = "";
+    public string? WindowsUser { get; set; }
+    public string? MachineName { get; set; }
 }
 

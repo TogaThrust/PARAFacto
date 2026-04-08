@@ -49,6 +49,12 @@ public partial class MainWindow
         var vm = new MainViewModel();
         DataContext = vm;
 
+        vm.Legal.RequestOpenTechnicalTab += () =>
+        {
+            try { MainTabControl.SelectedIndex = 6; } // Données techniques
+            catch { /* ignore */ }
+        };
+
         // Console -> Patients: Nouveau / Modifier
         vm.Console.RequestNewPatientRequested += () =>
         {

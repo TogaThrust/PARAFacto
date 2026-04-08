@@ -1,0 +1,208 @@
+================================================================================
+POLITIQUE DE CONFIDENTIALITÉ – LOGICIEL PARAFACTO NATIVE
+Version document : 2026-04-08
+================================================================================
+
+AVERTISSEMENT : le présent modèle est fourni à titre d’information et doit être
+relu et adapté par votre conseil juridique ou votre DPO avant toute utilisation
+opérationnelle. Les mentions entre crochets [ ] sont à compléter.
+
+--------------------------------------------------------------------------------
+1. OBJET
+--------------------------------------------------------------------------------
+La présente politique décrit comment sont traitées les données à caractère
+personnel lors de l’utilisation du logiciel « PARAFacto Native » (ci-après, le
+« Logiciel »), installé localement sur votre poste de travail. Elle vise le
+respect du Règlement (UE) 2016/679 (« RGPD ») et de la loi belge du 30 juillet
+2018 relative à la protection des personnes physiques à l’égard des traitements
+de données à caractère personnel, ainsi que les règles applicables aux données
+de santé et aux mineurs.
+
+--------------------------------------------------------------------------------
+2. RESPONSABLE DU TRAITEMENT
+--------------------------------------------------------------------------------
+Le responsable du traitement des données introduites et gérées par vous dans le
+Logiciel est le professionnel de santé / paramédical ou l’entité qui exploite le
+Logiciel dans le cadre de son activité professionnelle :
+
+  [À COMPLÉTER : dénomination sociale ou nom professionnel]
+  [À COMPLÉTER : forme juridique le cas échéant]
+  [À COMPLÉTER : adresse du siège / du cabinet]
+  [À COMPLÉTER : adresse e-mail de contact données personnelles]
+  [À COMPLÉTER : numéro BCE/TVA le cas échéant]
+
+L’éditeur du Logiciel (développeur / société éditrice) agit, sauf stipulation
+contractuelle contraire, en qualité de sous-traitant limité à la fourniture du
+Logiciel, tandis que vous demeurez responsable du traitement des données
+patients que vous saisissez, conservez et utilisez via le Logiciel.
+
+--------------------------------------------------------------------------------
+3. DESCRIPTION DU TRAITEMENT
+--------------------------------------------------------------------------------
+Le Logiciel est un outil de gestion de cabinet permettant notamment la tenue de
+fiches patients, la planification de rendez-vous, l’enregistrement de séances,
+la facturation et l’édition de documents (par ex. PDF). Les données sont en
+principe stockées localement sur l’équipement où le Logiciel est installé
+(base de données locale, fichiers générés sur l’espace disque que vous
+configurez), sauf lorsque vous activez des fonctions qui envoient des données
+vers des tiers (messagerie électronique, services d’abonnement ou de licence,
+etc.).
+
+--------------------------------------------------------------------------------
+4. CATÉGORIES DE DONNÉES TRAITÉES
+--------------------------------------------------------------------------------
+Selon votre usage, peuvent être traitées notamment :
+  • Données d’identification et de contact : nom, prénom, coordonnées, code
+    interne patient, etc. ;
+  • Données relatives à la vie privée et familiale pouvant concerner des
+    mineurs (âge, scolarité, informations communiquées par les représentants
+    légaux, etc.) ;
+  • Données de santé au sens du RGPD (article 9) : informations médicales ou
+    paramédicales pertinentes pour le suivi professionnel, historique de
+    séances, pièces jointes ou champs libres ;
+  • Données administratives et financières : tarification, facturation,
+    paiements, données mutuelle/assurance lorsque vous les encodez ;
+  • Données de connexion techniques limitées (horodatages locaux, chemins de
+    fichiers, paramètres applicatifs) ;
+  • Données relatives à l’abonnement ou à la licence lorsque vous utilisez les
+    fonctionnalités associées (identifiants techniques, statut d’abonnement).
+
+--------------------------------------------------------------------------------
+5. DONNÉES RELATIVES AUX MINEURS
+--------------------------------------------------------------------------------
+Lorsque le patient est mineur, le responsable du traitement doit s’assurer que
+toute collecte et tout traitement de données respectent le droit belge et
+européen : information des titulaires de l’autorité parentale ou des
+représentants légaux, base légale appropriée (notamment intérêt vital,
+obligation légale, exercice de la médecine / soins, consentement du représentant
+lorsque requis), et limitation des données au strict nécessaire. Le Logiciel
+ne remplace pas votre obligation d’obtenir et de documenter, le cas échéant,
+l’accord des personnes habilitées à représenter le mineur.
+
+--------------------------------------------------------------------------------
+6. FINALITÉS DU TRAITEMENT
+--------------------------------------------------------------------------------
+Les données sont traitées pour les finalités suivantes, liées à votre activité
+professionnelle :
+  (a) Gestion administrative et organisationnelle du cabinet ;
+  (b) Planification et suivi des rendez-vous et séances ;
+  (c) Établissement de documents de facturation et de comptabilité interne ;
+  (d) Respect des obligations légales, réglementaires et déontologiques
+      applicables aux professions de santé et paramédicales ;
+  (e) Sauvegarde, archivage et envoi de copies de documents (ex. PDF) lorsque
+      vous configurez une adresse e-mail ou un serveur de messagerie ;
+  (f) Gestion de la licence / abonnement lorsque cette fonctionnalité est
+      activée.
+
+Tout autre usage (prospection commerciale non liée aux soins, études externes,
+etc.) nécessite une base légale distincte et une information préalable.
+
+--------------------------------------------------------------------------------
+7. BASES LÉGALES (ART. 6 ET 9 RGPD)
+--------------------------------------------------------------------------------
+Selon les cas, le traitement peut reposer notamment sur :
+  • L’exécution de mesures précontractuelles ou d’un contrat (prise en charge
+    demandée par le patient ou son représentant) ;
+  • Une obligation légale (conservation de pièces comptables, obligations
+    spécifiques aux professionnels de santé le cas échéant) ;
+  • L’intérêt vital de la personne concernée ou d’une autre personne physique ;
+  • Des motifs d’intérêt public dans le domaine de la santé ou la médecine
+    préventive / diagnostic / soins, conformément au droit de l’Union ou des
+    États membres ;
+  • Le consentement explicite pour certaines données de santé ou finalités
+    accessoires, lorsque le consentement est le fondement retenu.
+
+Vous demeurez responsable du choix et de la documentation des fondements
+juridiques applicables à votre pratique.
+
+--------------------------------------------------------------------------------
+8. DESTINATAIRES ET SOUS-TRAITANTS
+--------------------------------------------------------------------------------
+Les données saisies dans le Logiciel sont en principe accessibles à vous et,
+selon votre organisation, aux membres autorisés de votre cabinet. Des
+destinataires supplémentaires peuvent intervenir si vous :
+  • Envoyez des e-mails (fournisseur de messagerie, hébergeur SMTP) ;
+  • Utilisez des services tiers intégrés (paiement, portail client, vérification
+    de licence, hébergement réseau) ;
+  • Sauvegardez des fichiers sur un cloud, un NAS ou un support géré par un
+    tiers.
+
+Tout sous-traitant doit être lié par des instructions écrites (article 28
+RGPD) lorsque le traitement est confié pour votre compte.
+
+--------------------------------------------------------------------------------
+9. TRANSFERTS HORS DE L’UNION EUROPÉENNE
+--------------------------------------------------------------------------------
+Si un de vos prestataires (messagerie, cloud, paiement) transfère des données
+hors UE/EEE, vous devez vous assurer que des garanties appropriées existent
+(clauses types de la Commission, décision d’adéquation, etc.) et en informer les
+personnes concernées si nécessaire.
+
+--------------------------------------------------------------------------------
+10. DURÉE DE CONSERVATION
+--------------------------------------------------------------------------------
+Les durées de conservation doivent être définies par le responsable du
+traitement en fonction des obligations légales (comptabilité, dossiers
+patients) et des recommandations professionnelles. À titre indicatif :
+  • Données de facturation : souvent 7 ans minimum en droit comptable belge
+    (sauf prescription ou obligation différente) ;
+  • Dossiers patients : durées pouvant être imposées ou recommandées par la
+    législation ou les ordres professionnels ;
+  • Données techniques du Logiciel : conservées tant que nécessaire au
+    fonctionnement et à la preuve d’acceptation des présentes (journaux
+    locaux d’acceptation).
+
+Passé le délai, les données doivent être effacées ou anonymisées.
+
+--------------------------------------------------------------------------------
+11. MESURES DE SÉCURITÉ
+--------------------------------------------------------------------------------
+Vous vous engagez à mettre en œuvre des mesures appropriées : mots de passe
+robustes sur la session Windows, chiffrement du disque si possible, sauvegardes
+régulières, contrôle d’accès physique au poste, mises à jour de sécurité,
+antivirus à jour. Le Logiciel ne se substitue pas à une politique de sécurité
+du cabinet.
+
+--------------------------------------------------------------------------------
+12. DROITS DES PERSONNES CONCERNÉES
+--------------------------------------------------------------------------------
+Sous réserve des conditions et exceptions prévues par le RGPD, chaque personne
+concernée peut exercer auprès du responsable du traitement :
+  • Droit d’accès ;
+  • Droit de rectification ;
+  • Droit à l’effacement (« droit à l’oubli ») lorsque les conditions sont
+    réunies ;
+  • Droit à la limitation du traitement ;
+  • Droit d’opposition lorsque le traitement est fondé sur l’intérêt légitime ;
+  • Droit à la portabilité lorsque le traitement est fondé sur le consentement
+    ou le contrat et qu’il est automatisé ;
+  • Droit de retirer le consentement à tout moment pour les traitements qui
+    s’y fondent ;
+  • Droit d’introduire une réclamation auprès de l’autorité de protection des
+    données (en Belgique : Autorité de protection des données – APDP, www.dataprotectionauthority.be).
+
+Les demandes doivent être adressées aux coordonnées indiquées à la section 2.
+
+--------------------------------------------------------------------------------
+13. AUTOMATISATION ET PROFILAGE
+--------------------------------------------------------------------------------
+Le Logiciel ne réalise pas de décision produisant des effets juridiques ou
+significatifs similaires fondée uniquement sur un traitement automatisé au sens
+de l’article 22 RGPD, sauf mention contraire dans une documentation spécifique.
+
+--------------------------------------------------------------------------------
+14. MODIFICATIONS
+--------------------------------------------------------------------------------
+La présente politique peut être mise à jour. En cas de changement substantiel,
+une nouvelle acceptation dans le Logiciel pourra être requise. La date de version
+en tête de document fait foi.
+
+--------------------------------------------------------------------------------
+15. CONTACT
+--------------------------------------------------------------------------------
+Pour toute question relative à cette politique : [À COMPLÉTER : même contact
+que section 2].
+
+================================================================================
+FIN DU DOCUMENT
+================================================================================

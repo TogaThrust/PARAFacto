@@ -3,15 +3,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="clr-namespace:PARAFactoNative.ViewModels"
         xmlns:views="clr-namespace:PARAFactoNative.Views"
         mc:Ignorable="d"
         Title="PARAFACTO Native" Height="820" Width="1200"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized">
-    <Window.DataContext>
-        <vm:MainViewModel/>
-    </Window.DataContext>
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
@@ -31,7 +27,7 @@
     </Window.Resources>
 
     <Grid>
-        <TabControl>
+        <TabControl x:Name="MainTabControl">
             <TabItem Header="Console">
                 <Grid Margin="10">
                     <Grid.ColumnDefinitions>
@@ -324,6 +320,90 @@
                 <ScrollViewer Margin="10"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Auto">
+                    <StackPanel>
+                    <Border Margin="0,0,0,20"
+                            Padding="14"
+                            BorderBrush="#CBD5E1"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Background="#F8FAFC">
+                        <StackPanel>
+                            <TextBlock Text="Politique de confidentialité et conditions d'utilisation"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,8"/>
+                            <TextBlock TextWrapping="Wrap"
+                                       Foreground="#92400E"
+                                       FontSize="12"
+                                       Margin="0,0,0,10"
+                                       Text="Ces textes sont des modèles à faire valider par votre conseil juridique ou votre DPO. Complétez les mentions [À COMPLÉTER]. L'acceptation est enregistrée localement avec horodatage et empreinte des documents (fichier d'audit, voir ci-dessous)."/>
+                            <TextBlock TextWrapping="Wrap"
+                                       Foreground="#B91C1C"
+                                       FontSize="12"
+                                       Margin="0,0,0,8"
+                                       Text="{Binding Legal.DocumentsLoadError}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Legal.HasDocumentsError}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="Politique de confidentialité (RGPD, mineurs, données de santé)"
+                                       FontWeight="SemiBold"
+                                       Margin="0,4,0,4"/>
+                            <TextBox IsReadOnly="True"
+                                     TextWrapping="Wrap"
+                                     AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Auto"
+                                     MinHeight="160"
+                                     MaxHeight="260"
+                                     FontFamily="Segoe UI"
+                                     FontSize="11"
+                                     Text="{Binding Legal.PrivacyText, Mode=OneWay}"/>
+                            <TextBlock Text="Conditions générales d'utilisation du service"
+                                       FontWeight="SemiBold"
+                                       Margin="0,12,0,4"/>
+                            <TextBox IsReadOnly="True"
+                                     TextWrapping="Wrap"
+                                     AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Auto"
+                                     MinHeight="160"
+                                     MaxHeight="260"
+                                     FontFamily="Segoe UI"
+                                     FontSize="11"
+                                     Text="{Binding Legal.TermsText, Mode=OneWay}"/>
+                            <CheckBox Margin="0,12,0,6"
+                                      FontSize="13"
+                                      Content="J'ai lu la politique de confidentialité et je l'accepte pour la version affichée ci-dessus."
+                                      IsChecked="{Binding Legal.AcceptPrivacy, UpdateSourceTrigger=PropertyChanged}"/>
+                            <CheckBox FontSize="13"
+                                      Content="J'ai lu les conditions d'utilisation du service et je les accepte pour la version affichée ci-dessus."
+                                      IsChecked="{Binding Legal.AcceptTerms, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button Content="Enregistrer mon acceptation (preuve locale)"
+                                    Command="{Binding Legal.SaveAcceptanceCommand}"
+                                    Margin="0,10,0,0"
+                                    HorizontalAlignment="Left"
+                                    Padding="14,8"/>
+                            <TextBlock TextWrapping="Wrap"
+                                       Foreground="#475569"
+                                       FontSize="12"
+                                       Margin="0,12,0,0"
+                                       Text="{Binding Legal.AcceptanceSummary}"/>
+                            <TextBlock TextWrapping="Wrap"
+                                       Foreground="#64748B"
+                                       FontSize="11"
+                                       Margin="0,6,0,0">
+                                <Run Text="Fichier d'audit des acceptations : "/>
+                                <Run Text="{Binding Legal.AuditFilePath, Mode=OneWay}"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
                     <!-- DockPanel : panneau gauche largeur fixe (évite qu'il disparaisse avec certaines mesures de grille *). -->
                     <DockPanel LastChildFill="True"
                                MaxWidth="1180"
@@ -470,8 +550,37 @@
                             </StackPanel>
                         </Border>
                     </DockPanel>
+                    </StackPanel>
                 </ScrollViewer>
             </TabItem>
         </TabControl>
+
+        <!-- Blocage jusqu'à acceptation des documents juridiques (versions courantes) -->
+        <Border Background="#CC1E293B"
+                Panel.ZIndex="1000"
+                Visibility="{Binding Legal.ShowBlockingOverlay, Converter={StaticResource BoolToVisibility}}">
+            <Border VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Background="White"
+                    BorderBrush="#CBD5E1"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="24"
+                    MaxWidth="520"
+                    Margin="24">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap"
+                               FontSize="15"
+                               LineHeight="22"
+                               Text="Veuillez vous rendre dans l'onglet « Données techniques », lire et accepter la politique de confidentialité ainsi que les conditions d'utilisation du service. Merci aussi d'ajouter une adresse e-mail d'envoi des copies de vos documents PDF si vous le désirez (section courriel du même onglet)."/>
+                    <Button Content="Ouvrir l'onglet Données techniques"
+                            Margin="0,20,0,0"
+                            Padding="16,10"
+                            HorizontalAlignment="Stretch"
+                            FontSize="14"
+                            Command="{Binding Legal.OpenTechnicalTabCommand}"/>
+                </StackPanel>
+            </Border>
+        </Border>
     </Grid>
 </Window>
