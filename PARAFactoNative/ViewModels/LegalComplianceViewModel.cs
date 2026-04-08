@@ -22,11 +22,11 @@ public sealed class LegalComplianceViewModel : NotifyBase
         _store = store;
         _baseDir = applicationBaseDirectory;
 
-        LoadDocuments();
-        ReloadAcceptanceUi();
-
         OpenTechnicalTabCommand = new RelayCommand(() => RequestOpenTechnicalTab?.Invoke());
         SaveAcceptanceCommand = new RelayCommand(SaveAcceptance, CanSaveAcceptance);
+
+        LoadDocuments();
+        ReloadAcceptanceUi();
     }
 
     public event Action? RequestOpenTechnicalTab;
