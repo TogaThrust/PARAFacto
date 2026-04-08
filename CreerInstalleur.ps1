@@ -6,7 +6,7 @@
 
 .DESCRIPTION
   Le script :
-    1) publie PARAFactoNative (Release, win-x64, self-contained) dans publish_output\win-x64
+    1) publie PARAFactoNative (Release, win-x64, self-contained) dans installer_output (PARAFactoNative.exe + dependances)
     2) compile un installateur Inno Setup vers installer_output\PARAFactoNative_Installer.exe
 
   Prerequis :
@@ -123,9 +123,9 @@ if (-not $csproj) {
 
 $projectDir = Split-Path $csproj -Parent
 $repoRoot = Split-Path $projectDir -Parent
-$publishDir = Join-Path $projectDir "publish_output\win-x64"
 $installerDir = Join-Path $projectDir "installer_output"
-$issPath = Join-Path $installerDir "PARAFactoNative_Setup.iss"
+$publishDir = $installerDir
+$issPath = Join-Path $env:TEMP ("PARAFactoNative_Setup_{0}.iss" -f [Guid]::NewGuid().ToString("N"))
 $installerExe = Join-Path $installerDir "PARAFactoNative_Installer.exe"
 $iscc = Resolve-IsccPath
 if (-not $iscc) {
@@ -159,13 +159,9 @@ Write-Host "Installer dir: $installerDir"
 Write-Host "Version      : $AppVersion"
 Write-Host ""
 
-if (Test-Path $publishDir) {
-    Remove-Item -Recurse -Force $publishDir
-}
 if (Test-Path $installerDir) {
     Remove-Item -Recurse -Force $installerDir
 }
-New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
 New-Item -ItemType Directory -Path $installerDir -Force | Out-Null
 
 dotnet publish $csproj `
@@ -226,9 +222,16 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Lancer PARAFacto Native"; Flags
 
 Set-Content -Path $issPath -Value $innoScript -Encoding ASCII
 
-& $iscc $issPath | Out-Host
-if ($LASTEXITCODE -ne 0) {
-    throw "Compilation Inno Setup echouee (code $LASTEXITCODE)."
+try {
+    & $iscc $issPath | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw "Compilation Inno Setup echouee (code $LASTEXITCODE)."
+    }
+}
+finally {
+    if (Test-Path $issPath) {
+        Remove-Item -Force $issPath -ErrorAction SilentlyContinue
+    }
 }
 
 if (-not (Test-Path $installerExe)) {
