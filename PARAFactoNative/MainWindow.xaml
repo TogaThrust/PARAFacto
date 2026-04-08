@@ -334,11 +334,6 @@
                                        FontWeight="SemiBold"
                                        Margin="0,0,0,8"/>
                             <TextBlock TextWrapping="Wrap"
-                                       Foreground="#92400E"
-                                       FontSize="12"
-                                       Margin="0,0,0,10"
-                                       Text="Ces textes sont des modèles à faire valider par votre conseil juridique ou votre DPO. Complétez les mentions [À COMPLÉTER]. L'acceptation est enregistrée localement avec horodatage et empreinte des documents (fichier d'audit, voir ci-dessous)."/>
-                            <TextBlock TextWrapping="Wrap"
                                        Foreground="#B91C1C"
                                        FontSize="12"
                                        Margin="0,0,0,8"
