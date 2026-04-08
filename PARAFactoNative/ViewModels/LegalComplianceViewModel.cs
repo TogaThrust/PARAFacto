@@ -17,6 +17,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
     private bool _showBlockingOverlay = true;
     private string _acceptanceSummary = "";
     private string _documentsLoadError = "";
+    private string _legalGateMessage = "";
 
     public LegalComplianceViewModel(AppSettingsStore store, string applicationBaseDirectory)
     {
@@ -76,6 +77,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
         AcceptPrivacy = false;
         AcceptTerms = false;
         SaveAcceptanceCommand?.RaiseCanExecuteChanged();
+        LegalGateMessage = "";
     }
 
     /// <summary>Vrai si les textes légaux ne sont pas exploitables (fichiers manquants, vides, erreur de lecture).</summary>
@@ -144,6 +146,13 @@ public sealed class LegalComplianceViewModel : NotifyBase
         private set => Set(ref _acceptanceSummary, value);
     }
 
+    /// <summary>Texte de l'overlay bloquant (premier lancement ou nouvelle version des documents légaux).</summary>
+    public string LegalGateMessage
+    {
+        get => _legalGateMessage;
+        private set => Set(ref _legalGateMessage, value);
+    }
+
     public string AuditFilePath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PARAFactoNative", "legal_acceptance_audit.json");
 
@@ -180,11 +189,33 @@ public sealed class LegalComplianceViewModel : NotifyBase
         var ok = state.IsCompleteForCurrentDocuments();
         var docsMissing = DocumentsUnavailableForAcceptance;
 
-        // Pas d'overlay bloquant si les fichiers légaux manquent : sinon vieille install / package incomplet
-        // empêche d'atteindre la console et le lien de mise à jour.
+        // Blocage = même règle que le premier lancement : acceptation requise pour les versions courantes
+        // (LegalDocuments.*). Dès qu'une constante change, ok devient false → overlay tant que les fichiers sont présents.
+        // Pas d'overlay si fichiers absents : accès console / bannière de mise à jour.
         ShowBlockingOverlay = !ok && !docsMissing;
         AcceptPrivacy = false;
         AcceptTerms = false;
+
+        if (ShowBlockingOverlay)
+        {
+            const string emailPdf =
+                " Merci aussi d'ajouter une adresse e-mail d'envoi des copies de vos documents PDF si vous le désirez (section courriel du même onglet).";
+            if (state.IsReacceptanceRequiredDueToNewLegalDocumentVersions())
+            {
+                LegalGateMessage =
+                    "Une nouvelle version de la politique de confidentialité et/ou des conditions d'utilisation est fournie avec cette mise à jour. " +
+                    "Vous devez vous rendre dans l'onglet « Données techniques », les lire et les accepter à nouveau avant de poursuivre — obligation identique au premier lancement." +
+                    emailPdf;
+            }
+            else
+            {
+                LegalGateMessage =
+                    "Veuillez vous rendre dans l'onglet « Données techniques », lire et accepter la politique de confidentialité ainsi que les conditions d'utilisation du service." +
+                    emailPdf;
+            }
+        }
+        else
+            LegalGateMessage = "";
 
         if (ok && state.PrivacyAcceptedAtUtc is { } p && state.TermsAcceptedAtUtc is { } t)
         {
@@ -199,6 +230,11 @@ public sealed class LegalComplianceViewModel : NotifyBase
                 "Vous pouvez utiliser la console : suivez la bannière « nouvelle version » ou téléchargez la dernière version du site, puis réinstallez. Ensuite, revenez ici pour lire et accepter les documents.";
             if (!string.IsNullOrWhiteSpace(DocumentsLoadError))
                 AcceptanceSummary += " " + DocumentsLoadError;
+        }
+        else if (state.IsReacceptanceRequiredDueToNewLegalDocumentVersions())
+        {
+            AcceptanceSummary =
+                "Les documents juridiques ont été mis à jour (nouvelle version publiée avec l'application). Lisez les textes ci-dessous, cochez les deux cases puis enregistrez votre acceptation — vous ne pourrez pas utiliser l'application tant que ce n'est pas fait.";
         }
         else
         {

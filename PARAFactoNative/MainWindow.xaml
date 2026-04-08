@@ -572,7 +572,7 @@
                     <TextBlock TextWrapping="Wrap"
                                FontSize="15"
                                LineHeight="22"
-                               Text="Veuillez vous rendre dans l'onglet « Données techniques », lire et accepter la politique de confidentialité ainsi que les conditions d'utilisation du service. Merci aussi d'ajouter une adresse e-mail d'envoi des copies de vos documents PDF si vous le désirez (section courriel du même onglet)."/>
+                               Text="{Binding Legal.LegalGateMessage}"/>
                     <Button Content="Ouvrir l'onglet Données techniques"
                             Margin="0,20,0,0"
                             Padding="16,10"

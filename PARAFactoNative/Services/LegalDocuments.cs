@@ -4,7 +4,9 @@ namespace PARAFactoNative.Services;
 
 /// <summary>
 /// Versions des documents juridiques livrés avec l'application.
-/// À incrémenter à chaque modification substantielle du texte (nouvelle acceptation requise).
+/// À chaque modification des fichiers <see cref="PrivacyFileName"/> ou <see cref="TermsFileName"/>,
+/// incrémenter la constante correspondante : l'app exigera une nouvelle acceptation (overlay bloquant)
+/// tant que l'utilisateur n'aura pas validé les textes courants dans « Données techniques ».
 /// </summary>
 public static class LegalDocuments
 {
