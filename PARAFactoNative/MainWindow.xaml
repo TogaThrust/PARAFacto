@@ -27,7 +27,8 @@
     </Window.Resources>
 
     <Grid>
-        <TabControl x:Name="MainTabControl">
+        <TabControl x:Name="MainTabControl"
+                    SelectionChanged="MainTabControl_SelectionChanged">
             <TabItem Header="Console">
                 <Grid Margin="10">
                     <Grid.ColumnDefinitions>

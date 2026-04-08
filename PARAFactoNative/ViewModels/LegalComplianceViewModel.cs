@@ -7,8 +7,12 @@ namespace PARAFactoNative.ViewModels;
 
 public sealed class LegalComplianceViewModel : NotifyBase
 {
+    /// <summary>Index de l'onglet « Données techniques » (doit rester aligné sur l’ordre des TabItem dans MainWindow.xaml).</summary>
+    public const int TechnicalTabIndex = 6;
+
     private readonly AppSettingsStore _store;
     private readonly string _baseDir;
+    private int _mainTabSelectedIndex;
 
     private string _privacyText = "";
     private string _termsText = "";
@@ -85,6 +89,13 @@ public sealed class LegalComplianceViewModel : NotifyBase
         HasDocumentsError || string.IsNullOrWhiteSpace(PrivacyText) || string.IsNullOrWhiteSpace(TermsText);
 
     public event Action? RequestOpenTechnicalTab;
+
+    /// <summary>À appeler quand l’onglet principal change : l’overlay se retire sur « Données techniques » pour permettre de cocher / enregistrer.</summary>
+    public void NotifyMainTabSelectionChanged(int selectedIndex)
+    {
+        _mainTabSelectedIndex = selectedIndex;
+        UpdateBlockingOverlayVisibility();
+    }
 
     public RelayCommand OpenTechnicalTabCommand { get; }
     public RelayCommand SaveAcceptanceCommand { get; }
@@ -183,20 +194,35 @@ public sealed class LegalComplianceViewModel : NotifyBase
         }
     }
 
+    /// <summary>
+    /// Tant qu’une acceptation est requise : overlay sur les autres onglets ; pas d’overlay sur « Données techniques »
+    /// pour pouvoir lire et cliquer sur Enregistrer (le voile bloquait l’UI derrière le message).
+    /// </summary>
+    private void UpdateBlockingOverlayVisibility()
+    {
+        var state = _store.LoadLegalAcceptance();
+        var ok = state.IsCompleteForCurrentDocuments();
+        var docsMissing = DocumentsUnavailableForAcceptance;
+        if (ok || docsMissing)
+        {
+            ShowBlockingOverlay = false;
+            return;
+        }
+
+        ShowBlockingOverlay = _mainTabSelectedIndex != TechnicalTabIndex;
+    }
+
     private void ReloadAcceptanceUi()
     {
         var state = _store.LoadLegalAcceptance();
         var ok = state.IsCompleteForCurrentDocuments();
         var docsMissing = DocumentsUnavailableForAcceptance;
+        var acceptancePending = !ok && !docsMissing;
 
-        // Blocage = même règle que le premier lancement : acceptation requise pour les versions courantes
-        // (LegalDocuments.*). Dès qu'une constante change, ok devient false → overlay tant que les fichiers sont présents.
-        // Pas d'overlay si fichiers absents : accès console / bannière de mise à jour.
-        ShowBlockingOverlay = !ok && !docsMissing;
         AcceptPrivacy = false;
         AcceptTerms = false;
 
-        if (ShowBlockingOverlay)
+        if (acceptancePending)
         {
             const string emailPdf =
                 " Merci aussi d'ajouter une adresse e-mail d'envoi des copies de vos documents PDF si vous le désirez (section courriel du même onglet).";
@@ -204,13 +230,13 @@ public sealed class LegalComplianceViewModel : NotifyBase
             {
                 LegalGateMessage =
                     "Une nouvelle version de la politique de confidentialité et/ou des conditions d'utilisation est fournie avec cette mise à jour. " +
-                    "Vous devez vous rendre dans l'onglet « Données techniques », les lire et les accepter à nouveau avant de poursuivre — obligation identique au premier lancement." +
+                    "Ouvrez l'onglet « Données techniques » (bouton ci-dessous), lisez les textes et acceptez-les — vous ne pourrez pas utiliser les autres onglets tant que ce n'est pas fait." +
                     emailPdf;
             }
             else
             {
                 LegalGateMessage =
-                    "Veuillez vous rendre dans l'onglet « Données techniques », lire et accepter la politique de confidentialité ainsi que les conditions d'utilisation du service." +
+                    "Ouvrez l'onglet « Données techniques » (bouton ci-dessous), lisez et acceptez la politique de confidentialité ainsi que les conditions d'utilisation." +
                     emailPdf;
             }
         }
@@ -234,7 +260,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
         else if (state.IsReacceptanceRequiredDueToNewLegalDocumentVersions())
         {
             AcceptanceSummary =
-                "Les documents juridiques ont été mis à jour (nouvelle version publiée avec l'application). Lisez les textes ci-dessous, cochez les deux cases puis enregistrez votre acceptation — vous ne pourrez pas utiliser l'application tant que ce n'est pas fait.";
+                "Les documents juridiques ont été mis à jour (nouvelle version publiée avec l'application). Lisez les textes ci-dessous, cochez les deux cases puis enregistrez votre acceptation — les autres onglets restent masqués par le message tant que ce n'est pas fait.";
         }
         else
         {
@@ -242,6 +268,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
                 "Veuillez lire les documents ci-dessous, cocher les deux cases puis enregistrer votre acceptation.";
         }
 
+        UpdateBlockingOverlayVisibility();
         SaveAcceptanceCommand?.RaiseCanExecuteChanged();
     }
 

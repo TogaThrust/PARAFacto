@@ -51,8 +51,19 @@ public partial class MainWindow
 
         vm.Legal.RequestOpenTechnicalTab += () =>
         {
-            try { MainTabControl.SelectedIndex = 6; } // Données techniques
+            try
+            {
+                MainTabControl.SelectedIndex = LegalComplianceViewModel.TechnicalTabIndex;
+                // Si l’onglet était déjà sélectionné, SelectionChanged ne se déclenche pas : forcer la synchro overlay.
+                vm.Legal.NotifyMainTabSelectionChanged(MainTabControl.SelectedIndex);
+            }
             catch { /* ignore */ }
+        };
+
+        Loaded += (_, _) =>
+        {
+            if (DataContext is MainViewModel m)
+                m.Legal.NotifyMainTabSelectionChanged(MainTabControl.SelectedIndex);
         };
 
         // Console -> Patients: Nouveau / Modifier
@@ -619,6 +630,15 @@ public partial class MainWindow
             return p;
         var d = new DateTime(y, m, 1);
         return d.ToString("MMMM yyyy", CultureInfo.GetCultureInfo("fr-BE"));
+    }
+
+    private void MainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!ReferenceEquals(sender, MainTabControl))
+            return;
+        if (DataContext is not MainViewModel vm)
+            return;
+        vm.Legal.NotifyMainTabSelectionChanged(MainTabControl.SelectedIndex);
     }
 
     private const string StripeCustomerPortalUrl =
