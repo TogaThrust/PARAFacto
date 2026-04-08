@@ -25,6 +25,7 @@ namespace PARAFactoNative.ViewModels;
 public sealed class PatientsViewModel : NotifyBase
 {
     private readonly PatientRepo _repo = new();
+    private readonly TarifRepo _tarifRepo = new();
     private readonly ImportService _import = new();
 
     /// <summary>Déclenché après un import réussi pour que la Console et les autres onglets se rechargent.</summary>
@@ -80,7 +81,7 @@ public sealed class PatientsViewModel : NotifyBase
 
     public bool IsReadOnly => !IsEditing;
 
-    public IReadOnlyList<string> StatutChoices { get; } = new[] { "BIM", "NON BIM", "PLEIN" };
+    public ObservableCollection<string> StatutChoices { get; } = new();
 
     public bool IsCode3ReadOnly => !IsNew; // modifiable uniquement à la création
 
@@ -212,7 +213,23 @@ public sealed class PatientsViewModel : NotifyBase
         SaveCommand = new RelayCommand(() => Save(), () => IsEditing);
         CancelCommand = new RelayCommand(() => Cancel(), () => IsEditing);
 
+        ReloadTarifChoices();
         Reload();
+    }
+
+    private void ReloadTarifChoices()
+    {
+        StatutChoices.Clear();
+        foreach (var t in _tarifRepo.GetAll())
+        {
+            var label = (t.Label ?? "").Trim();
+            if (label.Length == 0) continue;
+            if (StatutChoices.Any(x => string.Equals(x, label, StringComparison.OrdinalIgnoreCase))) continue;
+            StatutChoices.Add(label);
+        }
+
+        if (string.IsNullOrWhiteSpace(Statut) && StatutChoices.Count > 0)
+            Statut = StatutChoices[0];
     }
 
     private static string NormalizeMutuelle(string? s)
@@ -238,6 +255,7 @@ public sealed class PatientsViewModel : NotifyBase
 
     public void Reload()
     {
+        ReloadTarifChoices();
         Items.Clear();
 
         var q = (SearchText ?? "").Trim();
@@ -360,7 +378,7 @@ public sealed class PatientsViewModel : NotifyBase
         Code3 = "";
         Nom = "";
         Prenom = "";
-        Statut = "";
+        Statut = StatutChoices.FirstOrDefault() ?? "";
         Mutuelle = "";
         Niss = "";
         Telephone = "";
@@ -487,7 +505,9 @@ public sealed class PatientsViewModel : NotifyBase
                 LastName = nom,
                 FirstName = prenom,
 
-                Statut = string.IsNullOrWhiteSpace(Statut) ? "NON BIM" : Statut.Trim(),
+                Statut = string.IsNullOrWhiteSpace(Statut)
+                    ? (StatutChoices.FirstOrDefault() ?? "")
+                    : Statut.Trim(),
                 MutualName = string.IsNullOrWhiteSpace(Mutuelle) ? null : Mutuelle.Trim(),
                 Niss = string.IsNullOrWhiteSpace(Niss) ? null : Niss.Trim(),
 

@@ -836,8 +836,17 @@ ORDER BY nom, prenom;
     private void ApplyTarifFromStatut()
     {
         if (SelectedPatient is null || TarifChoices.Count == 0) return;
-        var s = (SelectedPatient.Statut ?? "").Trim().ToUpperInvariant();
+        var raw = (SelectedPatient.Statut ?? "").Trim();
+        var s = raw.ToUpperInvariant();
         AgendaTarifPick? pick;
+
+        // Nouveau comportement: si la fiche patient contient un tarif exact, l'utiliser en priorité.
+        pick = TarifChoices.FirstOrDefault(t => string.Equals(t.Label.Trim(), raw, StringComparison.OrdinalIgnoreCase));
+        if (pick is not null)
+        {
+            SelectedTarif = pick;
+            return;
+        }
 
         static bool IsCabinet30Label(string label)
         {

@@ -113,7 +113,7 @@
                             </DockPanel>
 
                             <DockPanel>
-                                <TextBlock Width="110" VerticalAlignment="Center" Text="Statut:" />
+                                <TextBlock Width="110" VerticalAlignment="Center" Text="Tarif RDV:" />
                                 <ComboBox IsEnabled="{Binding IsEditing}"
                                           ItemsSource="{Binding StatutChoices}"
                                           SelectedItem="{Binding Statut, UpdateSourceTrigger=PropertyChanged}"

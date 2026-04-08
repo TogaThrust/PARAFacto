@@ -28,8 +28,8 @@ public partial class PatientMedicalWindow : Window
                 return;
             }
 
-            // Normalisation rapide du statut
-            _patient.Statut = string.IsNullOrWhiteSpace(_patient.Statut) ? "NON BIM" : _patient.Statut.Trim();
+            // Le statut contient désormais le tarif par défaut de RDV (libellé exact du référentiel tarifs).
+            _patient.Statut = string.IsNullOrWhiteSpace(_patient.Statut) ? "" : _patient.Statut.Trim();
 
             _repo.Upsert(_patient);
             DialogResult = true;
