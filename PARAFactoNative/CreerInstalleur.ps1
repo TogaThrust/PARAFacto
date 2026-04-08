@@ -97,7 +97,9 @@ function Set-ProjectVersion {
     else {
         $updated = $raw -replace "</PropertyGroup>", "    <Version>$VersionText</Version>`r`n  </PropertyGroup>"
     }
-    Set-Content -Path $CsprojPath -Value $updated -Encoding UTF8
+    # PS 5.1: Set-Content -Encoding UTF8 ajoute un BOM; MSBuild n'en a pas besoin (Git plus propre).
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($CsprojPath, $updated, $utf8NoBom)
 }
 
 function Set-AppVersionJson {
