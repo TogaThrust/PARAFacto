@@ -6,8 +6,8 @@
 
 .DESCRIPTION
   Le script :
-    1) publie PARAFactoNative (Release, win-x64, self-contained) dans installer_output (PARAFactoNative.exe + dependances)
-    2) compile un installateur Inno Setup vers installer_output\PARAFactoNative_Installer.exe
+    1) publie PARAFactoNative (Release, win-x64, self-contained) dans publish_output\win-x64
+    2) compile l'installateur Inno : seul PARAFactoNative_Installer.exe est ecrit dans installer_output
 
   Prerequis :
     - .NET SDK installe (commande dotnet)
@@ -123,8 +123,8 @@ if (-not $csproj) {
 
 $projectDir = Split-Path $csproj -Parent
 $repoRoot = Split-Path $projectDir -Parent
+$publishDir = Join-Path $projectDir "publish_output\win-x64"
 $installerDir = Join-Path $projectDir "installer_output"
-$publishDir = $installerDir
 $issPath = Join-Path $env:TEMP ("PARAFactoNative_Setup_{0}.iss" -f [Guid]::NewGuid().ToString("N"))
 $installerExe = Join-Path $installerDir "PARAFactoNative_Installer.exe"
 $iscc = Resolve-IsccPath
@@ -158,6 +158,11 @@ Write-Host "Publish dir  : $publishDir"
 Write-Host "Installer dir: $installerDir"
 Write-Host "Version      : $AppVersion"
 Write-Host ""
+
+if (Test-Path $publishDir) {
+    Remove-Item -Recurse -Force $publishDir
+}
+New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
 
 if (Test-Path $installerDir) {
     Remove-Item -Recurse -Force $installerDir
@@ -240,5 +245,6 @@ if (-not (Test-Path $installerExe)) {
 
 Write-Host ""
 Write-Host "OK - Installateur genere."
-Write-Host "  Fichier : $installerExe"
-Write-Host "  Pensez a publier ce .exe comme asset GitHub Release."
+Write-Host "  App (publish) : $publishDir"
+Write-Host "  Installateur  : $installerExe"
+Write-Host "  Pensez a publier l'installateur .exe comme asset GitHub Release."
