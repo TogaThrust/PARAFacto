@@ -7,7 +7,7 @@ namespace PARAFactoNative.Services;
 public static class DbBootstrapper
 {
     // On garde simple: version "app" pour nos migrations.
-    private const int TargetSchemaVersion = 15;
+    private const int TargetSchemaVersion = 16;
 
     public static void EnsureDatabase()
     {
@@ -32,6 +32,7 @@ public static class DbBootstrapper
             EnsureAppointmentsTable(cn);
             EnsureAgendaUnavailabilityTable(cn);
             EnsureAgendaLunchDayOverrideTable(cn);
+            EnsureAgendaWorkdayDayOverrideTable(cn);
             EnsureAppointmentsRecurrenceSeriesColumn(cn);
             SetSchemaVersion(cn, TargetSchemaVersion);
             return;
@@ -51,6 +52,7 @@ public static class DbBootstrapper
         EnsureAppointmentsTable(cn);
         EnsureAgendaUnavailabilityTable(cn);
         EnsureAgendaLunchDayOverrideTable(cn);
+        EnsureAgendaWorkdayDayOverrideTable(cn);
         EnsureAppointmentsRecurrenceSeriesColumn(cn);
 
         SetSchemaVersion(cn, TargetSchemaVersion);
@@ -155,6 +157,21 @@ CREATE TABLE agenda_lunch_day_override(
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS ix_agenda_lunch_day_override_date ON agenda_lunch_day_override(date_iso);
+");
+    }
+
+    private static void EnsureAgendaWorkdayDayOverrideTable(IDbConnection cn)
+    {
+        if (TableExists(cn, "agenda_workday_day_override")) return;
+        cn.Execute(@"
+CREATE TABLE agenda_workday_day_override(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date_iso TEXT NOT NULL UNIQUE,
+  start_time TEXT NOT NULL,
+  end_time TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS ix_agenda_workday_day_override_date ON agenda_workday_day_override(date_iso);
 ");
     }
 

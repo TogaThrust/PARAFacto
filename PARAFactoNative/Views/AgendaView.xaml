@@ -30,7 +30,8 @@
         </Style>
         <!-- Ligne RDV ou créneau libre (vert) : Mois, Semaine, Jour -->
         <DataTemplate x:Key="AgendaLineRowTemplate">
-            <Border Padding="3,2" Margin="0,0,0,1" CornerRadius="3">
+            <Border Padding="3,2" Margin="0,0,0,1" CornerRadius="3"
+                    PreviewMouseLeftButtonDown="AgendaLineRow_OnPreviewMouseLeftButtonDown">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Background" Value="Transparent"/>
@@ -282,7 +283,8 @@
                                                         IsEnabled="{Binding CanSelectCalendarDay}"
                                                         HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                                         Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
-                                                        Padding="0" Margin="0" Cursor="Hand"/>
+                                                        Padding="0" Margin="0" Cursor="Hand"
+                                                        MouseDoubleClick="CalendarDayHeaderButton_OnMouseDoubleClick"/>
                                                 <Grid IsHitTestVisible="False">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*"/>
@@ -339,7 +341,8 @@
                                                         IsEnabled="{Binding CanSelectCalendarDay}"
                                                         HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                                         Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
-                                                        Padding="0" Margin="0" Cursor="Hand"/>
+                                                        Padding="0" Margin="0" Cursor="Hand"
+                                                        MouseDoubleClick="CalendarDayHeaderButton_OnMouseDoubleClick"/>
                                                 <StackPanel IsHitTestVisible="False">
                                                     <Grid VerticalAlignment="Center">
                                                         <Grid.ColumnDefinitions>

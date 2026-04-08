@@ -52,6 +52,8 @@ public sealed class AgendaLineVm : NotifyBase
     public int SortMinutes { get; init; }
     /// <summary>Jour calendaire déjà passé : pas d’édition ni de sélection de RDV.</summary>
     public bool IsHistoricalReadOnlyDay { get; init; }
+    /// <summary>Date de la case calendrier (double-clic sur le lunch).</summary>
+    public DateTime? CalendarOwnerDate { get; init; }
     private bool _isSelected;
     public bool IsSelected
     {
@@ -101,6 +103,7 @@ public sealed class AgendaViewModel : NotifyBase
     private readonly AppointmentRepo _repo = new();
     private readonly UnavailabilityRepo _unavailRepo = new();
     private readonly LunchDayOverrideRepo _lunchOverrideRepo = new();
+    private readonly WorkdayDayOverrideRepo _workdayOverrideRepo = new();
     private readonly PatientRepo _patientRepo = new();
     private readonly TarifRepo _tarifs = new();
     private readonly SeanceService _seanceSvc = new();
@@ -120,6 +123,9 @@ public sealed class AgendaViewModel : NotifyBase
 
     /// <summary>Exceptions lunch par date (plage visible + chargement paresseux hors plage).</summary>
     private Dictionary<string, LunchDayOverrideRow> _lunchOverridesByDay = new(StringComparer.Ordinal);
+
+    /// <summary>Exceptions début/fin de journée par date (plage visible + chargement paresseux hors plage).</summary>
+    private Dictionary<string, WorkdayDayOverrideRow> _workdayOverridesByDay = new(StringComparer.Ordinal);
 
     /// <summary>Émis après suppression d’un RDV (pour rafraîchir la console si même jour).</summary>
     public event Action<DateTime>? AgendaAppointmentDeleted;
@@ -369,6 +375,7 @@ public sealed class AgendaViewModel : NotifyBase
             if (d < DateTime.Today)
                 d = DateTime.Today;
             if (!Set(ref _appointmentDate, d)) return;
+            RebuildAppointmentTimeSlots();
             if (!_suppressTimeSuggest && EditingId == 0)
                 SuggestNextAvailableStartIfNew();
             RefreshLunchResetButtonVisibility();
@@ -649,6 +656,7 @@ public sealed class AgendaViewModel : NotifyBase
                     earliest = n.Hour * 60 + n.Minute;
                 }
 
+                var (wdResetS, wdResetE) = GetEffectiveWorkdayMinutesForDay(day.Date);
                 var slots = AppointmentScheduling.ListAvailableStartTimes(
                     sameDay,
                     unavailDay,
@@ -660,8 +668,8 @@ public sealed class AgendaViewModel : NotifyBase
                     pendingNewRdvNotInDb: EditingId == 0,
                     pendingStartMin: formStartMin,
                     pendingDurationMin: formDur,
-                    _workdayStartMin,
-                    _workdayClosingMin,
+                    wdResetS,
+                    wdResetE,
                     5,
                     earliest,
                     recLs,
@@ -673,8 +681,8 @@ public sealed class AgendaViewModel : NotifyBase
                         Fr,
                         day,
                         moveDur,
-                        _workdayStartMin,
-                        _workdayClosingMin,
+                        wdResetS,
+                        wdResetE,
                         d => _repo.ListForDay(d),
                         d => _unavailRepo.ListForDay(d),
                         d => TryGetEffectiveLunchForDay(d, out var ls, out var le) ? (true, ls, le) : (false, 0, 0));
@@ -936,6 +944,9 @@ ORDER BY nom, prenom;
         _lunchOverridesByDay = _lunchOverrideRepo.ListBetweenInclusive(fromIso, toIso)
             .ToDictionary(r => r.DateIso, r => r, StringComparer.Ordinal);
 
+        _workdayOverridesByDay = _workdayOverrideRepo.ListBetweenInclusive(fromIso, toIso)
+            .ToDictionary(r => r.DateIso, r => r, StringComparer.Ordinal);
+
         if (IsMonthView) RebuildMonthCells(byDay, byDayUnavail);
         else if (IsWeekView) RebuildWeekColumns(byDay, byDayUnavail);
         else RebuildDayLines(byDay, byDayUnavail);
@@ -991,7 +1002,7 @@ ORDER BY nom, prenom;
         return (AnchorDate.Date, AnchorDate.Date);
     }
 
-    private static AgendaLineVm LineFrom(AppointmentRow r, bool historicalReadOnly)
+    private AgendaLineVm LineFrom(AppointmentRow r, bool historicalReadOnly, DateTime calendarDay)
     {
         var sort = 0;
         AppointmentScheduling.TryParseTimeToMinutes(r.StartTime, out sort);
@@ -1000,11 +1011,12 @@ ORDER BY nom, prenom;
             AppointmentId = r.Id,
             SortMinutes = sort,
             LineText = $"{r.StartTime}  {r.PatientDisplay}",
-            IsHistoricalReadOnlyDay = historicalReadOnly
+            IsHistoricalReadOnlyDay = historicalReadOnly,
+            CalendarOwnerDate = calendarDay
         };
     }
 
-    private static AgendaLineVm UnavailLineFrom(UnavailabilityRow u, int startMin, int endMin, bool historicalReadOnly)
+    private AgendaLineVm UnavailLineFrom(UnavailabilityRow u, int startMin, int endMin, bool historicalReadOnly, DateTime calendarDay)
     {
         var reason = string.IsNullOrWhiteSpace(u.Reason) ? "" : $" — {u.Reason.Trim()}";
         var t0 = AppointmentScheduling.FormatMinutesAsHhMm(startMin);
@@ -1015,11 +1027,12 @@ ORDER BY nom, prenom;
             IsUnavailability = true,
             SortMinutes = startMin,
             LineText = $"Indisponible {t0} – {t1}{reason}",
-            IsHistoricalReadOnlyDay = historicalReadOnly
+            IsHistoricalReadOnlyDay = historicalReadOnly,
+            CalendarOwnerDate = calendarDay
         };
     }
 
-    private static AgendaLineVm LunchLineFrom(int startMin, int endMin, bool historicalReadOnly)
+    private AgendaLineVm LunchLineFrom(int startMin, int endMin, bool historicalReadOnly, DateTime calendarDay)
     {
         var t0 = AppointmentScheduling.FormatMinutesAsHhMm(startMin);
         var t1 = AppointmentScheduling.FormatMinutesAsHhMm(endMin);
@@ -1029,7 +1042,8 @@ ORDER BY nom, prenom;
             IsLunchBreak = true,
             SortMinutes = startMin,
             LineText = $"Lunch {t0} – {t1}",
-            IsHistoricalReadOnlyDay = historicalReadOnly
+            IsHistoricalReadOnlyDay = historicalReadOnly,
+            CalendarOwnerDate = calendarDay
         };
     }
 
@@ -1072,6 +1086,7 @@ ORDER BY nom, prenom;
         var historicalReadOnly = calendarDay.Date < DateTime.Today;
         var ordered = appts is null ? new List<AppointmentRow>() : appts.OrderBy(x => x.StartTime).ToList();
         var ulist = unavails ?? new List<UnavailabilityRow>();
+        var (ws, we) = GetEffectiveWorkdayMinutesForDay(calendarDay.Date);
 
         if (!includeGapHighlights)
         {
@@ -1079,10 +1094,10 @@ ORDER BY nom, prenom;
             foreach (var u in ulist.OrderBy(x => x.StartTime))
             {
                 if (!AppointmentScheduling.TryGetUnavailabilityInterval(u, out var us, out var ue)) continue;
-                lines.Add(UnavailLineFrom(u, us, ue, historicalReadOnly));
+                lines.Add(UnavailLineFrom(u, us, ue, historicalReadOnly, calendarDay.Date));
             }
 
-            lines.AddRange(ordered.Select(a => LineFrom(a, historicalReadOnly)));
+            lines.AddRange(ordered.Select(a => LineFrom(a, historicalReadOnly, calendarDay.Date)));
             SortAgendaLinesChronologically(lines);
             return lines;
         }
@@ -1093,21 +1108,21 @@ ORDER BY nom, prenom;
         {
             if (!AppointmentScheduling.TryParseTimeToMinutes(a.StartTime, out var s)) continue;
             var d = a.DurationMinutes > 0 ? a.DurationMinutes : 30;
-            var clip = ClipBusyToWorkday(s, s + d, _workdayStartMin, _workdayClosingMin);
+            var clip = ClipBusyToWorkday(s, s + d, ws, we);
             if (clip != null) busyParts.Add(clip.Value);
         }
 
         foreach (var u in ulist)
         {
             if (!AppointmentScheduling.TryGetUnavailabilityInterval(u, out var s, out var e)) continue;
-            var clip = ClipBusyToWorkday(s, e, _workdayStartMin, _workdayClosingMin);
+            var clip = ClipBusyToWorkday(s, e, ws, we);
             if (clip != null) busyParts.Add(clip.Value);
         }
 
         var hasLunchForDay = TryGetEffectiveLunchForDay(calendarDay.Date, out var lunchS, out var lunchE);
         if (hasLunchForDay)
         {
-            var lunchClip = ClipBusyToWorkday(lunchS, lunchE, _workdayStartMin, _workdayClosingMin);
+            var lunchClip = ClipBusyToWorkday(lunchS, lunchE, ws, we);
             if (lunchClip != null) busyParts.Add(lunchClip.Value);
         }
 
@@ -1127,34 +1142,35 @@ ORDER BY nom, prenom;
                 IsAvailableGap = true,
                 SortMinutes = gapStart,
                 LineText = $"Créneau disponible {t0} – {t1} ({len} min)",
-                IsHistoricalReadOnlyDay = historicalReadOnly
+                IsHistoricalReadOnlyDay = historicalReadOnly,
+                CalendarOwnerDate = calendarDay.Date
             });
         }
 
-        var cursor = _workdayStartMin;
+        var cursor = ws;
         foreach (var seg in merged)
         {
             addGapIfOk(cursor, seg.s);
             cursor = Math.Max(cursor, seg.e);
         }
 
-        addGapIfOk(cursor, _workdayClosingMin);
+        addGapIfOk(cursor, we);
 
         foreach (var u in ulist)
         {
             if (!AppointmentScheduling.TryGetUnavailabilityInterval(u, out var us, out var ue)) continue;
-            result.Add(UnavailLineFrom(u, us, ue, historicalReadOnly));
+            result.Add(UnavailLineFrom(u, us, ue, historicalReadOnly, calendarDay.Date));
         }
 
         if (hasLunchForDay)
         {
-            var lunchClip = ClipBusyToWorkday(lunchS, lunchE, _workdayStartMin, _workdayClosingMin);
+            var lunchClip = ClipBusyToWorkday(lunchS, lunchE, ws, we);
             if (lunchClip != null)
-                result.Add(LunchLineFrom(lunchClip.Value.s, lunchClip.Value.e, historicalReadOnly));
+                result.Add(LunchLineFrom(lunchClip.Value.s, lunchClip.Value.e, historicalReadOnly, calendarDay.Date));
         }
 
         foreach (var a in ordered)
-            result.Add(LineFrom(a, historicalReadOnly));
+            result.Add(LineFrom(a, historicalReadOnly, calendarDay.Date));
 
         SortAgendaLinesChronologically(result);
         return result;
@@ -1180,9 +1196,213 @@ ORDER BY nom, prenom;
                 if (TryGetEffectiveLunchForDay(day.Date, out var ls, out var le)) return (true, ls, le);
                 return (false, 0, 0);
             },
-            _workdayStartMin,
-            _workdayClosingMin) { Owner = Application.Current?.MainWindow };
+            GetEffectiveWorkdayMinutesForDay) { Owner = Application.Current?.MainWindow };
         w.ShowDialog();
+    }
+
+    /// <summary>Double-clic sur la date d’une case (mois / semaine) : horaires pour ce jour uniquement.</summary>
+    public void OnCalendarDateHeaderDoubleClick(DateTime day)
+    {
+        if (day.Date < DateTime.Today) return;
+        var owner = Application.Current?.MainWindow;
+        var (effS, effE) = GetEffectiveWorkdayMinutesForDay(day.Date);
+        var win = new WorkdayDayOverrideWindow(day.Date, AgendaQuarterHourChoices, effS, effE, Fr) { Owner = owner };
+        var iso = day.ToString("yyyy-MM-dd");
+        if (win.ShowDialog() == true
+            && !string.IsNullOrWhiteSpace(win.SavedStartHhMm)
+            && !string.IsNullOrWhiteSpace(win.SavedEndHhMm))
+        {
+            if (AppointmentScheduling.TryParseTimeToMinutes(win.SavedStartHhMm, out var ns)
+                && AppointmentScheduling.TryParseTimeToMinutes(win.SavedEndHhMm, out var ne)
+                && ns == _workdayStartMin
+                && ne == _workdayClosingMin)
+            {
+                _workdayOverrideRepo.DeleteForDateIso(iso);
+                _workdayOverridesByDay.Remove(iso);
+            }
+            else
+            {
+                _workdayOverrideRepo.Upsert(iso, win.SavedStartHhMm, win.SavedEndHhMm);
+                _workdayOverridesByDay[iso] = new WorkdayDayOverrideRow
+                {
+                    DateIso = iso,
+                    StartTime = win.SavedStartHhMm,
+                    EndTime = win.SavedEndHhMm
+                };
+            }
+
+            RefreshCalendar();
+            if (AppointmentDate.Date == day.Date)
+            {
+                RebuildAppointmentTimeSlots();
+                if (EditingId == 0)
+                    SuggestNextAvailableStartIfNew();
+            }
+        }
+        else
+            AppointmentDate = day.Date;
+    }
+
+    /// <summary>Double-clic sur la ligne lunch : déplacer la pause pour ce jour (annulation = date active au formulaire).</summary>
+    public void OnCalendarLunchLineDoubleClick(AgendaLineVm line)
+    {
+        if (line.CalendarOwnerDate is not { } day0) return;
+        var day = day0.Date;
+        if (day < DateTime.Today || !line.IsLunchBreak) return;
+        if (!TryGetEffectiveLunchForDay(day, out var ls, out var le)) return;
+
+        var owner = Application.Current?.MainWindow;
+        var iso = day.ToString("yyyy-MM-dd");
+        var unavailDay = _unavailRepo.ListForDay(day);
+        var seedLunchS = ls;
+        var seedLunchE = le;
+
+        outer:
+        while (true)
+        {
+            var lunchWin = new LunchRescheduleDayWindow(day, seedLunchS, seedLunchE, Fr) { Owner = owner };
+            if (lunchWin.ShowDialog() != true)
+            {
+                AppointmentDate = day;
+                RefreshLunchResetButtonVisibility();
+                return;
+            }
+
+            if (!AppointmentScheduling.TryParseTimeToMinutes(lunchWin.StartHhMm, out var nLunchS)
+                || !AppointmentScheduling.TryParseTimeToMinutes(lunchWin.EndHhMm, out var nLunchE)
+                || nLunchE <= nLunchS)
+            {
+                MessageBox.Show("Plage de lunch invalide.", "Agenda — lunch", MessageBoxButton.OK, MessageBoxImage.Warning);
+                continue;
+            }
+
+            while (true)
+            {
+                var sameDay = _repo.ListForDay(day);
+                var conflicts = AppointmentScheduling.ListAppointmentsOverlappingLunch(
+                    sameDay,
+                    nLunchS,
+                    nLunchE,
+                    null,
+                    0,
+                    0);
+
+                if (conflicts.Count == 0)
+                {
+                    _lunchOverrideRepo.UpsertMoved(iso, lunchWin.StartHhMm, lunchWin.EndHhMm);
+                    _lunchOverridesByDay[iso] = new LunchDayOverrideRow
+                    {
+                        DateIso = iso,
+                        Mode = "moved",
+                        StartTime = lunchWin.StartHhMm,
+                        EndTime = lunchWin.EndHhMm
+                    };
+                    RefreshLunchResetButtonVisibility();
+                    RefreshCalendar();
+                    if (AppointmentDate.Date == day)
+                        RebuildAppointmentTimeSlots();
+                    return;
+                }
+
+                var first = conflicts[0];
+                var detail = $"Rendez-vous concerné : {first.PatientDisplay} à {NormalizeTime(first.StartTime)}.";
+                var choiceWin = new LunchVsAppointmentConflictWindow(detail) { Owner = owner };
+                if (choiceWin.ShowDialog() != true)
+                {
+                    AppointmentDate = day;
+                    return;
+                }
+
+                if (choiceWin.Choice == LunchVsAppointmentConflictWindow.ConflictChoice.ModifyLunch)
+                {
+                    seedLunchS = nLunchS;
+                    seedLunchE = nLunchE;
+                    goto outer;
+                }
+
+                if (choiceWin.Choice != LunchVsAppointmentConflictWindow.ConflictChoice.MoveAppointment)
+                {
+                    AppointmentDate = day;
+                    return;
+                }
+
+                var moveDur = first.DurationMinutes > 0 ? first.DurationMinutes : 30;
+                int? earliest = null;
+                if (day.Date == DateTime.Today)
+                {
+                    var n = DateTime.Now;
+                    earliest = n.Hour * 60 + n.Minute;
+                }
+
+                var (wdCalS, wdCalE) = GetEffectiveWorkdayMinutesForDay(day.Date);
+                var slots = AppointmentScheduling.ListAvailableStartTimes(
+                    sameDay,
+                    unavailDay,
+                    moveDur,
+                    excludeAppointmentId: first.Id,
+                    editingAppointmentId: null,
+                    editingStartMin: 0,
+                    editingDurationMin: 30,
+                    pendingNewRdvNotInDb: false,
+                    pendingStartMin: 0,
+                    pendingDurationMin: 30,
+                    wdCalS,
+                    wdCalE,
+                    5,
+                    earliest,
+                    nLunchS,
+                    nLunchE,
+                    null,
+                    null);
+
+                if (slots.Count == 0)
+                {
+                    var msg = AppointmentScheduling.BuildMessageWhenNoSameDayRelocateSlot(
+                        Fr,
+                        day,
+                        moveDur,
+                        wdCalS,
+                        wdCalE,
+                        d => _repo.ListForDay(d),
+                        d => _unavailRepo.ListForDay(d),
+                        d => TryGetEffectiveLunchForDay(d, out var a, out var b) ? (true, a, b) : (false, 0, 0));
+                    MessageBox.Show(msg, "Agenda — lunch", MessageBoxButton.OK, MessageBoxImage.Information);
+                    seedLunchS = nLunchS;
+                    seedLunchE = nLunchE;
+                    goto outer;
+                }
+
+                var phone = _patientRepo.GetTelephoneByPatientId(first.PatientId);
+                var dateFr = day.ToString("dddd d MMMM yyyy", Fr);
+                var relocateWin = new AppointmentRelocateSlotWindow(
+                    $"Patient : {first.PatientDisplay}",
+                    $"Date : {dateFr} — actuellement à {NormalizeTime(first.StartTime)} ({moveDur} min).",
+                    slots,
+                    phone) { Owner = owner };
+
+                if (relocateWin.ShowDialog() != true)
+                {
+                    AppointmentDate = day;
+                    return;
+                }
+
+                var newHhMm = relocateWin.SelectedSlotHhMm;
+                if (string.IsNullOrWhiteSpace(newHhMm)) return;
+
+                try
+                {
+                    _repo.Update(first.Id, first.PatientId, first.TarifId, iso, newHhMm.Trim(), moveDur, first.RecurrenceSeriesId);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "Agenda — déplacement", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                AppointmentResponsibleNotify.ShowNotifyResponsibleDialog(_patientRepo, first.PatientId);
+                RefreshCalendar();
+            }
+        }
     }
 
     private void RebuildMonthCells(
@@ -1405,6 +1625,28 @@ ORDER BY nom, prenom;
         return row;
     }
 
+    private WorkdayDayOverrideRow? ResolveWorkdayOverrideRow(string dateIso)
+    {
+        if (_workdayOverridesByDay.TryGetValue(dateIso, out var cached)) return cached;
+        var row = _workdayOverrideRepo.GetForDateIso(dateIso);
+        if (row is not null)
+            _workdayOverridesByDay[dateIso] = row;
+        return row;
+    }
+
+    /// <summary>Début et fin de journée effectifs : exception pour ce jour ou réglage global.</summary>
+    private (int startMin, int endMin) GetEffectiveWorkdayMinutesForDay(DateTime day)
+    {
+        var iso = day.ToString("yyyy-MM-dd");
+        var ov = ResolveWorkdayOverrideRow(iso);
+        if (ov is not null
+            && AppointmentScheduling.TryParseTimeToMinutes(ov.StartTime, out var s)
+            && AppointmentScheduling.TryParseTimeToMinutes(ov.EndTime, out var e)
+            && e > s + 14)
+            return (s, e);
+        return (_workdayStartMin, _workdayClosingMin);
+    }
+
     /// <summary>Lunch effectif pour une date : réglage récurrent, sauf dimanche / férié BE / exception jour (omit ou moved).</summary>
     private bool TryGetEffectiveLunchForDay(DateTime day, out int startMin, out int endMin)
     {
@@ -1540,6 +1782,7 @@ ORDER BY nom, prenom;
                     earliest = n.Hour * 60 + n.Minute;
                 }
 
+                var (wdLunchS, wdLunchE) = GetEffectiveWorkdayMinutesForDay(day.Date);
                 var slots = AppointmentScheduling.ListAvailableStartTimes(
                     sameDay,
                     unavailDay,
@@ -1551,8 +1794,8 @@ ORDER BY nom, prenom;
                     pendingNewRdvNotInDb: EditingId == 0,
                     pendingStartMin: startMin,
                     pendingDurationMin: durSave,
-                    _workdayStartMin,
-                    _workdayClosingMin,
+                    wdLunchS,
+                    wdLunchE,
                     5,
                     earliest,
                     nLunchS,
@@ -1564,8 +1807,8 @@ ORDER BY nom, prenom;
                         Fr,
                         day,
                         moveDur,
-                        _workdayStartMin,
-                        _workdayClosingMin,
+                        wdLunchS,
+                        wdLunchE,
                         d => _repo.ListForDay(d),
                         d => _unavailRepo.ListForDay(d),
                         d => TryGetEffectiveLunchForDay(d, out var ls, out var le) ? (true, ls, le) : (false, 0, 0));
@@ -1621,7 +1864,8 @@ ORDER BY nom, prenom;
     {
         TimeSlots.Clear();
         var dur = Math.Max(15, DurationMinutes);
-        for (var t = _workdayStartMin; t + dur <= _workdayClosingMin; t += 15)
+        var (dayStart, dayClose) = GetEffectiveWorkdayMinutesForDay(AppointmentDate.Date);
+        for (var t = dayStart; t + dur <= dayClose; t += 15)
             TimeSlots.Add(AppointmentScheduling.FormatMinutesAsHhMm(t));
 
         if (EditingId > 0
@@ -1655,13 +1899,14 @@ ORDER BY nom, prenom;
             lunchE = le;
         }
 
+        var (wds, wdc) = GetEffectiveWorkdayMinutesForDay(AppointmentDate.Date);
         var slot = AppointmentScheduling.FindFirstAvailableStart(
             list,
             unavail,
             DurationMinutes,
             null,
-            _workdayStartMin,
-            _workdayClosingMin,
+            wds,
+            wdc,
             5,
             earliest,
             lunchS,
@@ -1699,7 +1944,8 @@ ORDER BY nom, prenom;
             if (startMin < nowMin) return true;
         }
 
-        return startMin < _workdayStartMin || startMin + durationMin > _workdayClosingMin;
+        var (wdFiltS, wdFiltE) = GetEffectiveWorkdayMinutesForDay(day.Date);
+        return startMin < wdFiltS || startMin + durationMin > wdFiltE;
     }
 
     private List<string> ListSlotsForRecurringOccurrence(DateTime day, int durationMin, long? excludeOtherAppointmentId)
@@ -1714,6 +1960,7 @@ ORDER BY nom, prenom;
             lunchE = le;
         }
 
+        var (wdRecS, wdRecE) = GetEffectiveWorkdayMinutesForDay(day.Date);
         return AppointmentScheduling.ListAvailableStartTimes(
             same,
             unavail,
@@ -1725,8 +1972,8 @@ ORDER BY nom, prenom;
             false,
             0,
             0,
-            _workdayStartMin,
-            _workdayClosingMin,
+            wdRecS,
+            wdRecE,
             5,
             earliest,
             lunchS,
@@ -1748,6 +1995,7 @@ ORDER BY nom, prenom;
         }
 
         var bDur = blocker.DurationMinutes > 0 ? blocker.DurationMinutes : 30;
+        var (wdBlkS, wdBlkE) = GetEffectiveWorkdayMinutesForDay(day.Date);
         return AppointmentScheduling.ListAvailableStartTimes(
             same,
             unavail,
@@ -1759,8 +2007,8 @@ ORDER BY nom, prenom;
             true,
             reservedStartMin,
             reservedDur,
-            _workdayStartMin,
-            _workdayClosingMin,
+            wdBlkS,
+            wdBlkE,
             5,
             earliest,
             lunchS,
@@ -1793,10 +2041,11 @@ ORDER BY nom, prenom;
             return;
         }
 
-        if (startMin < _workdayStartMin || startMin + DurationMinutes > _workdayClosingMin)
+        var (wdEncS, wdEncE) = GetEffectiveWorkdayMinutesForDay(AppointmentDate.Date);
+        if (startMin < wdEncS || startMin + DurationMinutes > wdEncE)
         {
-            var d0 = AppointmentScheduling.FormatMinutesAsHhMm(_workdayStartMin);
-            var d1 = AppointmentScheduling.FormatMinutesAsHhMm(_workdayClosingMin);
+            var d0 = AppointmentScheduling.FormatMinutesAsHhMm(wdEncS);
+            var d1 = AppointmentScheduling.FormatMinutesAsHhMm(wdEncE);
             MessageBox.Show(
                 $"L’heure de début doit être entre {d0} et une heure telle que la séance se termine au plus tard à {d1}.",
                 "Agenda",
@@ -2087,12 +2336,13 @@ ORDER BY nom, prenom;
                         var slotsR = ListSlotsForRecurringOccurrence(day, durSave, excludeApptId);
                         if (slotsR.Count == 0)
                         {
+                            var (wdOccS, wdOccE) = GetEffectiveWorkdayMinutesForDay(day.Date);
                             var msg = AppointmentScheduling.BuildMessageWhenNoSameDayRelocateSlot(
                                 Fr,
                                 day,
                                 durSave,
-                                _workdayStartMin,
-                                _workdayClosingMin,
+                                wdOccS,
+                                wdOccE,
                                 x => _repo.ListForDay(x),
                                 x => _unavailRepo.ListForDay(x),
                                 x => TryGetEffectiveLunchForDay(x, out var a, out var b) ? (true, a, b) : (false, 0, 0));
@@ -2124,12 +2374,13 @@ ORDER BY nom, prenom;
                                 var slotsB = ListSlotsForMovingBlocker(day, blocker, startMin, durSave);
                                 if (slotsB.Count == 0)
                                 {
+                                    var (wdBlkOccS, wdBlkOccE) = GetEffectiveWorkdayMinutesForDay(day.Date);
                                     var msg2 = AppointmentScheduling.BuildMessageWhenNoSameDayRelocateSlot(
                                         Fr,
                                         day,
                                         moveDurB,
-                                        _workdayStartMin,
-                                        _workdayClosingMin,
+                                        wdBlkOccS,
+                                        wdBlkOccE,
                                         x => _repo.ListForDay(x),
                                         x => _unavailRepo.ListForDay(x),
                                         x => TryGetEffectiveLunchForDay(x, out var a, out var b) ? (true, a, b) : (false, 0, 0));
@@ -2309,7 +2560,8 @@ ORDER BY nom, prenom;
                     }
 
                     var dur = src.DurationMinutes > 0 ? src.DurationMinutes : 30;
-                    if (startMin < _workdayStartMin || startMin + dur > _workdayClosingMin)
+                    var (wdCopyS, wdCopyE) = GetEffectiveWorkdayMinutesForDay(day.Date);
+                    if (startMin < wdCopyS || startMin + dur > wdCopyE)
                     {
                         skipped++;
                         continue;
@@ -2460,10 +2712,11 @@ ORDER BY nom, prenom;
 
         if (EditingId == 0)
         {
-            if (startMin < _workdayStartMin || startMin + DurationMinutes > _workdayClosingMin)
+            var (wdSaveS, wdSaveE) = GetEffectiveWorkdayMinutesForDay(AppointmentDate.Date);
+            if (startMin < wdSaveS || startMin + DurationMinutes > wdSaveE)
             {
-                var d0 = AppointmentScheduling.FormatMinutesAsHhMm(_workdayStartMin);
-                var d1 = AppointmentScheduling.FormatMinutesAsHhMm(_workdayClosingMin);
+                var d0 = AppointmentScheduling.FormatMinutesAsHhMm(wdSaveS);
+                var d1 = AppointmentScheduling.FormatMinutesAsHhMm(wdSaveE);
                 MessageBox.Show(
                     $"Pour un nouveau rendez-vous, l’heure de début doit être entre {d0} et une heure telle que la séance se termine au plus tard à {d1} (selon la durée choisie).",
                     "Agenda",

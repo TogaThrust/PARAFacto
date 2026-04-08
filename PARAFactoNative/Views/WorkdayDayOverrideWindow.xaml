@@ -1,8 +1,8 @@
-<Window x:Class="PARAFactoNative.Views.LunchRescheduleDayWindow"
+<Window x:Class="PARAFactoNative.Views.WorkdayDayOverrideWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Reporter le lunch (ce jour uniquement)"
-        Height="260" Width="420"
+        Title="Horaires de travail (ce jour)"
+        Height="320" Width="440"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="White"
@@ -11,29 +11,30 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <TextBlock x:Name="DateLabel" Grid.Row="0" Style="{StaticResource DialogCaptionTextBlock}" TextWrapping="Wrap"/>
         <TextBlock Grid.Row="1" Margin="0,10,0,0" Style="{StaticResource DialogMessageTextBlock}"
-                   Text="Choisissez la nouvelle heure de début et la durée de la pause. La plage s’affichera en jaune dans l’agenda pour cette date seulement."/>
-        <Grid Grid.Row="2" Margin="0,14,0,0" VerticalAlignment="Top">
+                   Text="Définissez l’heure de début et de fin de journée pour cette date uniquement. Les créneaux de rendez-vous et l’affichage du calendrier s’adaptent. Les horaires habituels (panneau de gauche) ne sont pas modifiés."/>
+        <Grid Grid.Row="2" Margin="0,14,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                <TextBlock Style="{StaticResource DialogSectionHeaderTextBlock}" Margin="0,0,0,4" Text="Heure de début"/>
+                <TextBlock Style="{StaticResource DialogSectionHeaderTextBlock}" Margin="0,0,0,4" Text="Début de journée"/>
                 <ComboBox x:Name="StartCombo" IsEditable="False"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                <TextBlock Style="{StaticResource DialogSectionHeaderTextBlock}" Margin="0,0,0,4" Text="Durée (minutes)"/>
-                <ComboBox x:Name="DurationCombo" IsEditable="False"/>
+                <TextBlock Style="{StaticResource DialogSectionHeaderTextBlock}" Margin="0,0,0,4" Text="Fin de journée"/>
+                <ComboBox x:Name="EndCombo" IsEditable="False"/>
             </StackPanel>
         </Grid>
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Style="{StaticResource DialogChoiceButton}" Margin="0,0,8,0" Content="Annuler" IsCancel="True"/>
-            <Button Style="{StaticResource DialogPrimaryChoiceButton}" Content="Enregistrer" IsDefault="True" Click="Ok_Click"/>
+            <Button Style="{StaticResource DialogPrimaryChoiceButton}" Content="Enregistrer" IsDefault="True" Click="Save_Click"/>
         </StackPanel>
     </Grid>
 </Window>

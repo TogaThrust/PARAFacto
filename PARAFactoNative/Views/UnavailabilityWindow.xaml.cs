@@ -17,8 +17,7 @@ public partial class UnavailabilityWindow : Window
     private readonly AppointmentRepo _apptRepo = new();
     private readonly PatientRepo _patientRepo = new();
     private readonly Func<DateTime, (bool hasLunch, int lunchStart, int lunchEnd)> _getEffectiveLunch;
-    private readonly int _workdayStartMin;
-    private readonly int _workdayClosingMin;
+    private readonly Func<DateTime, (int startMin, int endMin)> _getEffectiveWorkday;
 
     private sealed class UnavailListItem
     {
@@ -30,21 +29,57 @@ public partial class UnavailabilityWindow : Window
         Action? refreshParent,
         DateTime initialDate,
         Func<DateTime, (bool hasLunch, int lunchStart, int lunchEnd)> getEffectiveLunch,
-        int workdayStartMin,
-        int workdayClosingMin)
+        Func<DateTime, (int startMin, int endMin)> getEffectiveWorkday)
     {
         InitializeComponent();
         _refreshParent = refreshParent;
         _getEffectiveLunch = getEffectiveLunch;
-        _workdayStartMin = workdayStartMin;
-        _workdayClosingMin = workdayClosingMin;
+        _getEffectiveWorkday = getEffectiveWorkday;
 
         var times = Enumerable.Range(0, 96).Select(i => FormatHhMm(i * 15)).ToList();
         StartCombo.ItemsSource = times;
-        StartCombo.SelectedItem = "09:00";
-        RebuildEndComboForStart();
         DatePick.SelectedDate = initialDate.Date;
+        ApplyDefaultStartEndForSelectedDay();
         ReloadList();
+    }
+
+    private void ApplyDefaultStartEndForSelectedDay()
+    {
+        var d = DatePick.SelectedDate;
+        if (d is null) return;
+        if (StartCombo.ItemsSource is not IEnumerable<string> src)
+            return;
+        var times = src as IList<string> ?? src.ToList();
+
+        var (ws, we) = _getEffectiveWorkday(d.Value.Date);
+        var snappedStart = Math.Clamp((ws / 15) * 15, 0, 23 * 60 + 45);
+        var startStr = FormatHhMm(snappedStart);
+        StartCombo.SelectedItem = times.Contains(startStr) ? startStr : times.FirstOrDefault() ?? startStr;
+        RebuildEndComboForStart();
+        PickDefaultEndForClosing(we);
+    }
+
+    private void PickDefaultEndForClosing(int closingMin)
+    {
+        if (EndCombo.ItemsSource is not IEnumerable<string> endsEnum) return;
+        var ends = endsEnum.ToList();
+        if (ends.Count == 0) return;
+        string? best = null;
+        var bestDiff = int.MaxValue;
+        foreach (var e in ends)
+        {
+            if (!TimeSpan.TryParse(e.Trim(), CultureInfo.InvariantCulture, out var ts)) continue;
+            var m = (int)ts.TotalMinutes;
+            if (m > closingMin) continue;
+            var diff = closingMin - m;
+            if (diff < bestDiff)
+            {
+                bestDiff = diff;
+                best = e;
+            }
+        }
+
+        EndCombo.SelectedItem = best ?? ends[^1];
     }
 
     private static string FormatHhMm(int minutesSinceMidnight)
@@ -76,7 +111,11 @@ public partial class UnavailabilityWindow : Window
 
     private void StartCombo_OnSelectionChanged(object sender, SelectionChangedEventArgs e) => RebuildEndComboForStart();
 
-    private void DatePick_OnSelectedDateChanged(object? sender, SelectionChangedEventArgs e) => ReloadList();
+    private void DatePick_OnSelectedDateChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        ApplyDefaultStartEndForSelectedDay();
+        ReloadList();
+    }
 
     private void ReloadList()
     {
@@ -139,6 +178,7 @@ public partial class UnavailabilityWindow : Window
 
         var iso = day.Value.ToString("yyyy-MM-dd");
         var owner = Owner ?? Application.Current?.MainWindow;
+        var (wds, wdc) = _getEffectiveWorkday(day.Value.Date);
 
         while (true)
         {
@@ -211,8 +251,8 @@ public partial class UnavailabilityWindow : Window
                 pendingNewRdvNotInDb: false,
                 pendingStartMin: 0,
                 pendingDurationMin: 30,
-                _workdayStartMin,
-                _workdayClosingMin,
+                wds,
+                wdc,
                 5,
                 earliest,
                 lunchBlockS,
@@ -226,8 +266,8 @@ public partial class UnavailabilityWindow : Window
                     FrBe,
                     day.Value,
                     moveDur,
-                    _workdayStartMin,
-                    _workdayClosingMin,
+                    wds,
+                    wdc,
                     d => _apptRepo.ListForDay(d),
                     d => _unavailRepo.ListForDay(d),
                     _getEffectiveLunch);

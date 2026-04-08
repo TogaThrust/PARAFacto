@@ -1,0 +1,58 @@
+using System.Collections.Generic;
+using System.Linq;
+using Dapper;
+
+namespace PARAFactoNative.Services;
+
+public sealed class WorkdayDayOverrideRow
+{
+    public long Id { get; set; }
+    public string DateIso { get; set; } = "";
+    public string StartTime { get; set; } = "";
+    public string EndTime { get; set; } = "";
+}
+
+public sealed class WorkdayDayOverrideRepo
+{
+    public WorkdayDayOverrideRow? GetForDateIso(string dateIso)
+    {
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+        return cn.QuerySingleOrDefault<WorkdayDayOverrideRow>(@"
+SELECT id AS Id, date_iso AS DateIso, start_time AS StartTime, end_time AS EndTime
+FROM agenda_workday_day_override
+WHERE date_iso = @d
+LIMIT 1;
+", new { d = dateIso });
+    }
+
+    public IReadOnlyList<WorkdayDayOverrideRow> ListBetweenInclusive(string fromIso, string toIso)
+    {
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+        return cn.Query<WorkdayDayOverrideRow>(@"
+SELECT id AS Id, date_iso AS DateIso, start_time AS StartTime, end_time AS EndTime
+FROM agenda_workday_day_override
+WHERE date_iso >= @fromIso AND date_iso <= @toIso
+ORDER BY date_iso;
+", new { fromIso, toIso }).ToList();
+    }
+
+    public void Upsert(string dateIso, string startHhMm, string endHhMm)
+    {
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+        cn.Execute(@"
+INSERT INTO agenda_workday_day_override(date_iso, start_time, end_time)
+VALUES(@d, @s, @e)
+ON CONFLICT(date_iso) DO UPDATE SET start_time=@s, end_time=@e;
+", new { d = dateIso, s = startHhMm.Trim(), e = endHhMm.Trim() });
+    }
+
+    public void DeleteForDateIso(string dateIso)
+    {
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+        cn.Execute("DELETE FROM agenda_workday_day_override WHERE date_iso = @d;", new { d = dateIso });
+    }
+}
