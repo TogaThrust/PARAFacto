@@ -37,6 +37,7 @@ public sealed class AppSettingsStore
         public string? TermsAcceptedAtUtc { get; set; }
         public string? PrivacyDocVersionAccepted { get; set; }
         public string? TermsDocVersionAccepted { get; set; }
+        public string? UiLanguage { get; set; }
     }
 
     private static string SettingsFolder
@@ -230,6 +231,34 @@ public sealed class AppSettingsStore
                     s.AgendaLunchStart = startHhMm.Trim();
                 if (!string.IsNullOrWhiteSpace(endHhMm))
                     s.AgendaLunchEnd = endHhMm.Trim();
+                var json = JsonSerializer.Serialize(s, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(SettingsPath, json);
+            }
+            catch
+            {
+                /* ignore */
+            }
+        }
+    }
+
+    public string LoadUiLanguage()
+    {
+        lock (Gate)
+        {
+            var s = LoadAllInternal();
+            return UiLanguageService.Normalize(s?.UiLanguage);
+        }
+    }
+
+    public void SaveUiLanguage(string? languageCode)
+    {
+        lock (Gate)
+        {
+            try
+            {
+                Directory.CreateDirectory(SettingsFolder);
+                var s = LoadAllInternal() ?? new AppSettings();
+                s.UiLanguage = UiLanguageService.Normalize(languageCode);
                 var json = JsonSerializer.Serialize(s, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(SettingsPath, json);
             }

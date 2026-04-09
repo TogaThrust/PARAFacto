@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:PARAFactoNative.Views"
         mc:Ignorable="d"
-        Title="PARAFACTO Native" Height="820" Width="1200"
+        Title="{DynamicResource App.WindowTitle}" Height="820" Width="1200"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized">
 
@@ -29,7 +29,7 @@
     <Grid>
         <TabControl x:Name="MainTabControl"
                     SelectionChanged="MainTabControl_SelectionChanged">
-            <TabItem Header="Console">
+            <TabItem Header="{DynamicResource Tab.Console}">
                 <Grid Margin="10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="360"/>
@@ -129,19 +129,53 @@
                                        IsHitTestVisible="False"
                                        Source="{Binding Console.InvoiceLogoSource}"/>
                                 <TextBlock Grid.Column="1" FontSize="22" FontWeight="Bold" Text="LAURA GRENIER - LOGOPEDE" VerticalAlignment="Center"/>
-                                <Image Grid.Column="2"
-                                       Width="80"
-                                       Height="80"
-                                       Margin="0,0,320,0"
-                                       Stretch="Uniform"
-                                       VerticalAlignment="Center"
-                                       IsHitTestVisible="False"
-                                       RenderTransformOrigin="0.5,0.5"
-                                       Source="{Binding Console.LogoSource}">
-                                    <Image.RenderTransform>
-                                        <ScaleTransform ScaleX="5" ScaleY="5"/>
-                                    </Image.RenderTransform>
-                                </Image>
+                                <StackPanel Grid.Column="2"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center"
+                                            Margin="0,0,24,0">
+                                    <Image Width="80"
+                                           Height="80"
+                                           Margin="0,0,16,0"
+                                           Stretch="Uniform"
+                                           IsHitTestVisible="False"
+                                           RenderTransformOrigin="0.5,0.5"
+                                           Source="{Binding Console.LogoSource}">
+                                        <Image.RenderTransform>
+                                            <ScaleTransform ScaleX="5" ScaleY="5"/>
+                                        </Image.RenderTransform>
+                                    </Image>
+                                    <Border Background="#F8FAFC"
+                                            BorderBrush="#CBD5E1"
+                                            BorderThickness="1"
+                                            CornerRadius="14"
+                                            Padding="8,6">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button x:Name="LangFrButton"
+                                                    Width="36"
+                                                    Height="28"
+                                                    Margin="0,0,6,0"
+                                                    FontSize="16"
+                                                    Content="🇫🇷"
+                                                    ToolTip="{DynamicResource Language.TooltipFr}"
+                                                    Click="LangFrButton_OnClick"/>
+                                            <Button x:Name="LangEnButton"
+                                                    Width="36"
+                                                    Height="28"
+                                                    Margin="0,0,6,0"
+                                                    FontSize="16"
+                                                    Content="🇬🇧"
+                                                    ToolTip="{DynamicResource Language.TooltipEn}"
+                                                    Click="LangEnButton_OnClick"/>
+                                            <Button x:Name="LangNlButton"
+                                                    Width="36"
+                                                    Height="28"
+                                                    FontSize="16"
+                                                    Content="🇳🇱"
+                                                    ToolTip="{DynamicResource Language.TooltipNl}"
+                                                    Click="LangNlButton_OnClick"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
                             </Grid>
 
                             <!-- Encodage séance (logo byTT déplacé en Row 0) -->
@@ -302,22 +336,22 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Patients">
+            <TabItem Header="{DynamicResource Tab.Patients}">
                 <views:PatientsView DataContext="{Binding Patients}" />
             </TabItem>
-            <TabItem Header="Tarifs">
+            <TabItem Header="{DynamicResource Tab.Tarifs}">
                 <views:TarifsView />
             </TabItem>
-            <TabItem Header="Séances">
+            <TabItem Header="{DynamicResource Tab.Seances}">
                 <views:SeancesView />
             </TabItem>
-            <TabItem Header="Factures">
+            <TabItem Header="{DynamicResource Tab.Factures}">
                 <views:FacturesView />
             </TabItem>
-            <TabItem Header="Agenda RDV">
+            <TabItem Header="{DynamicResource Tab.Agenda}">
                 <views:AgendaView DataContext="{Binding Agenda}" />
             </TabItem>
-            <TabItem Header="Données techniques">
+            <TabItem Header="{DynamicResource Tab.Technical}">
                 <ScrollViewer Margin="10"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Auto">

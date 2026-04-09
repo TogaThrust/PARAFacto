@@ -1,0 +1,14 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <sys:String x:Key="App.WindowTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">PARAFACTO Native</sys:String>
+    <sys:String x:Key="Tab.Console" xmlns:sys="clr-namespace:System;assembly=mscorlib">Dashboard</sys:String>
+    <sys:String x:Key="Tab.Patients" xmlns:sys="clr-namespace:System;assembly=mscorlib">Patients</sys:String>
+    <sys:String x:Key="Tab.Tarifs" xmlns:sys="clr-namespace:System;assembly=mscorlib">Rates</sys:String>
+    <sys:String x:Key="Tab.Seances" xmlns:sys="clr-namespace:System;assembly=mscorlib">Sessions</sys:String>
+    <sys:String x:Key="Tab.Factures" xmlns:sys="clr-namespace:System;assembly=mscorlib">Invoices</sys:String>
+    <sys:String x:Key="Tab.Agenda" xmlns:sys="clr-namespace:System;assembly=mscorlib">Appointments</sys:String>
+    <sys:String x:Key="Tab.Technical" xmlns:sys="clr-namespace:System;assembly=mscorlib">Technical Data</sys:String>
+    <sys:String x:Key="Language.TooltipFr" xmlns:sys="clr-namespace:System;assembly=mscorlib">French</sys:String>
+    <sys:String x:Key="Language.TooltipEn" xmlns:sys="clr-namespace:System;assembly=mscorlib">English</sys:String>
+    <sys:String x:Key="Language.TooltipNl" xmlns:sys="clr-namespace:System;assembly=mscorlib">Dutch</sys:String>
+</ResourceDictionary>

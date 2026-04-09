@@ -20,6 +20,8 @@ namespace PARAFactoNative;
 
 public partial class MainWindow
 {
+    private readonly AppSettingsStore _appSettings = new();
+
     private static string BuildMonthYearLabelFr(string periodYYYYMM)
     {
         // period expected: YYYY-MM
@@ -36,6 +38,9 @@ public partial class MainWindow
     public MainWindow()
     {
         InitializeComponent();
+        UiLanguageService.Initialize(_appSettings.LoadUiLanguage());
+        UiLanguageService.LanguageChanged += OnUiLanguageChanged;
+        UpdateLanguageButtonsVisual();
 
         // Icône fenêtre (en code pour éviter XamlParseException si le fichier n'est pas trouvé au design time)
         try
@@ -315,6 +320,50 @@ public partial class MainWindow
                 MessageBox.Show(ex.ToString(), "Générer factures mutuelles - erreur", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         };
+    }
+
+    private void OnUiLanguageChanged(string _)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            foreach (Window w in Application.Current.Windows)
+                UiVisualLocalizer.Localize(w);
+            UpdateLanguageButtonsVisual();
+        });
+    }
+
+    private void UpdateLanguageButtonsVisual()
+    {
+        void apply(Button b, bool selected)
+        {
+            b.Opacity = selected ? 1.0 : 0.75;
+            b.FontWeight = selected ? FontWeights.Bold : FontWeights.Normal;
+            b.BorderBrush = selected ? Brushes.DodgerBlue : Brushes.LightGray;
+            b.BorderThickness = selected ? new Thickness(2) : new Thickness(1);
+            b.Background = selected ? new SolidColorBrush(Color.FromRgb(239, 246, 255)) : Brushes.White;
+        }
+
+        apply(LangFrButton, UiLanguageService.Current == UiLanguageService.Fr);
+        apply(LangEnButton, UiLanguageService.Current == UiLanguageService.En);
+        apply(LangNlButton, UiLanguageService.Current == UiLanguageService.Nl);
+    }
+
+    private void LangFrButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        UiLanguageService.SetLanguage(UiLanguageService.Fr);
+        _appSettings.SaveUiLanguage(UiLanguageService.Fr);
+    }
+
+    private void LangEnButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        UiLanguageService.SetLanguage(UiLanguageService.En);
+        _appSettings.SaveUiLanguage(UiLanguageService.En);
+    }
+
+    private void LangNlButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        UiLanguageService.SetLanguage(UiLanguageService.Nl);
+        _appSettings.SaveUiLanguage(UiLanguageService.Nl);
     }
 
     private void PostGenAskPrintOrOpenFolder(string title, string folder, List<string> pdfs)

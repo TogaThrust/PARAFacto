@@ -13,6 +13,9 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        var appSettings = new AppSettingsStore();
+        UiLanguageService.Initialize(appSettings.LoadUiLanguage());
+
         // Important pour le flux d'activation:
         // tant que la MainWindow n'est pas créée, l'app ne doit pas se fermer
         // automatiquement quand une boîte de dialogue se ferme.
@@ -37,6 +40,21 @@ public partial class App : Application
         };
 
         base.OnStartup(e);
+
+        EventManager.RegisterClassHandler(
+            typeof(Window),
+            FrameworkElement.LoadedEvent,
+            new RoutedEventHandler((sender, _) =>
+            {
+                if (sender is Window w)
+                    UiVisualLocalizer.Localize(w);
+            }));
+
+        UiLanguageService.LanguageChanged += _ =>
+        {
+            foreach (Window w in Current.Windows)
+                UiVisualLocalizer.Localize(w);
+        };
 
         // Afficher le message Adobe uniquement si aucun lecteur PDF capable d'imprimer n'est détecté
         try
