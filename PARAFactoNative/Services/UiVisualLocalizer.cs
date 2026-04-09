@@ -6,6 +6,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
 namespace PARAFactoNative.Services;
 
@@ -30,9 +31,12 @@ public static class UiVisualLocalizer
                 Walk(d, seen);
         }
 
-        var count = VisualTreeHelper.GetChildrenCount(node);
-        for (var i = 0; i < count; i++)
-            Walk(VisualTreeHelper.GetChild(node, i), seen);
+        if (node is Visual or Visual3D)
+        {
+            var count = VisualTreeHelper.GetChildrenCount(node);
+            for (var i = 0; i < count; i++)
+                Walk(VisualTreeHelper.GetChild(node, i), seen);
+        }
     }
 
     private static void LocalizeNode(DependencyObject node)
