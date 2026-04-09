@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text.Json;
 using System.Windows;
@@ -28,7 +29,10 @@ public sealed class ConsoleViewModel : NotifyBase
 {
     private const string InstallerDownloadUrl = "https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe";
     private const string VersionInfoUrl = "https://parafacto.netlify.app/app-version.json";
-    private static readonly HttpClient UpdateHttpClient = new();
+    private static readonly HttpClient UpdateHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(15),
+    };
     private bool _isInitializing;
     // Navigation/events (consommés par MainWindow.xaml.cs)
     public event Action? RequestNewPatientRequested;
@@ -472,13 +476,24 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
             var localVersion = Assembly.GetExecutingAssembly().GetName().Version;
             if (localVersion is null) return;
 
-            using var stream = await UpdateHttpClient.GetStreamAsync(VersionInfoUrl).ConfigureAwait(false);
+            // Éviter une réponse obsolète (CDN / cache intermédiaire) : requête non cacheable + query unique.
+            var url = $"{VersionInfoUrl}?_={DateTime.UtcNow.Ticks}";
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true, NoStore = true };
+            request.Headers.TryAddWithoutValidation("Pragma", "no-cache");
+
+            using var response = await UpdateHttpClient.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             using var doc = await JsonDocument.ParseAsync(stream).ConfigureAwait(false);
             if (!doc.RootElement.TryGetProperty("latestVersion", out var latestProp)) return;
 
             var latestRaw = latestProp.GetString();
             if (string.IsNullOrWhiteSpace(latestRaw)) return;
-            if (!Version.TryParse(latestRaw.Trim(), out var latestVersion)) return;
+            latestRaw = latestRaw.Trim();
+            if (latestRaw.Length > 0 && (latestRaw[0] == 'v' || latestRaw[0] == 'V'))
+                latestRaw = latestRaw[1..].TrimStart();
+            if (!Version.TryParse(latestRaw, out var latestVersion)) return;
 
             // Retour UI thread pour notifier WPF proprement.
             Application.Current?.Dispatcher.Invoke(() =>

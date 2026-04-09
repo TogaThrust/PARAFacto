@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Windows;
 using Microsoft.Win32;
@@ -41,6 +42,7 @@ public partial class MainWindow
         UiLanguageService.Initialize(_appSettings.LoadUiLanguage());
         UiLanguageService.LanguageChanged += OnUiLanguageChanged;
         UpdateLanguageButtonsVisual();
+        UpdateWindowTitle();
 
         // Icône fenêtre (en code pour éviter XamlParseException si le fichier n'est pas trouvé au design time)
         try
@@ -329,7 +331,17 @@ public partial class MainWindow
             foreach (Window w in Application.Current.Windows)
                 UiVisualLocalizer.Localize(w);
             UpdateLanguageButtonsVisual();
+            UpdateWindowTitle();
         });
+    }
+
+    private void UpdateWindowTitle()
+    {
+        var baseTitle = Application.Current?.TryFindResource("App.WindowTitle") as string;
+        if (string.IsNullOrWhiteSpace(baseTitle))
+            baseTitle = "PARAFACTO Native";
+        var v = Assembly.GetExecutingAssembly().GetName().Version;
+        Title = v is null ? baseTitle : $"{baseTitle} v{v.Major}.{v.Minor}.{v.Build}";
     }
 
     private void UpdateLanguageButtonsVisual()

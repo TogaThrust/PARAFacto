@@ -11,13 +11,21 @@
 
   Prerequis :
     - .NET SDK installe (commande dotnet)
-    - Inno Setup 6 installe (ISCC.exe)
+    - Inno Setup 6 installe (ISCC.exe) — sauf si -SiteSeulement
+
+  -SiteSeulement :
+    Met a jour <Version> dans le csproj et les deux app-version.json, puis quitte sans publish ni installateur.
+
+  Version :
+    Sans -AppVersion, le script demande le numero (une seule saisie, ecrit partout).
+    Avec -AppVersion "1.2.3", aucune question (CI / scripts).
 #>
 
 param(
     [string]$AppVersion = "",
     [string]$Publisher = "PARAFacto",
-    [string]$AppId = "{{95DA48C0-A83B-4F53-8A8A-7B81B81CC8E9}}"
+    [string]$AppId = "{{95DA48C0-A83B-4F53-8A8A-7B81B81CC8E9}}",
+    [switch]$SiteSeulement
 )
 
 $ErrorActionPreference = "Stop"
@@ -75,10 +83,33 @@ function Format-Version3 {
     return "{0}.{1}.{2}" -f $VersionValue.Major, $VersionValue.Minor, $build
 }
 
-function Increment-VersionPatch {
-    param([Version]$VersionValue)
-    $build = if ($VersionValue.Build -ge 0) { $VersionValue.Build } else { 0 }
-    return [Version]::new($VersionValue.Major, $VersionValue.Minor, $build + 1)
+function Resolve-AppVersionText {
+    param(
+        [string]$FromParam,
+        [string]$CsprojPath
+    )
+    if (-not [string]::IsNullOrWhiteSpace($FromParam)) {
+        $parsed = $null
+        if (-not [Version]::TryParse($FromParam.Trim(), [ref]$parsed)) {
+            throw "AppVersion invalide: '$FromParam'. Format attendu: major.minor.patch"
+        }
+        return (Format-Version3 -VersionValue $parsed)
+    }
+    $current = Get-ProjectVersion -CsprojPath $CsprojPath
+    $hint = Format-Version3 -VersionValue $current
+    while ($true) {
+        $line = Read-Host "Numero de version pour cette publication (ex. 1.0.33). Actuelle dans le projet : $hint"
+        if ([string]::IsNullOrWhiteSpace($line)) {
+            Write-Warning "Saisie vide : reessayez ou Ctrl+C pour annuler."
+            continue
+        }
+        $parsed = $null
+        if (-not [Version]::TryParse($line.Trim(), [ref]$parsed)) {
+            Write-Warning "Format invalide : major.minor.patch (ex. 1.0.33)."
+            continue
+        }
+        return (Format-Version3 -VersionValue $parsed)
+    }
 }
 
 function Set-ProjectVersion {
@@ -127,6 +158,23 @@ $publishDir = Join-Path $projectDir "publish_output\win-x64"
 $installerDir = Join-Path $projectDir "installer_output"
 $issPath = Join-Path $env:TEMP ("PARAFactoNative_Setup_{0}.iss" -f [Guid]::NewGuid().ToString("N"))
 $installerExe = Join-Path $installerDir "PARAFactoNative_Installer.exe"
+
+$AppVersion = Resolve-AppVersionText -FromParam $AppVersion -CsprojPath $csproj
+
+Set-ProjectVersion -CsprojPath $csproj -VersionText $AppVersion
+Set-AppVersionJson -JsonPath (Join-Path $repoRoot "subscription-site\public\app-version.json") -VersionText $AppVersion
+Set-AppVersionJson -JsonPath (Join-Path $projectDir "subscription-site\public\app-version.json") -VersionText $AppVersion
+
+Write-Host "Projet  : $csproj"
+Write-Host "Version : $AppVersion"
+Write-Host ""
+
+if ($SiteSeulement) {
+    Write-Host "OK - Site uniquement : csproj + app-version.json (racine repo et PARAFactoNative) mis a jour."
+    Write-Host "Ensuite : git add / commit / push ; laisser Netlify redeployer le site (dossier subscription-site)."
+    exit 0
+}
+
 $iscc = Resolve-IsccPath
 if (-not $iscc) {
     throw @"
@@ -136,27 +184,8 @@ https://jrsoftware.org/isdl.php
 "@
 }
 
-if ([string]::IsNullOrWhiteSpace($AppVersion)) {
-    $currentVersion = Get-ProjectVersion -CsprojPath $csproj
-    $nextVersion = Increment-VersionPatch -VersionValue $currentVersion
-    $AppVersion = Format-Version3 -VersionValue $nextVersion
-}
-else {
-    $parsed = $null
-    if (-not [Version]::TryParse($AppVersion.Trim(), [ref]$parsed)) {
-        throw "AppVersion invalide: '$AppVersion'. Format attendu: major.minor.patch"
-    }
-    $AppVersion = Format-Version3 -VersionValue $parsed
-}
-
-Set-ProjectVersion -CsprojPath $csproj -VersionText $AppVersion
-Set-AppVersionJson -JsonPath (Join-Path $repoRoot "subscription-site\public\app-version.json") -VersionText $AppVersion
-Set-AppVersionJson -JsonPath (Join-Path $projectDir "subscription-site\public\app-version.json") -VersionText $AppVersion
-
-Write-Host "Projet       : $csproj"
 Write-Host "Publish dir  : $publishDir"
 Write-Host "Installer dir: $installerDir"
-Write-Host "Version      : $AppVersion"
 Write-Host ""
 
 if (Test-Path $publishDir) {
