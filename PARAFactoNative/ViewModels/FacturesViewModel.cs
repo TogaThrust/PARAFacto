@@ -144,7 +144,7 @@ public sealed class FacturesViewModel : NotifyBase
     public InvoiceStats StatsFiltered { get; private set; } = new();
     public InvoiceStats StatsTotal { get; private set; } = new();
 
-    public bool IsCreditNoteType => string.Equals(SelectedType, "CREDIT_NOTE", StringComparison.OrdinalIgnoreCase);
+    public bool IsCreditNoteType => string.Equals(_selectedType, "CREDIT_NOTE", StringComparison.OrdinalIgnoreCase);
     public string PayeLabel => IsCreditNoteType ? "PAYEES" : "PAYE";
 
     private List<InvoiceRow> _allPeriodRows = new();

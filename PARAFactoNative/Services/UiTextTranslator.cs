@@ -20,7 +20,7 @@ public static class UiTextTranslator
         var text = source ?? "";
         if (text.Length == 0) return text;
         var frenchBase = ToFrench(text);
-        if (UiLanguageService.Current == UiLanguageService.Fr) return frenchBase;
+        if (UiLanguageService.Current == UiLanguageService.Fr) return NormalizeFrenchDisplay(frenchBase);
 
         var dict = UiLanguageService.Current == UiLanguageService.Nl ? Nl : En;
         var repl = UiLanguageService.Current == UiLanguageService.Nl ? NlByLength : EnByLength;
@@ -35,6 +35,13 @@ public static class UiTextTranslator
         return output;
     }
 
+    private static string NormalizeFrenchDisplay(string text)
+        => text switch
+        {
+            "CREDIT_NOTE" => "NOTE DE CRÉDIT",
+            _ => text
+        };
+
     private static string ToFrench(string text)
     {
         if (EnToFr.TryGetValue(text, out var fromEnExact)) return fromEnExact;
@@ -43,13 +50,11 @@ public static class UiTextTranslator
         var output = text;
         foreach (var kv in EnToFrByLength)
         {
-            if (output.Contains(kv.Key, StringComparison.Ordinal))
-                output = output.Replace(kv.Key, kv.Value, StringComparison.Ordinal);
+            output = ReplaceTokenBounded(output, kv.Key, kv.Value);
         }
         foreach (var kv in NlToFrByLength)
         {
-            if (output.Contains(kv.Key, StringComparison.Ordinal))
-                output = output.Replace(kv.Key, kv.Value, StringComparison.Ordinal);
+            output = ReplaceTokenBounded(output, kv.Key, kv.Value);
         }
         return output;
     }
@@ -63,6 +68,43 @@ public static class UiTextTranslator
                 reverse[kv.Value] = kv.Key;
         }
         return reverse;
+    }
+
+    private static string ReplaceTokenBounded(string input, string from, string to)
+    {
+        if (string.IsNullOrEmpty(input) || string.IsNullOrEmpty(from)) return input;
+
+        var index = 0;
+        var changed = false;
+        var output = new System.Text.StringBuilder(input.Length + 16);
+        while (true)
+        {
+            var hit = input.IndexOf(from, index, StringComparison.Ordinal);
+            if (hit < 0) break;
+
+            var before = hit == 0 ? '\0' : input[hit - 1];
+            var afterIndex = hit + from.Length;
+            var after = afterIndex >= input.Length ? '\0' : input[afterIndex];
+            var leftOk = hit == 0 || !char.IsLetterOrDigit(before);
+            var rightOk = afterIndex >= input.Length || !char.IsLetterOrDigit(after);
+
+            if (leftOk && rightOk)
+            {
+                output.Append(input, index, hit - index);
+                output.Append(to);
+                index = afterIndex;
+                changed = true;
+            }
+            else
+            {
+                output.Append(input, index, (hit - index) + from.Length);
+                index = afterIndex;
+            }
+        }
+
+        if (!changed) return input;
+        output.Append(input, index, input.Length - index);
+        return output.ToString();
     }
 
     private static Dictionary<string, string> BuildEn() => new(StringComparer.Ordinal)
@@ -99,6 +141,24 @@ public static class UiTextTranslator
         ["Part mutuelle:"] = "Health fund share:",
         ["Part patient"] = "Patient share",
         ["Part mutuelle"] = "Health fund share",
+        ["Lien agenda (RDV)"] = "Agenda link (appointment)",
+        ["TOUTES"] = "ALL",
+        ["PATIENT"] = "PATIENT",
+        ["MUTUELLE"] = "HEALTH FUND",
+        ["CREDIT_NOTE"] = "Credit note",
+        ["Annuler perte"] = "Cancel loss",
+        ["Modif mutuelle"] = "Health fund edit",
+        ["Suppression du mois"] = "Month deletion",
+        ["Supprimer toutes les factures du mois"] = "Delete all invoices for this month",
+        ["Indexer destinataires (PDF)"] = "Index recipients (PDF)",
+        ["Détails"] = "Details",
+        ["Période"] = "Period",
+        ["Période sélectionnée"] = "Selected period",
+        ["TOTAL ENREGISTRÉ"] = "TOTAL RECORDED",
+        ["Supprimer la ligne sélectionnée"] = "Delete selected row",
+        ["Total patient:"] = "Patient total:",
+        ["Total mutuelle:"] = "Health fund total:",
+        ["Total général:"] = "Grand total:",
         ["Commentaire patient"] = "Patient comment",
         ["Fiche patient"] = "Patient file",
         ["Un clic sur une ligne charge directement la fiche. Le bouton Modifier enregistre les changements du patient sélectionné."] = "Click a row to load the file directly. The Edit button saves changes for the selected patient.",
@@ -343,6 +403,24 @@ public static class UiTextTranslator
         ["Part mutuelle:"] = "Deel mutualiteit:",
         ["Part patient"] = "Deel patiënt",
         ["Part mutuelle"] = "Deel mutualiteit",
+        ["Lien agenda (RDV)"] = "Agenda-link (afspraak)",
+        ["TOUTES"] = "ALLE",
+        ["PATIENT"] = "PATIËNT",
+        ["MUTUELLE"] = "MUTUALITEIT",
+        ["CREDIT_NOTE"] = "Creditnota",
+        ["Annuler perte"] = "Verlies annuleren",
+        ["Modif mutuelle"] = "Mutualiteit wijzigen",
+        ["Suppression du mois"] = "Verwijderen van de maand",
+        ["Supprimer toutes les factures du mois"] = "Alle facturen van deze maand verwijderen",
+        ["Indexer destinataires (PDF)"] = "Ontvangers indexeren (PDF)",
+        ["Détails"] = "Details",
+        ["Période"] = "Periode",
+        ["Période sélectionnée"] = "Geselecteerde periode",
+        ["TOTAL ENREGISTRÉ"] = "TOTAAL GEREGISTREERD",
+        ["Supprimer la ligne sélectionnée"] = "Geselecteerde rij verwijderen",
+        ["Total patient:"] = "Totaal patiënt:",
+        ["Total mutuelle:"] = "Totaal mutualiteit:",
+        ["Total général:"] = "Algemeen totaal:",
         ["Commentaire"] = "Opmerking",
         ["Fiche patient"] = "Patiëntfiche",
         ["Un clic sur une ligne charge directement la fiche. Le bouton Modifier enregistre les changements du patient sélectionné."] = "Klik op een rij om de fiche direct te laden. De knop Bewerken slaat de wijzigingen van de geselecteerde patiënt op.",
@@ -425,6 +503,9 @@ public static class UiTextTranslator
         ["Impossible d'ouvrir le portail clients :"] = "Kan klantenportaal niet openen:",
         ["PARAFacto — Conformité"] = "PARAFacto — Naleving",
         ["Votre acceptation a été enregistrée. Une preuve locale (horodatage, versions des documents et empreintes des textes) a été ajoutée au fichier d'audit."] = "Uw akkoord is geregistreerd. Lokaal bewijs (tijdstempel, documentversies en tekst-hashes) werd toegevoegd aan het auditbestand.",
+        ["Abonnement PARAFacto"] = "PARAFacto-abonnement",
+        ["Portail clients Stripe"] = "Stripe-klantenportaal",
+        ["Accès portail clients"] = "Toegang klantenportaal",
         ["L’heure de début de journée doit être au moins 15 minutes avant la fin de journée."] = "Beginuur van de dag moet minstens 15 minuten voor het einduur liggen.",
         ["L’heure de fin de journée doit être au moins 15 minutes après le début de journée."] = "Einduur van de dag moet minstens 15 minuten na het beginuur liggen.",
         ["Les jours passés ne peuvent pas être modifiés (indisponibilités)."] = "Voorbije dagen kunnen niet worden gewijzigd (onbeschikbaarheid).",

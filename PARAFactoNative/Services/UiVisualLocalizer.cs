@@ -47,34 +47,47 @@ public static class UiVisualLocalizer
                 LocalizeWindow(w);
                 break;
             case TextBlock tb:
-                if (!BindingOperations.IsDataBound(tb, TextBlock.TextProperty))
+                if (!BindingOperations.IsDataBound(tb, TextBlock.TextProperty) &&
+                    ShouldLocalizeLocalString(tb, TextBlock.TextProperty))
                     tb.Text = TranslateFor(tb, "Text", tb.Text);
                 break;
             case Run run:
                 run.Text = TranslateFor(run, "Text", run.Text);
                 break;
             case Button b:
-                if (b.Content is string bs && !BindingOperations.IsDataBound(b, ContentControl.ContentProperty))
+                if (b.Content is string bs &&
+                    !BindingOperations.IsDataBound(b, ContentControl.ContentProperty) &&
+                    ShouldLocalizeLocalString(b, ContentControl.ContentProperty))
                     b.Content = TranslateFor(b, "Content", bs);
                 break;
             case CheckBox cb:
-                if (cb.Content is string cbs && !BindingOperations.IsDataBound(cb, ContentControl.ContentProperty))
+                if (cb.Content is string cbs &&
+                    !BindingOperations.IsDataBound(cb, ContentControl.ContentProperty) &&
+                    ShouldLocalizeLocalString(cb, ContentControl.ContentProperty))
                     cb.Content = TranslateFor(cb, "Content", cbs);
                 break;
             case RadioButton rb:
-                if (rb.Content is string rbs && !BindingOperations.IsDataBound(rb, ContentControl.ContentProperty))
+                if (rb.Content is string rbs &&
+                    !BindingOperations.IsDataBound(rb, ContentControl.ContentProperty) &&
+                    ShouldLocalizeLocalString(rb, ContentControl.ContentProperty))
                     rb.Content = TranslateFor(rb, "Content", rbs);
                 break;
             case Label lb:
-                if (lb.Content is string ls && !BindingOperations.IsDataBound(lb, ContentControl.ContentProperty))
+                if (lb.Content is string ls &&
+                    !BindingOperations.IsDataBound(lb, ContentControl.ContentProperty) &&
+                    ShouldLocalizeLocalString(lb, ContentControl.ContentProperty))
                     lb.Content = TranslateFor(lb, "Content", ls);
                 break;
             case GroupBox gb:
-                if (gb.Header is string hs && !BindingOperations.IsDataBound(gb, HeaderedContentControl.HeaderProperty))
+                if (gb.Header is string hs &&
+                    !BindingOperations.IsDataBound(gb, HeaderedContentControl.HeaderProperty) &&
+                    ShouldLocalizeLocalString(gb, HeaderedContentControl.HeaderProperty))
                     gb.Header = TranslateFor(gb, "Header", hs);
                 break;
             case TabItem ti:
-                if (ti.Header is string ths && !BindingOperations.IsDataBound(ti, HeaderedContentControl.HeaderProperty))
+                if (ti.Header is string ths &&
+                    !BindingOperations.IsDataBound(ti, HeaderedContentControl.HeaderProperty) &&
+                    ShouldLocalizeLocalString(ti, HeaderedContentControl.HeaderProperty))
                     ti.Header = TranslateFor(ti, "Header", ths);
                 break;
             case DataGrid dg:
@@ -97,9 +110,23 @@ public static class UiVisualLocalizer
     {
         foreach (var c in dg.Columns)
         {
-            if (c.Header is string hs)
+            if (c.Header is string hs && ShouldLocalizeDataGridColumnHeader(c))
                 c.Header = TranslateFor(c, "Header", hs);
         }
+    }
+
+    private static bool ShouldLocalizeLocalString(DependencyObject obj, DependencyProperty property)
+    {
+        var local = obj.ReadLocalValue(property);
+        if (local == DependencyProperty.UnsetValue) return true;
+        return local is string;
+    }
+
+    private static bool ShouldLocalizeDataGridColumnHeader(DataGridColumn column)
+    {
+        var local = column.ReadLocalValue(DataGridColumn.HeaderProperty);
+        if (local == DependencyProperty.UnsetValue) return true;
+        return local is string;
     }
 
     private static string TranslateFor(object node, string key, string current)
