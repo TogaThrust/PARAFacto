@@ -6,18 +6,91 @@
   <title>PARAFacto Native — Téléchargement</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
     h1 { font-size: 1.5rem; }
     .btn { display: inline-block; padding: 0.6rem 1rem; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; margin: 0.5rem 0.5rem 0.5rem 0; }
     .btn.secondary { background: #334155; }
     code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; }
+    .lang-switch { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .flag-btn { width: 24px; height: 18px; padding: 0; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; border-radius: 3px; overflow: hidden; }
+    .flag-btn.active { border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb inset; }
+    .flag-fr { display: grid; grid-template-columns: 1fr 1fr 1fr; width: 100%; height: 100%; }
+    .flag-fr span:nth-child(1) { background: #1d4ed8; } .flag-fr span:nth-child(2) { background: #fff; } .flag-fr span:nth-child(3) { background: #dc2626; }
+    .flag-nl { display: grid; grid-template-rows: 1fr 1fr 1fr; width: 100%; height: 100%; }
+    .flag-nl span:nth-child(1) { background: #dc2626; } .flag-nl span:nth-child(2) { background: #fff; } .flag-nl span:nth-child(3) { background: #1d4ed8; }
+    .flag-en { position: relative; width: 100%; height: 100%; background: #1d4ed8; }
+    .flag-en::before, .flag-en::after { content: ""; position: absolute; background: #fff; }
+    .flag-en::before { left: 0; right: 0; top: 7px; height: 4px; }
+    .flag-en::after { top: 0; bottom: 0; left: 10px; width: 4px; }
+    .flag-en i, .flag-en b { position: absolute; background: #dc2626; }
+    .flag-en i { left: 0; right: 0; top: 8px; height: 2px; }
+    .flag-en b { top: 0; bottom: 0; left: 11px; width: 2px; }
   </style>
 </head>
 <body>
-  <h1>PARAFacto Native</h1>
-  <p>Téléchargez l’installateur puis procédez au paiement. Copiez ensuite votre identifiant client (<code>cus_…</code>) affiché sur la page de confirmation et collez-le dans l’application.</p>
+  <div class="topbar">
+    <h1 id="title">PARAFacto Native</h1>
+    <div class="lang-switch" aria-label="Sélecteur de langue">
+      <button type="button" class="flag-btn" data-lang="fr" title="Français">
+        <span class="flag-fr"><span></span><span></span><span></span></span>
+      </button>
+      <button type="button" class="flag-btn" data-lang="en" title="English">
+        <span class="flag-en"><i></i><b></b></span>
+      </button>
+      <button type="button" class="flag-btn" data-lang="nl" title="Nederlands">
+        <span class="flag-nl"><span></span><span></span><span></span></span>
+      </button>
+    </div>
+  </div>
+  <p id="leadText"></p>
   <p>
     <a class="btn" href="https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe" download>Télécharger l’installateur (.exe)</a>
   </p>
-  <p><small>Après le téléchargement, lancer l'exécution du fichier <code>PARAFactoNative_Installer.exe</code>. Procéder au paiement et copier/coller le code reçu dans la fenêtre adhoc lors du lancement de l'application.</small></p>
+  <p><small id="afterText"></small></p>
+  <script>
+    (function () {
+      var texts = {
+        fr: {
+          title: "PARAFacto Native",
+          lead: "Téléchargez l'installateur, lancez l'exe téléchargé. Quand l'app est installée, lancez l'app depuis le bureau. Rendez vous sur la page de paiements et souscrivez l'abonnement.",
+          after: "Après avoir souscrit l'abonnement, vous recevez un code d'utilisateur. Copiez/collez ce code dans la fenêtre de demande de l'app. Lisez et approuvez les politiques de confidentialité et les conditions générales d'utilisation. Vous voilà prêt !"
+        },
+        en: {
+          title: "PARAFacto Native",
+          lead: "Download the installer and run the downloaded exe. Once the app is installed, launch it from the desktop. Go to the payment page and subscribe to the plan.",
+          after: "After subscribing, you receive a user code. Copy/paste this code into the app request window. Read and approve the privacy policy and terms of use. You are ready!"
+        },
+        nl: {
+          title: "PARAFacto Native",
+          lead: "Download het installatiebestand en start de gedownloade exe. Zodra de app is geïnstalleerd, start je de app vanaf het bureaublad. Ga naar de betaalpagina en neem een abonnement.",
+          after: "Na het afsluiten van het abonnement ontvang je een gebruikerscode. Kopieer/plak deze code in het aanvraagvenster van de app. Lees en keur het privacybeleid en de gebruiksvoorwaarden goed. Je bent klaar!"
+        }
+      };
+
+      var titleEl = document.getElementById("title");
+      var leadEl = document.getElementById("leadText");
+      var afterEl = document.getElementById("afterText");
+      var buttons = Array.prototype.slice.call(document.querySelectorAll(".flag-btn"));
+
+      function applyLanguage(lang) {
+        var key = texts[lang] ? lang : "fr";
+        var t = texts[key];
+        document.documentElement.lang = key;
+        titleEl.textContent = t.title;
+        leadEl.textContent = t.lead;
+        afterEl.textContent = t.after;
+        buttons.forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-lang") === key); });
+        try { localStorage.setItem("parafacto_site_lang", key); } catch (_) { }
+      }
+
+      buttons.forEach(function (b) {
+        b.addEventListener("click", function () { applyLanguage(b.getAttribute("data-lang")); });
+      });
+
+      var saved = "fr";
+      try { saved = localStorage.getItem("parafacto_site_lang") || "fr"; } catch (_) { }
+      applyLanguage(saved);
+    })();
+  </script>
 </body>
 </html>
