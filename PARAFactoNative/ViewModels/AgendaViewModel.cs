@@ -1880,18 +1880,34 @@ ORDER BY nom, prenom;
             TimeSlots.Add(s);
     }
 
-    /// <summary>Nouveau RDV uniquement : premier créneau libre selon la durée (pas de chevauchement).</summary>
+    /// <summary>Nouveau RDV uniquement : premier créneau libre après le dernier RDV de la journée (pas 15 min, aligné sur la liste « Heure de début »).</summary>
     private void SuggestNextAvailableStartIfNew()
     {
         if (_suppressTimeSuggest || EditingId > 0) return;
         var list = _repo.ListForDay(AppointmentDate);
         var unavail = _unavailRepo.ListForDay(AppointmentDate);
+        const int slotStepMin = 15;
         int? earliest = null;
         if (AppointmentDate.Date == DateTime.Today)
         {
             var n = DateTime.Now;
             earliest = n.Hour * 60 + n.Minute;
         }
+
+        var lastApptEndMin = 0;
+        foreach (var a in list)
+        {
+            if (!AppointmentScheduling.TryParseTimeToMinutes(a.StartTime, out var sm)) continue;
+            var d = a.DurationMinutes > 0 ? a.DurationMinutes : 30;
+            lastApptEndMin = Math.Max(lastApptEndMin, sm + d);
+        }
+
+        if (lastApptEndMin > 0)
+        {
+            var afterLast = (lastApptEndMin + slotStepMin - 1) / slotStepMin * slotStepMin;
+            earliest = earliest.HasValue ? Math.Max(earliest.Value, afterLast) : afterLast;
+        }
+
         int? lunchS = null, lunchE = null;
         if (TryGetEffectiveLunchForDay(AppointmentDate.Date, out var ls, out var le))
         {
@@ -1907,7 +1923,7 @@ ORDER BY nom, prenom;
             null,
             wds,
             wdc,
-            5,
+            slotStepMin,
             earliest,
             lunchS,
             lunchE);
