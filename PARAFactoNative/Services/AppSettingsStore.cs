@@ -37,6 +37,8 @@ public sealed class AppSettingsStore
         public string? TermsAcceptedAtUtc { get; set; }
         public string? PrivacyDocVersionAccepted { get; set; }
         public string? TermsDocVersionAccepted { get; set; }
+        public string? PrivacyContentSha256Accepted { get; set; }
+        public string? TermsContentSha256Accepted { get; set; }
         public string? UiLanguage { get; set; }
     }
 
@@ -286,6 +288,8 @@ public sealed class AppSettingsStore
                 TermsAcceptedAtUtc = tAt,
                 PrivacyDocVersionAccepted = string.IsNullOrWhiteSpace(s.PrivacyDocVersionAccepted) ? null : s.PrivacyDocVersionAccepted.Trim(),
                 TermsDocVersionAccepted = string.IsNullOrWhiteSpace(s.TermsDocVersionAccepted) ? null : s.TermsDocVersionAccepted.Trim(),
+                PrivacyContentSha256Accepted = string.IsNullOrWhiteSpace(s.PrivacyContentSha256Accepted) ? null : s.PrivacyContentSha256Accepted.Trim(),
+                TermsContentSha256Accepted = string.IsNullOrWhiteSpace(s.TermsContentSha256Accepted) ? null : s.TermsContentSha256Accepted.Trim(),
             };
         }
     }
@@ -309,12 +313,13 @@ public sealed class AppSettingsStore
                 s.TermsAcceptedAtUtc = nowIso;
                 s.PrivacyDocVersionAccepted = LegalDocuments.PrivacyPolicyVersion;
                 s.TermsDocVersionAccepted = LegalDocuments.TermsOfServiceVersion;
-
                 var settingsJson = JsonSerializer.Serialize(s, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(SettingsPath, settingsJson);
-
                 var privacyHash = Sha256HexUtf8(privacyFullText);
                 var termsHash = Sha256HexUtf8(termsFullText);
+                s.PrivacyContentSha256Accepted = privacyHash;
+                s.TermsContentSha256Accepted = termsHash;
+                settingsJson = JsonSerializer.Serialize(s, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(SettingsPath, settingsJson);
                 var appVer = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
 
                 AppendLegalAuditEvent(new LegalAcceptanceAuditEvent

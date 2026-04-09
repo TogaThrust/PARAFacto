@@ -18,25 +18,9 @@ public sealed class FacturesViewModel : NotifyBase
     private const string ReminderSenderDisplayName = "LAURA GRENIER - LOGOPEDE";
     private const string RelinkSecurityCode = "7324";
     private bool _relinkUnlocked;
-    public List<string> Types { get; } = new() { "TOUTES", "PATIENT", "MUTUELLE", "CREDIT_NOTE" };
-    public List<string> Statuses { get; } = new() { "TOUTES", "IMPAYEE", "PARTIELLE", "PAYEE", "ACQUITTEE", "PERTE", "MODIFIEE" };
-
-    private readonly InvoiceRepo _repo = new();
-    private readonly PatientRepo _patientRepo = new();
-
-    private string _selectedType = "TOUTES";
-    public string SelectedType { get => _selectedType; set { if (Set(ref _selectedType, value)) Refresh(); } }
-
-    private string _selectedStatus = "TOUTES";
-    public string SelectedStatus { get => _selectedStatus; set { if (Set(ref _selectedStatus, value)) Refresh(); } }
-
-    private string _search = "";
-    public string Search { get => _search; set { if (Set(ref _search, value)) Refresh(); } }
-
-    public List<InvoiceRow> Items { get; private set; } = new();
-
-    // Période pour filtre et stats (sous les Détails)
-    public static List<string> PeriodKinds { get; } = new()
+    private static readonly List<string> TypeKeys = new() { "TOUTES", "PATIENT", "MUTUELLE", "CREDIT_NOTE" };
+    private static readonly List<string> StatusKeys = new() { "TOUTES", "IMPAYEE", "PARTIELLE", "PAYEE", "ACQUITTEE", "PERTE", "MODIFIEE" };
+    private static readonly List<string> PeriodKindKeys = new()
     {
         "Toutes les périodes",
         "De 'date' à 'date'",
@@ -48,9 +32,65 @@ public sealed class FacturesViewModel : NotifyBase
         "Année courante",
         "Trimestre courant"
     };
+    public List<string> Types => TypeKeys.Select(UiTextTranslator.Translate).ToList();
+    public List<string> Statuses => StatusKeys.Select(UiTextTranslator.Translate).ToList();
+
+    private readonly InvoiceRepo _repo = new();
+    private readonly PatientRepo _patientRepo = new();
+
+    private string _selectedType = "TOUTES";
+    public string SelectedType
+    {
+        get => UiTextTranslator.Translate(_selectedType);
+        set
+        {
+            var canonical = NormalizeType(value);
+            if (Set(ref _selectedType, canonical))
+            {
+                Raise(nameof(SelectedType));
+                Refresh();
+            }
+        }
+    }
+
+    private string _selectedStatus = "TOUTES";
+    public string SelectedStatus
+    {
+        get => UiTextTranslator.Translate(_selectedStatus);
+        set
+        {
+            var canonical = NormalizeStatus(value);
+            if (Set(ref _selectedStatus, canonical))
+            {
+                Raise(nameof(SelectedStatus));
+                Refresh();
+            }
+        }
+    }
+
+    private string _search = "";
+    public string Search { get => _search; set { if (Set(ref _search, value)) Refresh(); } }
+
+    public List<InvoiceRow> Items { get; private set; } = new();
+
+    // Période pour filtre et stats (sous les Détails)
+    public List<string> PeriodKinds => PeriodKindKeys.Select(UiTextTranslator.Translate).ToList();
 
     private string _periodKind = "Toutes les périodes";
-    public string PeriodKind { get => _periodKind; set { if (Set(ref _periodKind, value)) { RaisePeriodFields(); Refresh(); } } }
+    public string PeriodKind
+    {
+        get => UiTextTranslator.Translate(_periodKind);
+        set
+        {
+            var canonical = NormalizePeriodKind(value);
+            if (Set(ref _periodKind, canonical))
+            {
+                Raise(nameof(PeriodKind));
+                RaisePeriodFields();
+                Refresh();
+            }
+        }
+    }
 
     private DateTime? _periodDateFrom;
     public DateTime? PeriodDateFrom { get => _periodDateFrom; set { if (Set(ref _periodDateFrom, value)) Refresh(); } }
@@ -259,8 +299,55 @@ public sealed class FacturesViewModel : NotifyBase
         CreateMutualRevisionCommand = new RelayCommand(CreateMutualRevision, CanMutualRevision);
         OpenFolderCommand = new RelayCommand(OpenWorkspaceFolder);
         DeleteMonthInvoicesCommand = new RelayCommand(DeleteMonthInvoices, CanDeleteMonthInvoices);
+        UiLanguageService.LanguageChanged += _ =>
+        {
+            Raise(nameof(Types));
+            Raise(nameof(Statuses));
+            Raise(nameof(PeriodKinds));
+            Raise(nameof(SelectedType));
+            Raise(nameof(SelectedStatus));
+            Raise(nameof(PeriodKind));
+            Raise(nameof(SelectedPeriodLabel));
+            Raise(nameof(PeriodLabel));
+        };
 
         Refresh();
+    }
+
+    private static string NormalizeType(string? value)
+    {
+        var v = (value ?? "").Trim();
+        foreach (var key in TypeKeys)
+        {
+            if (string.Equals(v, key, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(v, UiTextTranslator.Translate(key), StringComparison.OrdinalIgnoreCase))
+                return key;
+        }
+        return "TOUTES";
+    }
+
+    private static string NormalizeStatus(string? value)
+    {
+        var v = (value ?? "").Trim();
+        foreach (var key in StatusKeys)
+        {
+            if (string.Equals(v, key, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(v, UiTextTranslator.Translate(key), StringComparison.OrdinalIgnoreCase))
+                return key;
+        }
+        return "TOUTES";
+    }
+
+    private static string NormalizePeriodKind(string? value)
+    {
+        var v = (value ?? "").Trim();
+        foreach (var key in PeriodKindKeys)
+        {
+            if (string.Equals(v, key, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(v, UiTextTranslator.Translate(key), StringComparison.OrdinalIgnoreCase))
+                return key;
+        }
+        return "Toutes les périodes";
     }
 
     public void Reload() => Refresh();

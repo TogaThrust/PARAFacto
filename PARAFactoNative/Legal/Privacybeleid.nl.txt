@@ -1,0 +1,90 @@
+================================================================================
+PRIVACYBELEID - PARAFACTO NATIVE SOFTWARE
+Documentversie: 2026-04-08-02
+================================================================================
+
+1. DOEL
+Dit beleid legt uit hoe persoonsgegevens worden verwerkt bij gebruik van
+PARAFacto Native, lokaal geïnstalleerd op uw werkstation. Het ondersteunt
+naleving van AVG/GDPR (EU 2016/679), Belgische wet van 30 juli 2018 en regels
+voor gezondheidsgegevens en minderjarigen.
+
+2. VERWERKINGSVERANTWOORDELIJKE
+De verwerkingsverantwoordelijke voor ingevoerde en beheerde gegevens is de
+zorg- of paramedische professional (of entiteit) die de software gebruikt.
+Tenzij contractueel anders bepaald, treedt de uitgever op als verwerker beperkt
+tot levering van de software.
+
+3. BESCHRIJVING VAN DE VERWERKING
+PARAFacto Native ondersteunt patiëntendossiers, agenda, sessieregistratie,
+facturatie en documentexport (bv. PDF). Gegevens worden hoofdzakelijk lokaal
+opgeslagen, behalve bij geactiveerde functies die gegevens naar derden sturen
+(e-mail, abonnement/licentie, enz.).
+
+4. CATEGORIEËN VAN GEGEVENS
+Afhankelijk van gebruik kunnen o.a. verwerkt worden:
+- Identificatie- en contactgegevens
+- Gegevens i.v.m. minderjarigen/familiale context
+- Gezondheidsgegevens (AVG art. 9) voor professionele opvolging
+- Administratieve/financiële gegevens
+- Beperkte technische gegevens (tijdstempels, paden, instellingen)
+- Abonnements- of licentiegerelateerde technische identificatoren
+
+5. GEGEVENS VAN MINDERJARIGEN
+Bij minderjarige patiënten moet de verantwoordelijke zorgen voor een rechtsgeldige
+grondslag en, waar vereist, correcte informatie en toestemming van wettelijke
+vertegenwoordigers.
+
+6. DOELEINDEN
+Verwerking gebeurt voor:
+- Administratie en organisatie van de praktijk
+- Planning/opvolging van afspraken en sessies
+- Facturatie en interne boekhouding
+- Naleving van wettelijke en professionele verplichtingen
+- Back-up en verzending van documentkopieën indien geconfigureerd
+- Licentie/abonnementsbeheer wanneer geactiveerd
+
+7. RECHTSGRONDEN
+Mogelijke rechtsgronden: overeenkomst, wettelijke verplichting, vitaal belang,
+algemeen belang in de gezondheidszorg, of expliciete toestemming waar vereist.
+
+8. ONTVANGERS EN VERWERKERS
+Gegevens zijn in principe enkel toegankelijk voor bevoegde praktijkmedewerkers.
+Extra ontvangers kunnen betrokken zijn via e-mailproviders, cloudopslag, betaling
+of licentiecontrole, afhankelijk van uw configuratie.
+
+9. DOORGIFTE BUITEN EU/EER
+Als leveranciers gegevens buiten EU/EER verwerken, moet u passende waarborgen
+voorzien (adequaatheidsbesluit, SCC's, enz.) en betrokkenen informeren.
+
+10. BEWAARTERMIJNEN
+Bewaartermijnen moeten voldoen aan wettelijke/professionele verplichtingen.
+Voorbeelden:
+- Facturatie/boekhouding: vaak minstens 7 jaar in België
+- Patiëntendossiers: volgens toepasselijke regels
+- Technische acceptatielogs: zolang nodig als bewijs
+
+11. BEVEILIGING
+U moet passende beveiliging voorzien (sterke OS-wachtwoorden, schijfencryptie
+waar mogelijk, regelmatige back-ups, toegangscontrole, updates en antivirus).
+
+12. RECHTEN VAN BETROKKENEN
+Onder voorwaarden van de AVG kunnen betrokkenen o.a. vragen: inzage, correctie,
+wissing, beperking, bezwaar, overdraagbaarheid, intrekking van toestemming en
+klacht bij de Belgische GBA:
+https://www.dataprotectionauthority.be
+
+13. GEAUTOMATISEERDE BESLUITVORMING
+De software neemt geen geautomatiseerde beslissingen met rechtsgevolgen in de
+zin van AVG art. 22, tenzij expliciet anders gedocumenteerd.
+
+14. WIJZIGINGEN
+Dit beleid kan worden aangepast. Bij substantiële wijziging kan een nieuwe
+acceptatie in de applicatie vereist zijn.
+
+15. CONTACT
+Voor privacyvragen: parafacto@parafacto.be
+
+================================================================================
+EINDE DOCUMENT
+================================================================================

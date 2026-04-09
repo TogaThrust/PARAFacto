@@ -16,7 +16,12 @@ public sealed class SeancesViewModel : NotifyBase
 
     public ObservableCollection<SeanceRow> Items { get; } = new();
 
-    public string[] ModeOptions { get; } = new[] { "Jour", "Mois", "Année" };
+    public string[] ModeOptions => new[]
+    {
+        UiTextTranslator.Translate("Jour"),
+        UiTextTranslator.Translate("Mois"),
+        UiTextTranslator.Translate("Année")
+    };
 
     /// <summary>Années pour la liste déroulante (année courante - 10 à année courante + 1).</summary>
     public string[] AvailableYears { get; } = Enumerable.Range(DateTime.Today.Year - 10, 12)
@@ -27,11 +32,12 @@ public sealed class SeancesViewModel : NotifyBase
     private string _mode = "Jour";
     public string Mode
     {
-        get => _mode;
+        get => UiTextTranslator.Translate(_mode);
         set
         {
-            if (string.Equals(_mode, value, StringComparison.Ordinal)) return;
-            _mode = value ?? "Jour";
+            var canonical = NormalizeMode(value);
+            if (string.Equals(_mode, canonical, StringComparison.Ordinal)) return;
+            _mode = canonical;
             OnPropertyChanged();
             ApplyModeDefaults();
             Refresh();
@@ -169,8 +175,29 @@ public sealed class SeancesViewModel : NotifyBase
     {
         RefreshCommand = new RelayCommand(Refresh);
         DeleteSelectedCommand = new RelayCommand(DeleteSelected, CanEditSelected);
+        UiLanguageService.LanguageChanged += _ =>
+        {
+            OnPropertyChanged(nameof(ModeOptions));
+            OnPropertyChanged(nameof(Mode));
+            OnPropertyChanged(nameof(SelectedLockMessage));
+        };
 
         Mode = "Jour";
+    }
+
+    private static string NormalizeMode(string? value)
+    {
+        var v = (value ?? "").Trim();
+        if (string.Equals(v, "Mois", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(v, "Month", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(v, "Maand", StringComparison.OrdinalIgnoreCase))
+            return "Mois";
+        if (string.Equals(v, "Année", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(v, "Annee", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(v, "Year", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(v, "Jaar", StringComparison.OrdinalIgnoreCase))
+            return "Année";
+        return "Jour";
     }
 
     public void SetDay(DateTime date)
@@ -196,14 +223,14 @@ public sealed class SeancesViewModel : NotifyBase
 
     private string? ResolveCurrentPeriod()
     {
-        if (string.Equals(Mode, "Mois", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(_mode, "Mois", StringComparison.OrdinalIgnoreCase))
         {
             if (!int.TryParse(Year, out var y)) return null;
             if (!int.TryParse(Month, out var m)) return null;
             return $"{y:0000}-{Math.Clamp(m,1,12):00}";
         }
 
-        if (string.Equals(Mode, "Jour", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(_mode, "Jour", StringComparison.OrdinalIgnoreCase))
             return (Day ?? DateTime.Today).ToString("yyyy-MM");
 
         return null;
@@ -220,7 +247,7 @@ public sealed class SeancesViewModel : NotifyBase
     {
         var today = DateTime.Today;
 
-        if (string.Equals(Mode, "Mois", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(_mode, "Mois", StringComparison.OrdinalIgnoreCase))
         {
             IsDayEnabled = false;
             IsYearEnabled = true;
@@ -230,8 +257,8 @@ public sealed class SeancesViewModel : NotifyBase
             return;
         }
 
-        if (string.Equals(Mode, "Année", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(Mode, "Annee", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(_mode, "Année", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(_mode, "Annee", StringComparison.OrdinalIgnoreCase))
         {
             IsDayEnabled = false;
             IsYearEnabled = true;
@@ -294,7 +321,7 @@ public sealed class SeancesViewModel : NotifyBase
     {
         var q = (Search ?? "").Trim();
 
-        if (string.Equals(Mode, "Mois", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(_mode, "Mois", StringComparison.OrdinalIgnoreCase))
         {
             if (!int.TryParse(Year, out var y)) y = DateTime.Today.Year;
             if (!int.TryParse(Month, out var m)) m = DateTime.Today.Month;
@@ -302,8 +329,8 @@ public sealed class SeancesViewModel : NotifyBase
             return FilterText(list, q);
         }
 
-        if (string.Equals(Mode, "Année", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(Mode, "Annee", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(_mode, "Année", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(_mode, "Annee", StringComparison.OrdinalIgnoreCase))
         {
             if (!int.TryParse(Year, out var y)) y = DateTime.Today.Year;
             var list = _repo.GetByYear(y);

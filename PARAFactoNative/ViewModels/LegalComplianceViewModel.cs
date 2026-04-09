@@ -35,6 +35,11 @@ public sealed class LegalComplianceViewModel : NotifyBase
         {
             LoadDocuments();
             ReloadAcceptanceUi();
+            UiLanguageService.LanguageChanged += _ =>
+            {
+                LoadDocuments();
+                ReloadAcceptanceUi();
+            };
         }
         catch (Exception ex)
         {
@@ -171,8 +176,8 @@ public sealed class LegalComplianceViewModel : NotifyBase
     {
         try
         {
-            var pPath = LegalDocuments.PrivacyPath(_baseDir);
-            var tPath = LegalDocuments.TermsPath(_baseDir);
+            var pPath = ResolveLegalPathWithFallback(LegalDocuments.PrivacyPath(_baseDir), LegalDocuments.PrivacyFileName);
+            var tPath = ResolveLegalPathWithFallback(LegalDocuments.TermsPath(_baseDir), LegalDocuments.TermsFileName);
             if (!File.Exists(pPath) || !File.Exists(tPath))
             {
                 DocumentsLoadError =
@@ -194,6 +199,12 @@ public sealed class LegalComplianceViewModel : NotifyBase
         }
     }
 
+    private string ResolveLegalPathWithFallback(string preferredPath, string frFileName)
+    {
+        if (File.Exists(preferredPath)) return preferredPath;
+        return Path.Combine(_baseDir, "Legal", frFileName);
+    }
+
     /// <summary>
     /// Tant qu’une acceptation est requise : overlay sur les autres onglets ; pas d’overlay sur « Données techniques »
     /// pour pouvoir lire et cliquer sur Enregistrer (le voile bloquait l’UI derrière le message).
@@ -201,7 +212,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
     private void UpdateBlockingOverlayVisibility()
     {
         var state = _store.LoadLegalAcceptance();
-        var ok = state.IsCompleteForCurrentDocuments();
+        var ok = state.IsCompleteForCurrentDocuments(PrivacyText, TermsText);
         var docsMissing = DocumentsUnavailableForAcceptance;
         if (ok || docsMissing)
         {
@@ -215,7 +226,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
     private void ReloadAcceptanceUi()
     {
         var state = _store.LoadLegalAcceptance();
-        var ok = state.IsCompleteForCurrentDocuments();
+        var ok = state.IsCompleteForCurrentDocuments(PrivacyText, TermsText);
         var docsMissing = DocumentsUnavailableForAcceptance;
         var acceptancePending = !ok && !docsMissing;
 
@@ -226,7 +237,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
         {
             const string emailPdf =
                 " Merci aussi d'ajouter une adresse e-mail d'envoi des copies de vos documents PDF si vous le désirez (section courriel du même onglet).";
-            if (state.IsReacceptanceRequiredDueToNewLegalDocumentVersions())
+            if (state.IsReacceptanceRequiredDueToNewLegalDocumentVersions(PrivacyText, TermsText))
             {
                 LegalGateMessage =
                     "Une nouvelle version de la politique de confidentialité et/ou des conditions d'utilisation est fournie avec cette mise à jour. " +
@@ -257,7 +268,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
             if (!string.IsNullOrWhiteSpace(DocumentsLoadError))
                 AcceptanceSummary += " " + DocumentsLoadError;
         }
-        else if (state.IsReacceptanceRequiredDueToNewLegalDocumentVersions())
+        else if (state.IsReacceptanceRequiredDueToNewLegalDocumentVersions(PrivacyText, TermsText))
         {
             AcceptanceSummary =
                 "Les documents juridiques ont été mis à jour (nouvelle version publiée avec l'application). Lisez les textes ci-dessous, cochez les deux cases puis enregistrez votre acceptation — les autres onglets restent masqués par le message tant que ce n'est pas fait.";
@@ -267,6 +278,10 @@ public sealed class LegalComplianceViewModel : NotifyBase
             AcceptanceSummary =
                 "Veuillez lire les documents ci-dessous, cocher les deux cases puis enregistrer votre acceptation.";
         }
+
+        LegalGateMessage = UiTextTranslator.Translate(LegalGateMessage);
+        AcceptanceSummary = UiTextTranslator.Translate(AcceptanceSummary);
+        DocumentsLoadError = UiTextTranslator.Translate(DocumentsLoadError);
 
         UpdateBlockingOverlayVisibility();
         SaveAcceptanceCommand?.RaiseCanExecuteChanged();

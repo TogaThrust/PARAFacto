@@ -98,7 +98,7 @@ public sealed class AgendaViewModel : NotifyBase
     private const string MsgRdvPasseNonModifiable =
         "Les rendez-vous passés ne peuvent pas être modifiés depuis l’agenda.";
 
-    private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-BE");
+    private static CultureInfo UiCulture => CultureInfo.CurrentCulture;
 
     private readonly AppointmentRepo _repo = new();
     private readonly UnavailabilityRepo _unavailRepo = new();
@@ -130,7 +130,7 @@ public sealed class AgendaViewModel : NotifyBase
     /// <summary>Émis après suppression d’un RDV (pour rafraîchir la console si même jour).</summary>
     public event Action<DateTime>? AgendaAppointmentDeleted;
 
-    public List<string> ViewModes { get; } = new() { "Mois", "Semaine", "Jour" };
+    public List<string> ViewModes => new() { UiTextTranslator.Translate("Mois"), UiTextTranslator.Translate("Semaine"), UiTextTranslator.Translate("Jour") };
 
     private string _viewMode = "Mois";
     public string ViewMode
@@ -138,7 +138,8 @@ public sealed class AgendaViewModel : NotifyBase
         get => _viewMode;
         set
         {
-            if (!Set(ref _viewMode, value)) return;
+            var canonical = NormalizeViewMode(value);
+            if (!Set(ref _viewMode, canonical)) return;
             Raise(nameof(IsMonthView));
             Raise(nameof(IsWeekView));
             Raise(nameof(IsDayView));
@@ -148,9 +149,9 @@ public sealed class AgendaViewModel : NotifyBase
         }
     }
 
-    public bool IsMonthView => ViewMode == "Mois";
-    public bool IsWeekView => ViewMode == "Semaine";
-    public bool IsDayView => ViewMode == "Jour";
+    public bool IsMonthView => _viewMode == "Mois";
+    public bool IsWeekView => _viewMode == "Semaine";
+    public bool IsDayView => _viewMode == "Jour";
 
     /// <summary>Vue jour sur une date déjà passée : affichage grisé, lecture seule.</summary>
     public bool IsDayViewPastDay => IsDayView && AnchorDate.Date < DateTime.Today;
@@ -525,11 +526,30 @@ public sealed class AgendaViewModel : NotifyBase
         Raise(nameof(WorkdaySettingStart));
         Raise(nameof(WorkdaySettingClosing));
         Raise(nameof(LunchBreakEnabled));
+        UiLanguageService.LanguageChanged += _ =>
+        {
+            Raise(nameof(ViewModes));
+            UpdateHeader();
+            RefreshCalendar();
+        };
 
         ReloadRefs();
         UpdateHeader();
         _suppressTimeSuggest = false;
         SuggestNextAvailableStartIfNew();
+    }
+
+    private static string NormalizeViewMode(string? value)
+    {
+        var v = (value ?? "").Trim();
+        if (string.Equals(v, "Mois", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(v, "Month", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(v, "Maand", StringComparison.OrdinalIgnoreCase))
+            return "Mois";
+        if (string.Equals(v, "Semaine", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(v, "Week", StringComparison.OrdinalIgnoreCase))
+            return "Semaine";
+        return "Jour";
     }
 
     private bool CanSave() => SelectedPatient is not null && SelectedTarif is not null;
@@ -678,7 +698,7 @@ public sealed class AgendaViewModel : NotifyBase
                 if (slots.Count == 0)
                 {
                     var msg = AppointmentScheduling.BuildMessageWhenNoSameDayRelocateSlot(
-                        Fr,
+                        UiCulture,
                         day,
                         moveDur,
                         wdResetS,
@@ -691,7 +711,7 @@ public sealed class AgendaViewModel : NotifyBase
                 }
 
                 var phone = _patientRepo.GetTelephoneByPatientId(first.PatientId);
-                var dateFr = day.ToString("dddd d MMMM yyyy", Fr);
+                var dateFr = day.ToString("dddd d MMMM yyyy", UiCulture);
                 var relocateWin = new AppointmentRelocateSlotWindow(
                     $"Patient : {first.PatientDisplay}",
                     $"Date : {dateFr} — actuellement à {NormalizeTime(first.StartTime)} ({moveDur} min).",
@@ -909,10 +929,10 @@ ORDER BY nom, prenom;
     {
         HeaderTitle = ViewMode switch
         {
-            "Mois" => AnchorDate.ToString("MMMM yyyy", Fr),
+            "Mois" => AnchorDate.ToString("MMMM yyyy", UiCulture),
             "Semaine" =>
                 $"{StartOfWeekMonday(AnchorDate):dd/MM/yyyy} – {StartOfWeekMonday(AnchorDate).AddDays(6):dd/MM/yyyy}",
-            _ => AnchorDate.ToString("dddd d MMMM yyyy", Fr)
+            _ => AnchorDate.ToString("dddd d MMMM yyyy", UiCulture)
         };
     }
 
@@ -1206,7 +1226,7 @@ ORDER BY nom, prenom;
         if (day.Date < DateTime.Today) return;
         var owner = Application.Current?.MainWindow;
         var (effS, effE) = GetEffectiveWorkdayMinutesForDay(day.Date);
-        var win = new WorkdayDayOverrideWindow(day.Date, AgendaQuarterHourChoices, effS, effE, Fr) { Owner = owner };
+        var win = new WorkdayDayOverrideWindow(day.Date, AgendaQuarterHourChoices, effS, effE, UiCulture) { Owner = owner };
         var iso = day.ToString("yyyy-MM-dd");
         if (win.ShowDialog() == true
             && !string.IsNullOrWhiteSpace(win.SavedStartHhMm)
@@ -1260,7 +1280,7 @@ ORDER BY nom, prenom;
         outer:
         while (true)
         {
-            var lunchWin = new LunchRescheduleDayWindow(day, seedLunchS, seedLunchE, Fr) { Owner = owner };
+            var lunchWin = new LunchRescheduleDayWindow(day, seedLunchS, seedLunchE, UiCulture) { Owner = owner };
             if (lunchWin.ShowDialog() != true)
             {
                 AppointmentDate = day;
@@ -1358,7 +1378,7 @@ ORDER BY nom, prenom;
                 if (slots.Count == 0)
                 {
                     var msg = AppointmentScheduling.BuildMessageWhenNoSameDayRelocateSlot(
-                        Fr,
+                        UiCulture,
                         day,
                         moveDur,
                         wdCalS,
@@ -1373,7 +1393,7 @@ ORDER BY nom, prenom;
                 }
 
                 var phone = _patientRepo.GetTelephoneByPatientId(first.PatientId);
-                var dateFr = day.ToString("dddd d MMMM yyyy", Fr);
+                var dateFr = day.ToString("dddd d MMMM yyyy", UiCulture);
                 var relocateWin = new AppointmentRelocateSlotWindow(
                     $"Patient : {first.PatientDisplay}",
                     $"Date : {dateFr} — actuellement à {NormalizeTime(first.StartTime)} ({moveDur} min).",
@@ -1453,7 +1473,7 @@ ORDER BY nom, prenom;
             WeekColumns.Add(new AgendaWeekColumnVm
             {
                 Day = d,
-                Header = d.ToString("ddd d/M", Fr),
+                Header = d.ToString("ddd d/M", UiCulture),
                 IsToday = d.Date == today,
                 IsPastDay = d.Date < today,
                 IsBelgianHoliday = isFerie,
@@ -1724,7 +1744,7 @@ ORDER BY nom, prenom;
         outer:
         while (true)
         {
-            var lunchWin = new LunchRescheduleDayWindow(day, seedLunchS, seedLunchE, Fr) { Owner = owner };
+            var lunchWin = new LunchRescheduleDayWindow(day, seedLunchS, seedLunchE, UiCulture) { Owner = owner };
             if (lunchWin.ShowDialog() != true) return false;
             if (!AppointmentScheduling.TryParseTimeToMinutes(lunchWin.StartHhMm, out var nLunchS)
                 || !AppointmentScheduling.TryParseTimeToMinutes(lunchWin.EndHhMm, out var nLunchE)
@@ -1804,7 +1824,7 @@ ORDER BY nom, prenom;
                 if (slots.Count == 0)
                 {
                     var msg = AppointmentScheduling.BuildMessageWhenNoSameDayRelocateSlot(
-                        Fr,
+                        UiCulture,
                         day,
                         moveDur,
                         wdLunchS,
@@ -1819,7 +1839,7 @@ ORDER BY nom, prenom;
                 }
 
                 var phone = _patientRepo.GetTelephoneByPatientId(first.PatientId);
-                var dateFr = day.ToString("dddd d MMMM yyyy", Fr);
+                var dateFr = day.ToString("dddd d MMMM yyyy", UiCulture);
                 var relocateWin = new AppointmentRelocateSlotWindow(
                     $"Patient : {first.PatientDisplay}",
                     $"Date : {dateFr} — actuellement à {NormalizeTime(first.StartTime)} ({moveDur} min).",
@@ -2232,7 +2252,7 @@ ORDER BY nom, prenom;
                 summary.AppendLine();
                 foreach (var c in conflicts)
                 {
-                    var ds = c.Day.ToString("dddd d MMMM yyyy", Fr);
+                    var ds = c.Day.ToString("dddd d MMMM yyyy", UiCulture);
                     var ourT = AppointmentScheduling.FormatMinutesAsHhMm(startMin);
                     switch (c.Kind)
                     {
@@ -2276,7 +2296,7 @@ ORDER BY nom, prenom;
                 {
                     var day = c.Day;
                     var dIso = day.ToString("yyyy-MM-dd");
-                    var dateTitle = day.ToString("dddd d MMMM yyyy", Fr);
+                    var dateTitle = day.ToString("dddd d MMMM yyyy", UiCulture);
                     var telR = _patientRepo.GetTelephoneByPatientId(patientId);
                     var phoneR = string.IsNullOrWhiteSpace(telR) ? "" : InternationalPhoneFormatter.FormatForDisplay(telR);
 
@@ -2354,7 +2374,7 @@ ORDER BY nom, prenom;
                         {
                             var (wdOccS, wdOccE) = GetEffectiveWorkdayMinutesForDay(day.Date);
                             var msg = AppointmentScheduling.BuildMessageWhenNoSameDayRelocateSlot(
-                                Fr,
+                                UiCulture,
                                 day,
                                 durSave,
                                 wdOccS,
@@ -2392,7 +2412,7 @@ ORDER BY nom, prenom;
                                 {
                                     var (wdBlkOccS, wdBlkOccE) = GetEffectiveWorkdayMinutesForDay(day.Date);
                                     var msg2 = AppointmentScheduling.BuildMessageWhenNoSameDayRelocateSlot(
-                                        Fr,
+                                        UiCulture,
                                         day,
                                         moveDurB,
                                         wdBlkOccS,
@@ -2428,7 +2448,7 @@ ORDER BY nom, prenom;
                             }
                             case RecurringBlockKind.Unavailability:
                             {
-                                var uw = new UnavailabilityRescheduleWindow(day, c.BlockingUnavailability!, Fr) { Owner = owner };
+                                var uw = new UnavailabilityRescheduleWindow(day, c.BlockingUnavailability!, UiCulture) { Owner = owner };
                                 if (uw.ShowDialog() == true)
                                 {
                                     _unavailRepo.Update(c.BlockingUnavailability!.Id, uw.StartHhMm, uw.EndHhMm, uw.ReasonText);
@@ -2452,7 +2472,7 @@ ORDER BY nom, prenom;
                             }
                             case RecurringBlockKind.Lunch:
                             {
-                                var lunchWin = new LunchRescheduleDayWindow(day, c.LunchStartMin, c.LunchEndMin, Fr) { Owner = owner };
+                                var lunchWin = new LunchRescheduleDayWindow(day, c.LunchStartMin, c.LunchEndMin, UiCulture) { Owner = owner };
                                 if (lunchWin.ShowDialog() == true)
                                 {
                                     _lunchOverrideRepo.UpsertMoved(dIso, lunchWin.StartHhMm, lunchWin.EndHhMm);
@@ -2875,8 +2895,8 @@ ORDER BY nom, prenom;
         var row = _repo.GetById(EditingId);
         var patientLabel = row?.PatientDisplay ?? SelectedPatient?.Display ?? "(patient inconnu)";
         var dateLabel = row != null
-            ? DateTime.ParseExact(row.DateIso, "yyyy-MM-dd", CultureInfo.InvariantCulture).ToString("dddd d MMMM yyyy", Fr)
-            : AppointmentDate.ToString("dddd d MMMM yyyy", Fr);
+            ? DateTime.ParseExact(row.DateIso, "yyyy-MM-dd", CultureInfo.InvariantCulture).ToString("dddd d MMMM yyyy", UiCulture)
+            : AppointmentDate.ToString("dddd d MMMM yyyy", UiCulture);
         var timeLabel = row != null ? NormalizeTime(row.StartTime) : SelectedTime;
         var msg = $"Supprimer le rendez-vous suivant ?\n\nPatient : {patientLabel}\n{dateLabel} à {timeLabel}";
         if (ShowActionChoice("Agenda", msg, "Supprimer", "Annuler") != ActionChoiceResult.Primary)

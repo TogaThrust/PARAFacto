@@ -1,0 +1,88 @@
+================================================================================
+PRIVACY POLICY - PARAFACTO NATIVE SOFTWARE
+Document version: 2026-04-08-02
+================================================================================
+
+1. PURPOSE
+This policy explains how personal data is processed when using PARAFacto Native,
+installed locally on your workstation. It is intended to support compliance with
+EU Regulation 2016/679 (GDPR), Belgian law of 30 July 2018, and applicable rules
+for health data and minors.
+
+2. DATA CONTROLLER
+The data controller for data entered and managed in the software is the healthcare
+or paramedical professional (or legal entity) operating the software.
+Unless otherwise contractually agreed, the software editor acts as a processor
+limited to software provision.
+
+3. PROCESSING DESCRIPTION
+PARAFacto Native supports patient records, appointment planning, session logging,
+invoicing and document generation (e.g. PDF). Data is mainly stored locally on
+your device and in configured folders, except when optional features send data to
+third parties (email, subscription/license services, etc.).
+
+4. CATEGORIES OF DATA
+Depending on usage, processed data may include:
+- Identification/contact data (name, phone, email, internal code, etc.)
+- Minor-related and family-context data where relevant
+- Health data (GDPR art. 9) needed for professional follow-up
+- Administrative/financial data (pricing, invoicing, payments, insurers)
+- Limited technical data (timestamps, file paths, app settings)
+- Subscription/license related technical identifiers
+
+5. DATA ABOUT MINORS
+When a patient is a minor, the controller must ensure lawful processing and, where
+required, proper information and authorization from legal representatives.
+
+6. PURPOSES
+Data is processed for:
+- Practice administration and organization
+- Appointment/session planning and follow-up
+- Billing and internal accounting documents
+- Legal/regulatory/professional obligations
+- Backup and document copy sending if configured
+- License/subscription management when enabled
+
+7. LEGAL BASES
+Depending on context, legal bases may include contract, legal obligations, vital
+interests, public interest in health, or explicit consent where required.
+
+8. RECIPIENTS AND PROCESSORS
+Data is generally accessible only to authorized practice members. Additional
+recipients may be involved via email providers, cloud/storage tools, payment or
+license related services, depending on your configuration.
+
+9. TRANSFERS OUTSIDE EU/EEA
+If your providers transfer data outside EU/EEA, you must ensure appropriate
+safeguards (adequacy decision, SCCs, etc.) and provide required information.
+
+10. RETENTION
+Retention periods must follow legal/professional obligations. Typical examples:
+- Invoicing/accounting data: often at least 7 years in Belgium
+- Patient files: according to legal/professional requirements
+- Technical acceptance logs: as needed for compliance evidence
+
+11. SECURITY
+You must implement suitable security (strong OS passwords, encrypted disk when
+possible, regular backups, access control, updated antivirus and system updates).
+
+12. DATA SUBJECT RIGHTS
+Subject to GDPR conditions/exceptions, data subjects may request access,
+rectification, erasure, restriction, objection, portability, consent withdrawal,
+and may lodge a complaint with the Belgian DPA:
+https://www.dataprotectionauthority.be
+
+13. AUTOMATED DECISIONS
+The software does not perform automated decisions producing legal/similar effects
+within GDPR art. 22, unless explicitly documented otherwise.
+
+14. CHANGES
+This policy may be updated. A new in-app acceptance can be required after
+substantial changes. The version shown at the top is authoritative.
+
+15. CONTACT
+For privacy questions: parafacto@parafacto.be
+
+================================================================================
+END OF DOCUMENT
+================================================================================

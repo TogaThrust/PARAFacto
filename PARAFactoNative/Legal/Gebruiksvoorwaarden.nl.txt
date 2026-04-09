@@ -1,0 +1,75 @@
+================================================================================
+GEBRUIKSVOORWAARDEN - PARAFACTO NATIVE SOFTWARE
+Documentversie: 2026-04-08-02
+================================================================================
+
+1. DOEL EN AANVAARDING
+Deze Gebruiksvoorwaarden regelen de toegang tot en het gebruik van PARAFacto
+Native. Door te installeren, op te starten of te gebruiken, bevestigt u dat u
+deze voorwaarden en het privacybeleid hebt gelezen en aanvaard.
+
+2. DIENSTBESCHRIJVING
+De software is een desktoptoepassing voor praktijkbeheer in de zorg:
+patiënten, agenda, sessies, facturatie en documentexport.
+De software wordt geleverd "zoals ze is", met eventuele updates van de uitgever.
+
+3. LICENTIE
+Onder voorbehoud van geldige licentie/abonnement krijgt u een persoonlijke,
+niet-exclusieve, niet-overdraagbare en herroepbare licentie voor gebruik op het
+aantal werkstations toegestaan door uw contract.
+Verboden: ongeoorloofde verspreiding, omzeilen van licentiecontrole, reverse
+engineering buiten wettelijke uitzonderingen, en direct concurrerende afleiding.
+
+4. TOEGANGSVOORWAARDEN
+Toegang kan afhangen van periodieke validatie van licentie/abonnement.
+U bent verantwoordelijk voor vertrouwelijkheid van inloggegevens en beveiliging.
+
+5. VERPLICHTINGEN VAN DE PROFESSIONELE GEBRUIKER
+U verbindt zich ertoe:
+- AVG, Belgische privacywet en beroepsgeheim na te leven
+- Geldige rechtsgrond te voorzien voor patiëntgegevens (ook minderjarigen)
+- Enkel noodzakelijke en relevante gegevens te verwerken
+- Beveiliging en back-ups te organiseren
+- Geen onwettig of frauduleus gebruik te maken
+- Gegevens te controleren vóór facturatie of verzending
+
+6. GEGEVENS EN DIENSTEN VAN DERDEN
+U blijft uitsluitend verantwoordelijk voor ingevoerde gegevens. Activering van
+e-mail, synchronisatie of derde diensten gebeurt onder uw verantwoordelijkheid,
+inclusief informatieplicht en eventuele verwerkersovereenkomsten.
+
+7. BESCHIKBAARHEID EN ONDERHOUD
+De uitgever streeft naar betrouwbare werking maar garandeert geen ononderbroken
+beschikbaarheid noch foutloosheid. Bepaalde updates kunnen verplicht zijn.
+
+8. INTELLECTUELE EIGENDOM
+Software, documentatie, merken en grafische elementen blijven eigendom van de
+uitgever/licentiegevers. Er worden geen rechten verleend buiten deze licentie.
+
+9. AANSPRAKELIJKHEIDSBEPERKING
+Binnen de grenzen van dwingend recht is de uitgever niet aansprakelijk voor
+indirecte schade (dataverlies, omzetverlies, commerciële schade), behalve waar
+wettelijk niet uitsluitbaar. De gebruiker blijft verantwoordelijk voor zorg-,
+facturatie- en conformiteitsbeslissingen.
+
+10. OVERMACHT
+De uitgever is niet aansprakelijk voor gebeurtenissen buiten redelijke controle
+(grote storingen, rampen, sociale conflicten, zware cyberincidenten, enz.).
+
+11. DUUR EN BEËINDIGING
+Deze voorwaarden gelden zolang u de software gebruikt. Bij ernstige inbreuk kan
+toegang worden opgeschort of beëindigd, onverminderd andere rechtsmiddelen.
+
+12. TOEPASSELIJK RECHT EN GESCHILLEN
+Deze voorwaarden vallen onder Belgisch recht. Bij gebrek aan minnelijke regeling
+zijn de bevoegde Belgische rechtbanken bevoegd, behoudens dwingend recht.
+
+13. SCHEIDBAARHEID
+Als een bepaling ongeldig wordt verklaard, blijven de overige bepalingen gelden.
+
+14. CONTACT
+Voor vragen over deze voorwaarden: parafacto@parafacto.be
+
+================================================================================
+EINDE DOCUMENT
+================================================================================

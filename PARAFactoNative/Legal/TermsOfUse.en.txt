@@ -1,0 +1,78 @@
+================================================================================
+TERMS OF USE (TOU) - PARAFACTO NATIVE SOFTWARE
+Document version: 2026-04-08-02
+================================================================================
+
+1. PURPOSE AND ACCEPTANCE
+These Terms of Use govern access to and use of PARAFacto Native software.
+By installing, launching or using the software, you acknowledge that you have
+read and accepted these Terms and the Privacy Policy.
+
+2. SERVICE DESCRIPTION
+The software is a desktop application for healthcare/paramedical practice
+management (patients, appointments, sessions, billing, document export).
+It is provided "as is", subject to updates published by the editor.
+
+3. LICENSE
+Subject to any subscription/license requirements and validity, a personal,
+non-exclusive, non-transferable, revocable license is granted to use the software
+on the number of workstations allowed by your contract/subscription.
+Forbidden uses include unauthorized redistribution, license bypass, reverse
+engineering beyond mandatory legal exceptions, and direct competing derivation.
+
+4. ACCESS CONDITIONS
+Access may require valid license/subscription checks (including periodic online
+verification depending on configuration). You are responsible for credential
+confidentiality and workstation security.
+
+5. PROFESSIONAL USER OBLIGATIONS
+You must:
+- Comply with GDPR, Belgian privacy law and professional secrecy obligations
+- Ensure valid legal basis for patient data processing, including minors
+- Enter only adequate and necessary data
+- Protect systems, backups and practice access
+- Avoid unlawful/fraudulent use
+- Verify data accuracy before invoicing/transmission
+
+6. HOSTED DATA / THIRD PARTIES
+You remain solely responsible for data entered in the software. Enabling email,
+synchronization or third-party services is your responsibility, including legal
+information duties and required processor agreements.
+
+7. AVAILABILITY AND MAINTENANCE
+The editor aims for reliable operation but does not guarantee uninterrupted
+availability or absence of errors. Some updates may be required for security or
+compliance reasons.
+
+8. INTELLECTUAL PROPERTY
+Software, documentation, marks and graphical elements remain the exclusive
+property of the editor/licensors. No rights are granted beyond this license.
+
+9. LIABILITY LIMITATION
+Within mandatory legal limits, the editor is not liable for indirect damages
+(data loss, loss of revenue, commercial harm), except in cases where liability
+cannot legally be excluded. The user remains responsible for care decisions,
+billing decisions and regulatory compliance.
+
+10. FORCE MAJEURE
+The editor is not liable for events beyond reasonable control (major outages,
+disasters, social conflicts, cyber incidents, etc.).
+
+11. TERM AND TERMINATION
+These Terms apply throughout software use. In case of serious breach, access may
+be suspended or terminated, without prejudice to other legal remedies.
+
+12. APPLICABLE LAW AND DISPUTES
+These Terms are governed by Belgian law. In the absence of amicable resolution,
+competent Belgian courts shall have jurisdiction, subject to mandatory law.
+
+13. SEVERABILITY
+If one clause is held invalid, remaining clauses remain effective to the extent
+permitted by law.
+
+14. CONTACT
+For Terms-related questions: parafacto@parafacto.be
+
+================================================================================
+END OF DOCUMENT
+================================================================================
