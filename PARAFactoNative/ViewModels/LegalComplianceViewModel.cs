@@ -256,9 +256,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
 
         if (ok && state.PrivacyAcceptedAtUtc is { } p && state.TermsAcceptedAtUtc is { } t)
         {
-            AcceptanceSummary =
-                $"Politique de confidentialité (version {LegalDocuments.PrivacyPolicyVersion}) et conditions d'utilisation (version {LegalDocuments.TermsOfServiceVersion}) acceptées le {p:yyyy-MM-dd HH:mm} UTC. " +
-                $"Une trace horodatée avec empreinte des textes est enregistrée dans : {AuditFilePath}";
+            AcceptanceSummary = BuildAcceptedSummaryLocalized(p);
         }
         else if (docsMissing)
         {
@@ -290,6 +288,22 @@ public sealed class LegalComplianceViewModel : NotifyBase
     private bool CanSaveAcceptance()
         => AcceptPrivacy && AcceptTerms && string.IsNullOrEmpty(DocumentsLoadError)
            && !string.IsNullOrEmpty(PrivacyText) && !string.IsNullOrEmpty(TermsText);
+
+    private string BuildAcceptedSummaryLocalized(DateTimeOffset acceptedAtUtc)
+    {
+        return UiLanguageService.Current switch
+        {
+            UiLanguageService.En =>
+                $"Privacy policy (version {LegalDocuments.PrivacyPolicyVersion}) and terms of use (version {LegalDocuments.TermsOfServiceVersion}) accepted on {acceptedAtUtc:yyyy-MM-dd HH:mm} UTC. " +
+                $"A timestamped record with text hashes is stored in: {AuditFilePath}",
+            UiLanguageService.Nl =>
+                $"Privacybeleid (versie {LegalDocuments.PrivacyPolicyVersion}) en gebruiksvoorwaarden (versie {LegalDocuments.TermsOfServiceVersion}) aanvaard op {acceptedAtUtc:yyyy-MM-dd HH:mm} UTC. " +
+                $"Een tijdgestempeld bewijs met tekst-hashes is opgeslagen in: {AuditFilePath}",
+            _ =>
+                $"Politique de confidentialité (version {LegalDocuments.PrivacyPolicyVersion}) et conditions d'utilisation (version {LegalDocuments.TermsOfServiceVersion}) acceptées le {acceptedAtUtc:yyyy-MM-dd HH:mm} UTC. " +
+                $"Une trace horodatée avec empreinte des textes est enregistrée dans : {AuditFilePath}"
+        };
+    }
 
     private void SaveAcceptance()
     {

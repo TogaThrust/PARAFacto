@@ -62,7 +62,7 @@
                     <DataGridTextColumn Header="Pays" Binding="{Binding Country}" Width="Auto" />
                     <DataGridTextColumn Header="Téléphone" Binding="{Binding Phone}" Width="Auto" />
                     <DataGridTextColumn Header="Mail" Binding="{Binding Email}" Width="Auto" />
-                    <DataGridTextColumn Header="Référend" Binding="{Binding Referend}" Width="Auto" />
+                    <DataGridTextColumn Header="Référent" Binding="{Binding Referend}" Width="Auto" />
                     <DataGridTextColumn Header="Médecin" Binding="{Binding PrescriberLastName}" Width="Auto" />
                     <DataGridTextColumn Header="Prénom médecin" Binding="{Binding PrescriberFirstName}" Width="Auto" />
                     <DataGridTextColumn Header="Code médecin" Binding="{Binding PrescriberCode}" Width="Auto" />
@@ -173,7 +173,7 @@
                             </DockPanel>
 
                             <DockPanel>
-                                <TextBlock Width="110" VerticalAlignment="Center" Text="Référend:" />
+                                <TextBlock Width="110" VerticalAlignment="Center" Text="Référent:" />
                                 <TextBox Text="{Binding Referend, UpdateSourceTrigger=PropertyChanged}"
                                          IsReadOnly="{Binding IsReadOnly}" />
                             </DockPanel>

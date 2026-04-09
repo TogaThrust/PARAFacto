@@ -135,9 +135,9 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <Image Grid.Column="0"
-                                           Width="420"
-                                           Height="140"
-                                           Margin="0,0,14,0"
+                                           Width="560"
+                                           Height="190"
+                                           Margin="18,0,16,0"
                                            Stretch="Uniform"
                                            HorizontalAlignment="Left"
                                            IsHitTestVisible="False"
@@ -470,11 +470,11 @@
                                 VerticalAlignment="Top"
                                 Background="#FAFAFA">
                             <StackPanel>
-                                <TextBlock Text="Abonnement PARAFacto"
+                                <TextBlock Text="{DynamicResource Technical.Subscription.Title}"
                                            FontSize="16"
                                            FontWeight="SemiBold"
                                            Margin="0,0,0,6"/>
-                                <TextBlock Text="Portail clients Stripe"
+                                <TextBlock Text="{DynamicResource Technical.Subscription.Subtitle}"
                                            FontSize="13"
                                            Foreground="#475569"
                                            Margin="0,0,0,12"/>
@@ -483,7 +483,7 @@
                                            LineHeight="20"
                                            Margin="0,0,0,16"
                                            Text="Permet aux abonnés de gérer leur carte bancaire, leurs factures et leur abonnement (selon les options activées dans Stripe)."/>
-                                <Button Content="Accès portail clients"
+                                <Button Content="{DynamicResource Technical.Subscription.OpenPortal}"
                                         Click="StripeCustomerPortal_Click"
                                         HorizontalAlignment="Stretch"
                                         Padding="18,10"
@@ -589,7 +589,7 @@
                                             <ColumnDefinition Width="140"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Mot de passe app :" Margin="0,0,10,0"/>
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{DynamicResource Technical.Smtp.AppPassword}" Margin="0,0,10,0"/>
                                         <PasswordBox Grid.Column="1"
                                                      views:PasswordBoxAssistant.BindPassword="True"
                                                      views:PasswordBoxAssistant.BoundPassword="{Binding Console.SmtpPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>

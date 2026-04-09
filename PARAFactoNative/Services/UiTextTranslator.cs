@@ -10,24 +10,59 @@ public static class UiTextTranslator
     private static readonly IReadOnlyDictionary<string, string> Nl = BuildNl();
     private static readonly IReadOnlyList<KeyValuePair<string, string>> EnByLength = En.OrderByDescending(k => k.Key.Length).ToList();
     private static readonly IReadOnlyList<KeyValuePair<string, string>> NlByLength = Nl.OrderByDescending(k => k.Key.Length).ToList();
+    private static readonly IReadOnlyDictionary<string, string> EnToFr = BuildReverse(En);
+    private static readonly IReadOnlyDictionary<string, string> NlToFr = BuildReverse(Nl);
+    private static readonly IReadOnlyList<KeyValuePair<string, string>> EnToFrByLength = EnToFr.OrderByDescending(k => k.Key.Length).ToList();
+    private static readonly IReadOnlyList<KeyValuePair<string, string>> NlToFrByLength = NlToFr.OrderByDescending(k => k.Key.Length).ToList();
 
     public static string Translate(string? source)
     {
         var text = source ?? "";
         if (text.Length == 0) return text;
-        if (UiLanguageService.Current == UiLanguageService.Fr) return text;
+        var frenchBase = ToFrench(text);
+        if (UiLanguageService.Current == UiLanguageService.Fr) return frenchBase;
 
         var dict = UiLanguageService.Current == UiLanguageService.Nl ? Nl : En;
         var repl = UiLanguageService.Current == UiLanguageService.Nl ? NlByLength : EnByLength;
-        if (dict.TryGetValue(text, out var exact)) return exact;
+        if (dict.TryGetValue(frenchBase, out var exact)) return exact;
 
-        var output = text;
+        var output = frenchBase;
         foreach (var kv in repl)
         {
             if (output.Contains(kv.Key, StringComparison.Ordinal))
                 output = output.Replace(kv.Key, kv.Value, StringComparison.Ordinal);
         }
         return output;
+    }
+
+    private static string ToFrench(string text)
+    {
+        if (EnToFr.TryGetValue(text, out var fromEnExact)) return fromEnExact;
+        if (NlToFr.TryGetValue(text, out var fromNlExact)) return fromNlExact;
+
+        var output = text;
+        foreach (var kv in EnToFrByLength)
+        {
+            if (output.Contains(kv.Key, StringComparison.Ordinal))
+                output = output.Replace(kv.Key, kv.Value, StringComparison.Ordinal);
+        }
+        foreach (var kv in NlToFrByLength)
+        {
+            if (output.Contains(kv.Key, StringComparison.Ordinal))
+                output = output.Replace(kv.Key, kv.Value, StringComparison.Ordinal);
+        }
+        return output;
+    }
+
+    private static Dictionary<string, string> BuildReverse(IReadOnlyDictionary<string, string> src)
+    {
+        var reverse = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var kv in src)
+        {
+            if (!reverse.ContainsKey(kv.Value))
+                reverse[kv.Value] = kv.Key;
+        }
+        return reverse;
     }
 
     private static Dictionary<string, string> BuildEn() => new(StringComparer.Ordinal)
@@ -93,6 +128,10 @@ public static class UiTextTranslator
         ["Retour au lunch récurrent"] = "Back to recurring lunch",
         ["Heure de début"] = "Start time",
         ["Durée de la séance"] = "Session duration",
+        ["30 minutes"] = "30 minutes",
+        ["1 heure"] = "1 hour",
+        ["Autre (heures et minutes…)"] = "Other (hours and minutes...)",
+        ["minutes"] = "minutes",
         ["Encodage récurrent"] = "Recurring entry",
         ["Copier journée jusqu'à date"] = "Copy day until date",
         ["Supprimer journée"] = "Delete day",
@@ -113,13 +152,23 @@ public static class UiTextTranslator
         ["Nom"] = "Last name",
         ["Prénom"] = "First name",
         ["Téléphone"] = "Phone",
+        ["Référent"] = "Referrer",
         ["Référend"] = "Referrer",
         ["Date presc"] = "Prescription date",
         ["Date accord"] = "Approval date",
         ["Période accord"] = "Approval period",
         ["Nomenclature"] = "Prescription code",
         ["Médecin"] = "Doctor",
+        ["médecin"] = "doctor",
+        ["Infos médicales"] = "Medical information",
+        ["infos médicales"] = "medical information",
+        ["Nom médecin"] = "Doctor last name",
+        ["Nom médecin:"] = "Doctor last name:",
+        ["Nom médecin :"] = "Doctor last name:",
         ["Nomenclature:"] = "Prescription code:",
+        ["Prénom médecin :"] = "Doctor first name:",
+        ["Code médecin :"] = "Doctor code:",
+        ["Médecin et prescriptions"] = "Doctor and prescriptions",
         ["Nouveau patient - erreur"] = "New patient - error",
         ["Modifier patient - erreur"] = "Edit patient - error",
         ["Lister séances - erreur"] = "List sessions - error",
@@ -259,6 +308,7 @@ public static class UiTextTranslator
         ["Période sélectionnée"] = "Selected period",
         ["Perte"] = "Loss",
         ["Solde"] = "Balance",
+        ["Jour férié :"] = "Public holiday:",
         ["Ces horaires sont mémorisés au lancement suivant. La liste « Heure de début » s’y adapte. Les RDV déjà enregistrés hors plage restent inchangés jusqu’à modification manuelle."] = "These hours are remembered at next startup. The \"Start time\" list adapts to them. Existing appointments outside this range remain unchanged until manually edited.",
         ["Tarif RDV:"] = "Appointment rate:",
     };
@@ -320,6 +370,10 @@ public static class UiTextTranslator
         ["Retour au lunch récurrent"] = "Terug naar terugkerende lunch",
         ["Heure de début"] = "Startuur",
         ["Durée de la séance"] = "Sessieduur",
+        ["30 minutes"] = "30 minuten",
+        ["1 heure"] = "1 uur",
+        ["Autre (heures et minutes…)"] = "Andere (uren en minuten...)",
+        ["minutes"] = "minuten",
         ["Encodage récurrent"] = "Terugkerende invoer",
         ["Copier journée jusqu'à date"] = "Dag kopiëren tot datum",
         ["Supprimer journée"] = "Dag verwijderen",
@@ -339,12 +393,23 @@ public static class UiTextTranslator
         ["Nom"] = "Naam",
         ["Prénom"] = "Voornaam",
         ["Téléphone"] = "Telefoon",
+        ["Référent"] = "Verwijzer",
+        ["Référend"] = "Verwijzer",
         ["Date presc"] = "Voorschriftdatum",
         ["Date accord"] = "Goedkeuringsdatum",
         ["Période accord"] = "Goedkeuringsperiode",
         ["Nomenclature"] = "Voorschriftcode",
         ["Médecin"] = "Arts",
+        ["médecin"] = "arts",
+        ["Infos médicales"] = "Medische info",
+        ["infos médicales"] = "medische info",
+        ["Nom médecin"] = "Naam arts",
+        ["Nom médecin:"] = "Naam arts:",
+        ["Nom médecin :"] = "Naam arts:",
         ["Nomenclature:"] = "Voorschriftcode:",
+        ["Prénom médecin :"] = "Voornaam arts:",
+        ["Code médecin :"] = "Code arts:",
+        ["Médecin et prescriptions"] = "Arts en voorschriften",
         ["Nouveau patient - erreur"] = "Nieuwe patiënt - fout",
         ["Modifier patient - erreur"] = "Patiënt bewerken - fout",
         ["Lister séances - erreur"] = "Sessies weergeven - fout",
@@ -399,6 +464,7 @@ public static class UiTextTranslator
         ["Utiliser SMTP (Gmail/Autre) si Outlook absent"] = "SMTP gebruiken (Gmail/Anders) als Outlook ontbreekt",
         ["Port :"] = "Poort:",
         ["From (optionnel) :"] = "Van (optioneel):",
+        ["Mot de passe app :"] = "App-wachtwoord:",
         ["Workspace introuvable.\nChoisis d'abord le workspace."] = "Workspace niet gevonden.\nKies eerst de workspace.",
         ["Annuler"] = "Annuleren",
         ["Enregistrer"] = "Opslaan",
@@ -475,6 +541,7 @@ public static class UiTextTranslator
         ["Période sélectionnée"] = "Geselecteerde periode",
         ["Perte"] = "Verlies",
         ["Solde"] = "Saldo",
+        ["Jour férié :"] = "Feestdag:",
         ["Ces horaires sont mémorisés au lancement suivant. La liste « Heure de début » s’y adapte. Les RDV déjà enregistrés hors plage restent inchangés jusqu’à modification manuelle."] = "Deze uren worden bewaard voor de volgende start. De lijst \"Startuur\" past zich eraan aan. Reeds geregistreerde afspraken buiten dit bereik blijven ongewijzigd tot handmatige wijziging.",
         ["Tarif RDV:"] = "Afsprakentarief:",
     };

@@ -560,7 +560,7 @@ public sealed class FacturesViewModel : NotifyBase
     private string GetPeriodRangeLabel()
     {
         var (from, to) = GetPeriodRange();
-        if (!from.HasValue || !to.HasValue) return "Toutes les périodes";
+        if (!from.HasValue || !to.HasValue) return UiTextTranslator.Translate("Toutes les périodes");
         return $"{from.Value:dd/MM/yyyy} → {to.Value:dd/MM/yyyy}";
     }
 

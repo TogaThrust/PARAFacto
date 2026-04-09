@@ -38,10 +38,15 @@
     <sys:String x:Key="Factures.SelectedPeriod" xmlns:sys="clr-namespace:System;assembly=mscorlib">Geselecteerde periode</sys:String>
     <sys:String x:Key="Factures.TotalRecorded" xmlns:sys="clr-namespace:System;assembly=mscorlib">TOTAAL GEREGISTREERD</sys:String>
     <sys:String x:Key="Factures.LossesLabel" xmlns:sys="clr-namespace:System;assembly=mscorlib">VERLIEZEN: </sys:String>
+    <sys:String x:Key="Agenda.RatePrefillHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Het tarief wordt vooraf ingevuld volgens de status van de patiënt (fiche). U kunt dit wijzigen.</sys:String>
     <sys:String x:Key="Unavailability.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Onbeschikbaarheid</sys:String>
     <sys:String x:Key="Unavailability.ReasonOptional" xmlns:sys="clr-namespace:System;assembly=mscorlib">Reden (optioneel)</sys:String>
     <sys:String x:Key="Unavailability.TodayGroup" xmlns:sys="clr-namespace:System;assembly=mscorlib">Onbeschikbaarheden vandaag</sys:String>
     <sys:String x:Key="Unavailability.DeleteSelection" xmlns:sys="clr-namespace:System;assembly=mscorlib">Selectie verwijderen</sys:String>
     <sys:String x:Key="Unavailability.Add" xmlns:sys="clr-namespace:System;assembly=mscorlib">Toevoegen</sys:String>
     <sys:String x:Key="Unavailability.Close" xmlns:sys="clr-namespace:System;assembly=mscorlib">Sluiten</sys:String>
+    <sys:String x:Key="Technical.Subscription.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">PARAFacto-abonnement</sys:String>
+    <sys:String x:Key="Technical.Subscription.Subtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Stripe-klantenportaal</sys:String>
+    <sys:String x:Key="Technical.Subscription.OpenPortal" xmlns:sys="clr-namespace:System;assembly=mscorlib">Toegang klantenportaal</sys:String>
+    <sys:String x:Key="Technical.Smtp.AppPassword" xmlns:sys="clr-namespace:System;assembly=mscorlib">App-wachtwoord:</sys:String>
 </ResourceDictionary>

@@ -284,9 +284,9 @@ public sealed class AgendaViewModel : NotifyBase
 
     public List<AgendaDurationChoice> DurationPresets { get; } = new()
     {
-        new AgendaDurationChoice { Label = "30 minutes", PresetMinutes = 30 },
-        new AgendaDurationChoice { Label = "1 heure", PresetMinutes = 60 },
-        new AgendaDurationChoice { Label = AutreDurationLabelDefault, PresetMinutes = null }
+        new AgendaDurationChoice { Label = UiTextTranslator.Translate("30 minutes"), PresetMinutes = 30 },
+        new AgendaDurationChoice { Label = UiTextTranslator.Translate("1 heure"), PresetMinutes = 60 },
+        new AgendaDurationChoice { Label = UiTextTranslator.Translate(AutreDurationLabelDefault), PresetMinutes = null }
     };
 
     private bool _suppressDurationChoice;
@@ -516,6 +516,7 @@ public sealed class AgendaViewModel : NotifyBase
 
         _suppressTimeSuggest = true;
         _suppressDurationChoice = true;
+        RefreshDurationPresetLabels();
         _selectedDurationChoice = DurationPresets[0];
         _suppressDurationChoice = false;
         Raise(nameof(SelectedDurationChoice));
@@ -529,6 +530,7 @@ public sealed class AgendaViewModel : NotifyBase
         UiLanguageService.LanguageChanged += _ =>
         {
             Raise(nameof(ViewModes));
+            RefreshDurationPresetLabels();
             UpdateHeader();
             RefreshCalendar();
         };
@@ -1002,7 +1004,7 @@ ORDER BY nom, prenom;
         }
 
         IsDayViewHoliday = true;
-        DayHolidayBanner = $"Jour férié : {name}";
+        DayHolidayBanner = $"{UiTextTranslator.Translate("Jour férié :")} {TranslateHolidayName(name)}";
     }
 
     private (DateTime from, DateTime to) GetVisibleRange()
@@ -1046,7 +1048,7 @@ ORDER BY nom, prenom;
             AppointmentId = 0,
             IsUnavailability = true,
             SortMinutes = startMin,
-            LineText = $"Indisponible {t0} – {t1}{reason}",
+            LineText = $"{AgendaUnavailableLabel()} {t0} – {t1}{reason}",
             IsHistoricalReadOnlyDay = historicalReadOnly,
             CalendarOwnerDate = calendarDay
         };
@@ -1061,7 +1063,7 @@ ORDER BY nom, prenom;
             AppointmentId = 0,
             IsLunchBreak = true,
             SortMinutes = startMin,
-            LineText = $"Lunch {t0} – {t1}",
+            LineText = $"{AgendaLunchLabel()} {t0} – {t1}",
             IsHistoricalReadOnlyDay = historicalReadOnly,
             CalendarOwnerDate = calendarDay
         };
@@ -1161,7 +1163,7 @@ ORDER BY nom, prenom;
                 AppointmentId = 0,
                 IsAvailableGap = true,
                 SortMinutes = gapStart,
-                LineText = $"Créneau disponible {t0} – {t1} ({len} min)",
+                LineText = $"{AgendaAvailableSlotLabel()} {t0} – {t1} ({len} min)",
                 IsHistoricalReadOnlyDay = historicalReadOnly,
                 CalendarOwnerDate = calendarDay.Date
             });
@@ -1447,7 +1449,7 @@ ORDER BY nom, prenom;
                 IsToday = d.Date == today,
                 IsPastDay = d.Date < today,
                 IsBelgianHoliday = isFerie,
-                HolidayName = ferieName ?? "",
+                HolidayName = isFerie ? TranslateHolidayName(ferieName ?? "") : "",
                 Lines = BuildCalendarDayLines(
                     list,
                     ulist,
@@ -1477,7 +1479,7 @@ ORDER BY nom, prenom;
                 IsToday = d.Date == today,
                 IsPastDay = d.Date < today,
                 IsBelgianHoliday = isFerie,
-                HolidayName = ferieName ?? "",
+                HolidayName = isFerie ? TranslateHolidayName(ferieName ?? "") : "",
                 Lines = BuildCalendarDayLines(
                     list,
                     ulist,
@@ -1486,6 +1488,52 @@ ORDER BY nom, prenom;
             });
         }
     }
+
+    private static string TranslateHolidayName(string frName)
+    {
+        var key = (frName ?? "").Trim();
+        if (key.Length == 0) return key;
+        if (UiLanguageService.Current == UiLanguageService.Fr) return key;
+
+        return key switch
+        {
+            "Nouvel An" => UiLanguageService.Current == UiLanguageService.Nl ? "Nieuwjaar" : "New Year's Day",
+            "Fête du Travail" => UiLanguageService.Current == UiLanguageService.Nl ? "Dag van de Arbeid" : "Labour Day",
+            "Fête nationale" => UiLanguageService.Current == UiLanguageService.Nl ? "Nationale feestdag" : "National Day",
+            "Assomption" => UiLanguageService.Current == UiLanguageService.Nl ? "Onze-Lieve-Vrouw Hemelvaart" : "Assumption Day",
+            "Toussaint" => UiLanguageService.Current == UiLanguageService.Nl ? "Allerheiligen" : "All Saints' Day",
+            "Armistice 1918" => UiLanguageService.Current == UiLanguageService.Nl ? "Wapenstilstand 1918" : "Armistice Day",
+            "Noël" => UiLanguageService.Current == UiLanguageService.Nl ? "Kerstmis" : "Christmas Day",
+            "Lundi de Pâques" => UiLanguageService.Current == UiLanguageService.Nl ? "Paasmaandag" : "Easter Monday",
+            "Ascension" => UiLanguageService.Current == UiLanguageService.Nl ? "Onze-Lieve-Heer Hemelvaart" : "Ascension Day",
+            "Lundi de Pentecôte" => UiLanguageService.Current == UiLanguageService.Nl ? "Pinkstermaandag" : "Whit Monday",
+            _ => key
+        };
+    }
+
+    private static string AgendaAvailableSlotLabel()
+        => UiLanguageService.Current switch
+        {
+            UiLanguageService.En => "Available slot",
+            UiLanguageService.Nl => "Beschikbaar tijdslot",
+            _ => "Créneau disponible"
+        };
+
+    private static string AgendaUnavailableLabel()
+        => UiLanguageService.Current switch
+        {
+            UiLanguageService.En => "Unavailable",
+            UiLanguageService.Nl => "Onbeschikbaar",
+            _ => "Indisponible"
+        };
+
+    private static string AgendaLunchLabel()
+        => UiLanguageService.Current switch
+        {
+            UiLanguageService.En => "Lunch",
+            UiLanguageService.Nl => "Lunch",
+            _ => "Lunch"
+        };
 
     private void RebuildDayLines(
         Dictionary<string, List<AppointmentRow>> byDay,
@@ -1563,7 +1611,7 @@ ORDER BY nom, prenom;
     }
 
     private void ResetAutrePresetLabel()
-        => DurationPresets[2].Label = AutreDurationLabelDefault;
+        => DurationPresets[2].Label = UiTextTranslator.Translate(AutreDurationLabelDefault);
 
     private void ApplyAutrePresetLabelFromMinutes(int minutes)
     {
@@ -1576,10 +1624,32 @@ ORDER BY nom, prenom;
         DurationPresets[2].Label = FormatCustomDurationDisplay(minutes);
     }
 
-    private static string FormatCustomDurationDisplay(int minutes) =>
-        minutes < 60 ? $"{minutes} minutes"
-        : minutes % 60 == 0 ? (minutes / 60 == 1 ? "1 heure" : $"{minutes / 60} heures")
-        : $"{minutes / 60} h {minutes % 60} min";
+    private static string FormatCustomDurationDisplay(int minutes)
+    {
+        if (minutes < 60)
+            return $"{minutes} {UiTextTranslator.Translate("minutes")}";
+
+        if (minutes % 60 == 0)
+        {
+            if (UiLanguageService.Current == UiLanguageService.En)
+                return minutes / 60 == 1 ? "1 hour" : $"{minutes / 60} hours";
+            if (UiLanguageService.Current == UiLanguageService.Nl)
+                return minutes / 60 == 1 ? "1 uur" : $"{minutes / 60} uur";
+            return minutes / 60 == 1 ? "1 heure" : $"{minutes / 60} heures";
+        }
+
+        return $"{minutes / 60} h {minutes % 60} min";
+    }
+
+    private void RefreshDurationPresetLabels()
+    {
+        DurationPresets[0].Label = UiTextTranslator.Translate("30 minutes");
+        DurationPresets[1].Label = UiTextTranslator.Translate("1 heure");
+        if (_selectedDurationChoice?.PresetMinutes is null && DurationMinutes != 30 && DurationMinutes != 60)
+            ApplyAutrePresetLabelFromMinutes(DurationMinutes);
+        else
+            ResetAutrePresetLabel();
+    }
 
     private static string NormalizeTime(string t)
     {

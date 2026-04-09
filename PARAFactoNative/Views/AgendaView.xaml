@@ -197,7 +197,7 @@
                         <Button Content="Supprimer journée" Command="{Binding DeleteDayCommand}" Padding="12,6" Margin="0,0,8,8"/>
                     </WrapPanel>
                     <TextBlock Foreground="#64748B" FontSize="11" TextWrapping="Wrap"
-                               Text="Le tarif est prérempli selon le statut du patient (fiche). Vous pouvez le changer."/>
+                               Text="{DynamicResource Agenda.RatePrefillHint}"/>
                 </StackPanel>
             </ScrollViewer>
         </Border>

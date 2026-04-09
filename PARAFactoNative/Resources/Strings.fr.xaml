@@ -38,10 +38,15 @@
     <sys:String x:Key="Factures.SelectedPeriod" xmlns:sys="clr-namespace:System;assembly=mscorlib">Période sélectionnée</sys:String>
     <sys:String x:Key="Factures.TotalRecorded" xmlns:sys="clr-namespace:System;assembly=mscorlib">TOTAL ENREGISTRÉ</sys:String>
     <sys:String x:Key="Factures.LossesLabel" xmlns:sys="clr-namespace:System;assembly=mscorlib">PERTES : </sys:String>
+    <sys:String x:Key="Agenda.RatePrefillHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Le tarif est prérempli selon le statut du patient (fiche). Vous pouvez le changer.</sys:String>
     <sys:String x:Key="Unavailability.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Indisponibilité</sys:String>
     <sys:String x:Key="Unavailability.ReasonOptional" xmlns:sys="clr-namespace:System;assembly=mscorlib">Raison (optionnel)</sys:String>
     <sys:String x:Key="Unavailability.TodayGroup" xmlns:sys="clr-namespace:System;assembly=mscorlib">Indisponibilités ce jour</sys:String>
     <sys:String x:Key="Unavailability.DeleteSelection" xmlns:sys="clr-namespace:System;assembly=mscorlib">Supprimer la sélection</sys:String>
     <sys:String x:Key="Unavailability.Add" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ajouter</sys:String>
     <sys:String x:Key="Unavailability.Close" xmlns:sys="clr-namespace:System;assembly=mscorlib">Fermer</sys:String>
+    <sys:String x:Key="Technical.Subscription.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Abonnement PARAFacto</sys:String>
+    <sys:String x:Key="Technical.Subscription.Subtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Portail clients Stripe</sys:String>
+    <sys:String x:Key="Technical.Subscription.OpenPortal" xmlns:sys="clr-namespace:System;assembly=mscorlib">Accès portail clients</sys:String>
+    <sys:String x:Key="Technical.Smtp.AppPassword" xmlns:sys="clr-namespace:System;assembly=mscorlib">Mot de passe app :</sys:String>
 </ResourceDictionary>
