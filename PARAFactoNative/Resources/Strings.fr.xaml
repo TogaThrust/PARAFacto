@@ -11,4 +11,37 @@
     <sys:String x:Key="Language.TooltipFr" xmlns:sys="clr-namespace:System;assembly=mscorlib">Français</sys:String>
     <sys:String x:Key="Language.TooltipEn" xmlns:sys="clr-namespace:System;assembly=mscorlib">Anglais</sys:String>
     <sys:String x:Key="Language.TooltipNl" xmlns:sys="clr-namespace:System;assembly=mscorlib">Néerlandais</sys:String>
+    <sys:String x:Key="Tarifs.Header.Label" xmlns:sys="clr-namespace:System;assembly=mscorlib">Libellé</sys:String>
+    <sys:String x:Key="Tarifs.Header.PartPatient" xmlns:sys="clr-namespace:System;assembly=mscorlib">Part patient</sys:String>
+    <sys:String x:Key="Tarifs.Header.PartMutuelle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Part mutuelle</sys:String>
+    <sys:String x:Key="Tarifs.Header.Active" xmlns:sys="clr-namespace:System;assembly=mscorlib">Actif</sys:String>
+    <sys:String x:Key="Seances.Header.PartPatient" xmlns:sys="clr-namespace:System;assembly=mscorlib">Part patient</sys:String>
+    <sys:String x:Key="Seances.Header.PartMutuelle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Part mutuelle</sys:String>
+    <sys:String x:Key="Seances.Header.AgendaLink" xmlns:sys="clr-namespace:System;assembly=mscorlib">Lien agenda (RDV)</sys:String>
+    <sys:String x:Key="Seances.DeleteSelected" xmlns:sys="clr-namespace:System;assembly=mscorlib">Supprimer la ligne sélectionnée</sys:String>
+    <sys:String x:Key="Seances.TotalPatient" xmlns:sys="clr-namespace:System;assembly=mscorlib">Total patient:</sys:String>
+    <sys:String x:Key="Seances.TotalMutuelle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Total mutuelle:</sys:String>
+    <sys:String x:Key="Seances.TotalGeneral" xmlns:sys="clr-namespace:System;assembly=mscorlib">Total général:</sys:String>
+    <sys:String x:Key="Factures.Actions" xmlns:sys="clr-namespace:System;assembly=mscorlib">Actions</sys:String>
+    <sys:String x:Key="Factures.Button.Payment" xmlns:sys="clr-namespace:System;assembly=mscorlib">Paiement</sys:String>
+    <sys:String x:Key="Factures.Button.Loss" xmlns:sys="clr-namespace:System;assembly=mscorlib">Perte</sys:String>
+    <sys:String x:Key="Factures.Button.CancelLoss" xmlns:sys="clr-namespace:System;assembly=mscorlib">Annuler perte</sys:String>
+    <sys:String x:Key="Factures.Button.CreditNote" xmlns:sys="clr-namespace:System;assembly=mscorlib">Note de crédit</sys:String>
+    <sys:String x:Key="Factures.Button.MutualEdit" xmlns:sys="clr-namespace:System;assembly=mscorlib">Modif mutuelle</sys:String>
+    <sys:String x:Key="Factures.Button.OpenFolder" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ouvrir dossier</sys:String>
+    <sys:String x:Key="Factures.MonthDeletion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Suppression du mois</sys:String>
+    <sys:String x:Key="Factures.DeleteAllMonth" xmlns:sys="clr-namespace:System;assembly=mscorlib">Supprimer toutes les factures du mois</sys:String>
+    <sys:String x:Key="Factures.IndexRecipientsPdf" xmlns:sys="clr-namespace:System;assembly=mscorlib">Indexer destinataires (PDF)</sys:String>
+    <sys:String x:Key="Factures.DoubleClickHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Un double clic sur une facture impayée vous permet d'envoyer un message Whatsapp ou mail à la personne concernée (si encodé dans la DB)</sys:String>
+    <sys:String x:Key="Factures.Details" xmlns:sys="clr-namespace:System;assembly=mscorlib">Détails</sys:String>
+    <sys:String x:Key="Factures.Period" xmlns:sys="clr-namespace:System;assembly=mscorlib">Période</sys:String>
+    <sys:String x:Key="Factures.SelectedPeriod" xmlns:sys="clr-namespace:System;assembly=mscorlib">Période sélectionnée</sys:String>
+    <sys:String x:Key="Factures.TotalRecorded" xmlns:sys="clr-namespace:System;assembly=mscorlib">TOTAL ENREGISTRÉ</sys:String>
+    <sys:String x:Key="Factures.LossesLabel" xmlns:sys="clr-namespace:System;assembly=mscorlib">PERTES : </sys:String>
+    <sys:String x:Key="Unavailability.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Indisponibilité</sys:String>
+    <sys:String x:Key="Unavailability.ReasonOptional" xmlns:sys="clr-namespace:System;assembly=mscorlib">Raison (optionnel)</sys:String>
+    <sys:String x:Key="Unavailability.TodayGroup" xmlns:sys="clr-namespace:System;assembly=mscorlib">Indisponibilités ce jour</sys:String>
+    <sys:String x:Key="Unavailability.DeleteSelection" xmlns:sys="clr-namespace:System;assembly=mscorlib">Supprimer la sélection</sys:String>
+    <sys:String x:Key="Unavailability.Add" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ajouter</sys:String>
+    <sys:String x:Key="Unavailability.Close" xmlns:sys="clr-namespace:System;assembly=mscorlib">Fermer</sys:String>
 </ResourceDictionary>

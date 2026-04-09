@@ -28,10 +28,10 @@
                   BeginningEdit="TarifsGrid_BeginningEdit"
                   PreviewMouseDoubleClick="TarifsGrid_PreviewMouseDoubleClick">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Libellé" Binding="{Binding Label, Mode=OneWay}" Width="*"/>
-                <DataGridTextColumn Header="Part patient" Binding="{Binding PartPatientEuro, Mode=OneWay}" Width="Auto"/>
-                <DataGridTextColumn Header="Part mutuelle" Binding="{Binding PartMutuelleEuro, Mode=OneWay}" Width="Auto"/>
-                <DataGridCheckBoxColumn Header="Actif" Binding="{Binding Active}" Width="Auto"/>
+                <DataGridTextColumn Header="{DynamicResource Tarifs.Header.Label}" Binding="{Binding Label, Mode=OneWay}" Width="*"/>
+                <DataGridTextColumn Header="{DynamicResource Tarifs.Header.PartPatient}" Binding="{Binding PartPatientEuro, Mode=OneWay}" Width="Auto"/>
+                <DataGridTextColumn Header="{DynamicResource Tarifs.Header.PartMutuelle}" Binding="{Binding PartMutuelleEuro, Mode=OneWay}" Width="Auto"/>
+                <DataGridCheckBoxColumn Header="{DynamicResource Tarifs.Header.Active}" Binding="{Binding Active}" Width="Auto"/>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

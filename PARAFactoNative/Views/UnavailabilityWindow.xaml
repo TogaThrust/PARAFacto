@@ -1,7 +1,7 @@
 <Window x:Class="PARAFactoNative.Views.UnavailabilityWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Indisponibilité"
+        Title="{DynamicResource Unavailability.Title}"
         Height="540" Width="500"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
@@ -37,10 +37,10 @@
             </StackPanel>
         </Grid>
         <StackPanel Grid.Row="3" Margin="0,12,0,0">
-            <TextBlock Style="{StaticResource DialogSectionHeaderTextBlock}" Margin="0,0,0,4" Text="Raison (optionnel)"/>
+            <TextBlock Style="{StaticResource DialogSectionHeaderTextBlock}" Margin="0,0,0,4" Text="{DynamicResource Unavailability.ReasonOptional}"/>
             <TextBox x:Name="ReasonBox" AcceptsReturn="False" MaxLength="200"/>
         </StackPanel>
-        <GroupBox Grid.Row="4" Header="Indisponibilités ce jour" Margin="0,14,0,8" Padding="8,8,8,8">
+        <GroupBox Grid.Row="4" Header="{DynamicResource Unavailability.TodayGroup}" Margin="0,14,0,8" Padding="8,8,8,8">
             <ListBox x:Name="UnavailList" Margin="0">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
@@ -50,9 +50,9 @@
             </ListBox>
         </GroupBox>
         <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-            <Button Content="Supprimer la sélection" Style="{StaticResource DialogChoiceButton}" Margin="0,0,8,0" Click="Delete_Click"/>
-            <Button Content="Ajouter" Style="{StaticResource DialogPrimaryChoiceButton}" Margin="0,0,8,0" Click="Add_Click"/>
-            <Button Content="Fermer" Style="{StaticResource DialogChoiceButton}" IsCancel="True"/>
+            <Button Content="{DynamicResource Unavailability.DeleteSelection}" Style="{StaticResource DialogChoiceButton}" Margin="0,0,8,0" Click="Delete_Click"/>
+            <Button Content="{DynamicResource Unavailability.Add}" Style="{StaticResource DialogPrimaryChoiceButton}" Margin="0,0,8,0" Click="Add_Click"/>
+            <Button Content="{DynamicResource Unavailability.Close}" Style="{StaticResource DialogChoiceButton}" IsCancel="True"/>
         </StackPanel>
     </Grid>
 </Window>

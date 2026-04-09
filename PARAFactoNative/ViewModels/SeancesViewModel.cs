@@ -162,9 +162,10 @@ public sealed class SeancesViewModel : NotifyBase
         {
             var period = ResolveCurrentPeriod();
             if (string.IsNullOrWhiteSpace(period)) return "";
-            return new InvoiceRepo().HasAnyInvoicesForPeriod(period)
+            var message = new InvoiceRepo().HasAnyInvoicesForPeriod(period)
                 ? $"Le mois {period} est verrouillé car des factures existent déjà."
                 : $"Le mois {period} est modifiable.";
+            return UiTextTranslator.Translate(message);
         }
     }
 

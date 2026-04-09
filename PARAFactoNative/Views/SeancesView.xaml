@@ -49,21 +49,21 @@
                 <DataGridTextColumn Header="Patient" Binding="{Binding PatientDisplay}" Width="*" IsReadOnly="True"/>
                 <DataGridTextColumn Header="Tarif" Binding="{Binding TarifLabel}" Width="Auto" IsReadOnly="True"/>
                 <DataGridCheckBoxColumn Header="Cash" Binding="{Binding IsCash}" Width="Auto" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Part patient" Binding="{Binding PartPatientCents, Converter={StaticResource CentsToEuro}}" Width="Auto" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Part mutuelle" Binding="{Binding PartMutuelleCents, Converter={StaticResource CentsToEuro}}" Width="Auto" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Lien agenda (RDV)" Binding="{Binding RdvAgendaMarkerPrefix}" Width="140" IsReadOnly="True"/>
+                <DataGridTextColumn Header="{DynamicResource Seances.Header.PartPatient}" Binding="{Binding PartPatientCents, Converter={StaticResource CentsToEuro}}" Width="Auto" IsReadOnly="True"/>
+                <DataGridTextColumn Header="{DynamicResource Seances.Header.PartMutuelle}" Binding="{Binding PartMutuelleCents, Converter={StaticResource CentsToEuro}}" Width="Auto" IsReadOnly="True"/>
+                <DataGridTextColumn Header="{DynamicResource Seances.Header.AgendaLink}" Binding="{Binding RdvAgendaMarkerPrefix}" Width="140" IsReadOnly="True"/>
                 <DataGridTextColumn Header="Commentaire" Binding="{Binding Commentaire}" Width="*" IsReadOnly="True"/>
             </DataGrid.Columns>
         </DataGrid>
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,8">
-            <Button Content="Supprimer la ligne sélectionnée" Command="{Binding Seances.DeleteSelectedCommand}"/>
+            <Button Content="{DynamicResource Seances.DeleteSelected}" Command="{Binding Seances.DeleteSelectedCommand}"/>
         </StackPanel>
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
-            <TextBlock Text="Total patient:" Margin="0,0,6,0" VerticalAlignment="Center"/>
+            <TextBlock Text="{DynamicResource Seances.TotalPatient}" Margin="0,0,6,0" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding Seances.TotalPatient}" FontWeight="Bold" Margin="0,0,14,0" VerticalAlignment="Center"/>
-            <TextBlock Text="Total mutuelle:" Margin="0,0,6,0" VerticalAlignment="Center"/>
+            <TextBlock Text="{DynamicResource Seances.TotalMutuelle}" Margin="0,0,6,0" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding Seances.TotalMutuelle}" FontWeight="Bold" Margin="0,0,14,0" VerticalAlignment="Center"/>
-            <TextBlock Text="Total général:" Margin="0,0,6,0" VerticalAlignment="Center"/>
+            <TextBlock Text="{DynamicResource Seances.TotalGeneral}" Margin="0,0,6,0" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding Seances.TotalGeneral}" FontWeight="Bold" VerticalAlignment="Center"/>
         </StackPanel>
     </Grid>

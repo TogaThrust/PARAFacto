@@ -79,38 +79,38 @@
             <Border Grid.Column="1" BorderBrush="#DDD" BorderThickness="1" Padding="10" CornerRadius="6" Margin="10,0,0,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <TextBlock FontSize="14" FontWeight="Bold" Text="Actions"/>
+                        <TextBlock FontSize="14" FontWeight="Bold" Text="{DynamicResource Factures.Actions}"/>
                         <WrapPanel Margin="0,6,0,0">
-                            <Button Content="Paiement" Command="{Binding Factures.AddPaymentCommand}" Margin="0,0,8,8"/>
-                            <Button Content="Perte" Command="{Binding Factures.AddLossCommand}" Margin="0,0,8,8"/>
-                            <Button Content="Annuler perte" Command="{Binding Factures.ClearLossCommand}" Margin="0,0,8,8"/>
+                            <Button Content="{DynamicResource Factures.Button.Payment}" Command="{Binding Factures.AddPaymentCommand}" Margin="0,0,8,8"/>
+                            <Button Content="{DynamicResource Factures.Button.Loss}" Command="{Binding Factures.AddLossCommand}" Margin="0,0,8,8"/>
+                            <Button Content="{DynamicResource Factures.Button.CancelLoss}" Command="{Binding Factures.ClearLossCommand}" Margin="0,0,8,8"/>
                         </WrapPanel>
                         <WrapPanel>
-                            <Button Content="Note de crédit" Command="{Binding Factures.CreateCreditNoteCommand}" Margin="0,0,8,8"/>
-                            <Button Content="Modif mutuelle" Command="{Binding Factures.CreateMutualRevisionCommand}" Margin="0,0,8,8"/>
+                            <Button Content="{DynamicResource Factures.Button.CreditNote}" Command="{Binding Factures.CreateCreditNoteCommand}" Margin="0,0,8,8"/>
+                            <Button Content="{DynamicResource Factures.Button.MutualEdit}" Command="{Binding Factures.CreateMutualRevisionCommand}" Margin="0,0,8,8"/>
                         </WrapPanel>
                         <WrapPanel>
-                            <Button Content="Ouvrir dossier" Command="{Binding Factures.OpenFolderCommand}" Margin="0,0,8,8"/>
+                            <Button Content="{DynamicResource Factures.Button.OpenFolder}" Command="{Binding Factures.OpenFolderCommand}" Margin="0,0,8,8"/>
                         </WrapPanel>
                         <Separator Margin="0,8,0,8"/>
-                        <TextBlock FontWeight="Bold" Text="Suppression du mois"/>
+                        <TextBlock FontWeight="Bold" Text="{DynamicResource Factures.MonthDeletion}"/>
                         <TextBlock Margin="0,6,0,8" Foreground="#666" Text="{Binding Factures.SelectedPeriodLabel}" TextWrapping="Wrap"/>
-                        <Button Content="Supprimer toutes les factures du mois" Command="{Binding Factures.DeleteMonthInvoicesCommand}" Margin="0,0,0,8"/>
+                        <Button Content="{DynamicResource Factures.DeleteAllMonth}" Command="{Binding Factures.DeleteMonthInvoicesCommand}" Margin="0,0,0,8"/>
                         <Separator Margin="0,8,0,8"/>
                         <StackPanel Margin="0,0,0,2">
-                            <Button Content="Indexer destinataires (PDF)"
+                            <Button Content="{DynamicResource Factures.IndexRecipientsPdf}"
                                     Command="{Binding Factures.RelinkPatientsCommand}"
                                     HorizontalAlignment="Left"/>
                             <TextBlock Margin="0,8,0,0"
                                        Foreground="#555"
                                        TextWrapping="Wrap"
-                                       Text="Un double clic sur une facture impayée vous permet d'envoyer un message Whatsapp ou mail à la personne concernée (si encodé dans la DB)"/>
+                                       Text="{DynamicResource Factures.DoubleClickHint}"/>
                         </StackPanel>
                         <Separator Margin="0,8,0,8"/>
-                        <TextBlock FontSize="14" FontWeight="Bold" Text="Détails"/>
+                        <TextBlock FontSize="14" FontWeight="Bold" Text="{DynamicResource Factures.Details}"/>
                         <TextBlock Margin="0,8,0,0" Text="{Binding Factures.SelectedDetails}" TextWrapping="Wrap"/>
                         <Separator Margin="0,14,0,10"/>
-                        <TextBlock FontWeight="Bold" FontSize="13" Text="Période"/>
+                        <TextBlock FontWeight="Bold" FontSize="13" Text="{DynamicResource Factures.Period}"/>
                         <ComboBox Margin="0,6,0,10" ItemsSource="{Binding Factures.PeriodKinds}" SelectedItem="{Binding Factures.PeriodKind}"/>
                         <StackPanel Visibility="{Binding Factures.ShowPeriodDateRange, Converter={StaticResource BoolToVis}}" Margin="0,0,0,10">
                             <TextBlock Text="De"/>
@@ -160,25 +160,25 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
-                                <TextBlock Margin="0,0,0,8" FontWeight="Bold" FontSize="13" Text="Période sélectionnée"/>
+                                <TextBlock Margin="0,0,0,8" FontWeight="Bold" FontSize="13" Text="{DynamicResource Factures.SelectedPeriod}"/>
                                 <TextBlock Margin="0,2,0,0"><Run Text="{Binding Factures.PayeLabel, Mode=OneWay}"/><Run Text=" : "/><Run Text="{Binding Factures.StatsFiltered.PayeEuro, Mode=OneWay}"/></TextBlock>
                                 <TextBlock Margin="0,4,0,0"><Run Text="IMPAYÉS : "/><Run Text="{Binding Factures.StatsFiltered.ImpayeEuro, Mode=OneWay}"/></TextBlock>
                                 <TextBlock Margin="0,4,0,0"><Run Text="PARTIEL : "/><Run Text="{Binding Factures.StatsFiltered.PartielEuro, Mode=OneWay}"/></TextBlock>
                                 <TextBlock Margin="0,4,0,0"><Run Text="TOTAL REÇU : "/><Run Text="{Binding Factures.StatsFiltered.TotalRecuEuro, Mode=OneWay}"/></TextBlock>
                                 <TextBlock Margin="0,4,0,0"><Run Text="EN ATTENTE : "/><Run Text="{Binding Factures.StatsFiltered.EnAttenteEuro, Mode=OneWay}"/></TextBlock>
                                 <TextBlock Margin="0,4,0,0"><Run Text="NOTES DE CRÉDIT : "/><Run Text="{Binding Factures.StatsFiltered.NcEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="PERTES : "/><Run Text="{Binding Factures.StatsFiltered.PertesEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="{DynamicResource Factures.LossesLabel}"/><Run Text="{Binding Factures.StatsFiltered.PertesEuro, Mode=OneWay}"/></TextBlock>
                             </StackPanel>
                             <Border Grid.Column="1" Width="1" Margin="12,0" BorderBrush="#CCC" BorderThickness="1,0,0,0" VerticalAlignment="Stretch"/>
                             <StackPanel Grid.Column="2">
-                                <TextBlock Margin="0,0,0,8" FontWeight="Bold" FontSize="13" Text="TOTAL ENREGISTRÉ"/>
+                                <TextBlock Margin="0,0,0,8" FontWeight="Bold" FontSize="13" Text="{DynamicResource Factures.TotalRecorded}"/>
                                 <TextBlock Margin="0,2,0,0"><Run Text="PAYE : "/><Run Text="{Binding Factures.StatsTotal.PayeEuro, Mode=OneWay}"/></TextBlock>
                                 <TextBlock Margin="0,4,0,0"><Run Text="IMPAYÉS : "/><Run Text="{Binding Factures.StatsTotal.ImpayeEuro, Mode=OneWay}"/></TextBlock>
                                 <TextBlock Margin="0,4,0,0"><Run Text="PARTIEL : "/><Run Text="{Binding Factures.StatsTotal.PartielEuro, Mode=OneWay}"/></TextBlock>
                                 <TextBlock Margin="0,4,0,0"><Run Text="TOTAL REÇU : "/><Run Text="{Binding Factures.StatsTotal.TotalRecuEuro, Mode=OneWay}"/></TextBlock>
                                 <TextBlock Margin="0,4,0,0"><Run Text="EN ATTENTE : "/><Run Text="{Binding Factures.StatsTotal.EnAttenteEuro, Mode=OneWay}"/></TextBlock>
                                 <TextBlock Margin="0,4,0,0"><Run Text="NOTES DE CRÉDIT : "/><Run Text="{Binding Factures.StatsTotal.NcEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="PERTES : "/><Run Text="{Binding Factures.StatsTotal.PertesEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,4,0,0"><Run Text="{DynamicResource Factures.LossesLabel}"/><Run Text="{Binding Factures.StatsTotal.PertesEuro, Mode=OneWay}"/></TextBlock>
                             </StackPanel>
                         </Grid>
 
