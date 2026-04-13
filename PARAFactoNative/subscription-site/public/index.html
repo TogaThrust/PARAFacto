@@ -15,6 +15,7 @@
     .flag-btn { width: 24px; height: 18px; padding: 0; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; border-radius: 3px; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; }
     .flag-btn.active { border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb inset; }
     .flag-btn img { display: block; width: 18px; height: 12px; object-fit: cover; }
+    .install-notice { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 0.65rem 0.85rem; margin: 0 0 1rem 0; font-size: 0.95rem; }
   </style>
 </head>
 <body>
@@ -32,6 +33,7 @@
       </button>
     </div>
   </div>
+  <p id="installNotice" class="install-notice"></p>
   <p id="leadText"></p>
   <p>
     <a id="downloadBtn" class="btn" href="https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe" download>Télécharger l'installateur (.exe)</a>
@@ -42,18 +44,21 @@
       var texts = {
         fr: {
           title: "PARAFacto Native",
+          installNotice: "Mise à jour : fermez entièrement PARAFacto Native avant de lancer l'installateur, sinon l'installation peut échouer ou bloquer des fichiers.",
           lead: "Téléchargez l'installateur, lancez l'exe téléchargé. Quand l'app est installée, lancez l'app depuis le bureau. Rendez vous sur la page de paiements et souscrivez l'abonnement.",
           after: "Après avoir souscrit l'abonnement, vous recevez un code d'utilisateur. Copiez/collez ce code dans la fenêtre de demande de l'app. Lisez et approuvez les politiques de confidentialité et les conditions générales d'utilisation. Vous voilà prêt !",
-          btn: "Télécharger l'installateur (.exe)"
+          btn: "Télécharger l’installateur (.exe)"
         },
         en: {
           title: "PARAFacto Native",
+          installNotice: "Update: fully close PARAFacto Native before running the installer, otherwise setup may fail or lock files.",
           lead: "Download the installer and run the downloaded exe. Once the app is installed, launch it from the desktop. Go to the payment page and subscribe to the plan.",
           after: "After subscribing, you receive a user code. Copy/paste this code into the app request window. Read and approve the privacy policy and terms of use. You are ready!",
           btn: "Download installer (.exe)"
         },
         nl: {
           title: "PARAFacto Native",
+          installNotice: "Update: sluit PARAFacto Native volledig voordat u het installatieprogramma start, anders kan de installatie mislukken of bestanden vergrendelen.",
           lead: "Download het installatiebestand en start de gedownloade exe. Zodra de app is geïnstalleerd, start je de app vanaf het bureaublad. Ga naar de betaalpagina en neem een abonnement.",
           after: "Na het afsluiten van het abonnement ontvang je een gebruikerscode. Kopieer/plak deze code in het aanvraagvenster van de app. Lees en keur het privacybeleid en de gebruiksvoorwaarden goed. Je bent klaar!",
           btn: "Installatieprogramma downloaden (.exe)"
@@ -61,6 +66,7 @@
       };
 
       var titleEl = document.getElementById("title");
+      var installNoticeEl = document.getElementById("installNotice");
       var leadEl = document.getElementById("leadText");
       var afterEl = document.getElementById("afterText");
       var downloadBtn = document.getElementById("downloadBtn");
@@ -71,6 +77,7 @@
         var t = texts[key];
         document.documentElement.lang = key;
         titleEl.textContent = t.title;
+        installNoticeEl.textContent = t.installNotice || "";
         leadEl.textContent = t.lead;
         afterEl.textContent = t.after;
         downloadBtn.textContent = t.btn;

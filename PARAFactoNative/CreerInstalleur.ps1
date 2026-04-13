@@ -21,7 +21,7 @@
     Avec -AppVersion "1.2.3", aucune question (CI / scripts).
 
   app-version.json :
-    Contient latestVersion + installerUrl (GitHub .../releases/download/vVERSION/...).
+    Contient latestVersion, installerUrl (exe GitHub par tag), downloadPageUrl (page Netlify avec consignes).
     Apres publication : creez sur GitHub une release avec le tag vVERSION (ex. v1.2.3) et joignez
     PARAFactoNative_Installer.exe, sinon le lien de telechargement renvoie 404 ou un ancien fichier.
 #>
@@ -149,7 +149,8 @@ function Set-AppVersionJson {
     }
     # URL par tag GitHub (pas "releases/latest" : sinon on telecharge encore l'exe de l'ancienne release).
     $installerUrl = "https://github.com/TogaThrust/PARAFacto/releases/download/v$VersionText/PARAFactoNative_Installer.exe"
-    $content = "{`n  `"latestVersion`": `"$VersionText`",`n  `"installerUrl`": `"$installerUrl`"`n}`n"
+    $downloadPageUrl = "https://parafacto.netlify.app/"
+    $content = "{`n  `"latestVersion`": `"$VersionText`",`n  `"installerUrl`": `"$installerUrl`",`n  `"downloadPageUrl`": `"$downloadPageUrl`"`n}`n"
     Set-Content -Path $JsonPath -Value $content -Encoding ASCII
 }
 
@@ -311,6 +312,7 @@ PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\{#MyAppExeName}
+CloseApplications=yes
 
 [Languages]
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"

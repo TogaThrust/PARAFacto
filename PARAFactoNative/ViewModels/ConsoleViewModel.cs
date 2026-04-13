@@ -27,15 +27,17 @@ namespace PARAFactoNative.ViewModels;
 /// </summary>
 public sealed class ConsoleViewModel : NotifyBase
 {
-    /// <summary>Secours si <c>app-version.json</c> ne contient pas <c>installerUrl</c> (anciens déploiements).</summary>
-    private const string InstallerDownloadUrl = "https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe";
     private const string VersionInfoUrl = "https://parafacto.netlify.app/app-version.json";
+    /// <summary>Page avec instructions et bouton d'installateur (pas l'URL directe du .exe : le navigateur ne montre aucune page utile).</summary>
+    private const string DefaultDownloadPageUrl = "https://parafacto.netlify.app/";
     private static readonly HttpClient UpdateHttpClient = new()
     {
         Timeout = TimeSpan.FromSeconds(15),
     };
-    /// <summary>URL lue depuis app-version.json ; évite releases/latest alors que latestVersion a déjà été bumpé.</summary>
+    /// <summary>URL directe du .exe (app-version.json) — utilisée par le site pour le bouton ; pas pour le clic dans l'app.</summary>
     private string? _installerDownloadUrlOverride;
+    /// <summary>Page d'aide / téléchargement (optionnel dans app-version.json).</summary>
+    private string? _downloadPageUrlOverride;
     private bool _isInitializing;
     // Navigation/events (consommés par MainWindow.xaml.cs)
     public event Action? RequestNewPatientRequested;
@@ -508,10 +510,21 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
                     installerOverride = uri.ToString();
             }
 
+            string? downloadPageOverride = null;
+            if (doc.RootElement.TryGetProperty("downloadPageUrl", out var pageEl))
+            {
+                var p = (pageEl.GetString() ?? "").Trim();
+                if (p.Length > 0 && Uri.TryCreate(p, UriKind.Absolute, out var pageUri)
+                    && (string.Equals(pageUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(pageUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)))
+                    downloadPageOverride = pageUri.ToString();
+            }
+
             // Retour UI thread pour notifier WPF proprement.
             Application.Current?.Dispatcher.Invoke(() =>
             {
                 _installerDownloadUrlOverride = installerOverride;
+                _downloadPageUrlOverride = downloadPageOverride;
                 IsUpdateAvailable = latestVersion > localVersion;
                 OpenInstallerDownloadCommand.RaiseCanExecuteChanged();
             });
@@ -1032,14 +1045,23 @@ Voulez-vous l'imprimer maintenant ?",
     {
         try
         {
-            var url = string.IsNullOrWhiteSpace(_installerDownloadUrlOverride)
-                ? InstallerDownloadUrl
-                : _installerDownloadUrlOverride;
+            var landing = string.IsNullOrWhiteSpace(_downloadPageUrlOverride)
+                ? DefaultDownloadPageUrl
+                : _downloadPageUrlOverride;
+
+            MessageBox.Show(
+                UiTextTranslator.Translate(
+                    "Une page web va s'ouvrir avec le lien de téléchargement et les consignes. L'application va se fermer tout de suite : lancez l'installateur seulement après cette fermeture, pour éviter tout conflit de fichiers."),
+                UiTextTranslator.Translate("PARAFacto — Mise à jour"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+
             Process.Start(new ProcessStartInfo
             {
-                FileName = url,
+                FileName = landing,
                 UseShellExecute = true
             });
+            Application.Current.Shutdown(0);
         }
         catch (Exception ex)
         {
