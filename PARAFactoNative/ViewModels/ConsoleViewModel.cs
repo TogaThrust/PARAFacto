@@ -27,12 +27,15 @@ namespace PARAFactoNative.ViewModels;
 /// </summary>
 public sealed class ConsoleViewModel : NotifyBase
 {
+    /// <summary>Secours si <c>app-version.json</c> ne contient pas <c>installerUrl</c> (anciens déploiements).</summary>
     private const string InstallerDownloadUrl = "https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe";
     private const string VersionInfoUrl = "https://parafacto.netlify.app/app-version.json";
     private static readonly HttpClient UpdateHttpClient = new()
     {
         Timeout = TimeSpan.FromSeconds(15),
     };
+    /// <summary>URL lue depuis app-version.json ; évite releases/latest alors que latestVersion a déjà été bumpé.</summary>
+    private string? _installerDownloadUrlOverride;
     private bool _isInitializing;
     // Navigation/events (consommés par MainWindow.xaml.cs)
     public event Action? RequestNewPatientRequested;
@@ -495,9 +498,20 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
                 latestRaw = latestRaw[1..].TrimStart();
             if (!Version.TryParse(latestRaw, out var latestVersion)) return;
 
+            string? installerOverride = null;
+            if (doc.RootElement.TryGetProperty("installerUrl", out var instEl))
+            {
+                var u = (instEl.GetString() ?? "").Trim();
+                if (u.Length > 0 && Uri.TryCreate(u, UriKind.Absolute, out var uri)
+                    && (string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)))
+                    installerOverride = uri.ToString();
+            }
+
             // Retour UI thread pour notifier WPF proprement.
             Application.Current?.Dispatcher.Invoke(() =>
             {
+                _installerDownloadUrlOverride = installerOverride;
                 IsUpdateAvailable = latestVersion > localVersion;
                 OpenInstallerDownloadCommand.RaiseCanExecuteChanged();
             });
@@ -1018,9 +1032,12 @@ Voulez-vous l'imprimer maintenant ?",
     {
         try
         {
+            var url = string.IsNullOrWhiteSpace(_installerDownloadUrlOverride)
+                ? InstallerDownloadUrl
+                : _installerDownloadUrlOverride;
             Process.Start(new ProcessStartInfo
             {
-                FileName = InstallerDownloadUrl,
+                FileName = url,
                 UseShellExecute = true
             });
         }

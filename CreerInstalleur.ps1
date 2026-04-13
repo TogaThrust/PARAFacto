@@ -19,6 +19,11 @@
   Version :
     Sans -AppVersion, le script demande le numero (une seule saisie, ecrit partout).
     Avec -AppVersion "1.2.3", aucune question (CI / scripts).
+
+  app-version.json :
+    Contient latestVersion + installerUrl (GitHub .../releases/download/vVERSION/...).
+    Apres publication : creez sur GitHub une release avec le tag vVERSION (ex. v1.2.3) et joignez
+    PARAFactoNative_Installer.exe, sinon le lien de telechargement renvoie 404 ou un ancien fichier.
 #>
 
 param(
@@ -142,7 +147,9 @@ function Set-AppVersionJson {
     if (-not (Test-Path $dir)) {
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
     }
-    $content = "{`n  `"latestVersion`": `"$VersionText`"`n}`n"
+    # URL par tag GitHub (pas "releases/latest" : sinon on telecharge encore l'exe de l'ancienne release).
+    $installerUrl = "https://github.com/TogaThrust/PARAFacto/releases/download/v$VersionText/PARAFactoNative_Installer.exe"
+    $content = "{`n  `"latestVersion`": `"$VersionText`",`n  `"installerUrl`": `"$installerUrl`"`n}`n"
     Set-Content -Path $JsonPath -Value $content -Encoding ASCII
 }
 

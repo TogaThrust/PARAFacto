@@ -3,3 +3,11 @@ Renommez ou copiez votre installateur ici sous le nom exact :
   PARAFactoNative_Installer.exe
 
 Ensuite supprimez ce fichier .txt avant la mise en ligne si vous voulez.
+
+---
+
+Par défaut, le site et l'app utilisent app-version.json : champ "installerUrl" (URL par version,
+ex. .../releases/download/v1.1.2/PARAFactoNative_Installer.exe). Il faut une release GitHub avec
+le tag vX.Y.Z et la pièce jointe PARAFactoNative_Installer.exe. L'URL "releases/latest/download"
+sans mettre à jour la release "latest" laisse télécharger un ancien exe alors que latestVersion
+dans le JSON est déjà plus élevé.

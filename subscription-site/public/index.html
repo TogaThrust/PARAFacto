@@ -34,7 +34,7 @@
   </div>
   <p id="leadText"></p>
   <p>
-    <a id="downloadBtn" class="btn" href="https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe" download>Télécharger l’installateur (.exe)</a>
+    <a id="downloadBtn" class="btn" href="https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe" download>Télécharger l'installateur (.exe)</a>
   </p>
   <p><small id="afterText"></small></p>
   <script>
@@ -85,6 +85,15 @@
       var saved = "fr";
       try { saved = localStorage.getItem("parafacto_site_lang") || "fr"; } catch (_) { }
       applyLanguage(saved);
+
+      fetch("app-version.json?_=" + Date.now(), { cache: "no-store" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (!j || typeof j.installerUrl !== "string") return;
+          var u = j.installerUrl.trim();
+          if (u.indexOf("https://") === 0 || u.indexOf("http://") === 0) downloadBtn.href = u;
+        })
+        .catch(function () { });
     })();
   </script>
 </body>
