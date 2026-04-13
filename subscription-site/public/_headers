@@ -2,6 +2,8 @@
 /app-version.json
   Access-Control-Allow-Origin: *
   Access-Control-Allow-Methods: GET
+  Cache-Control: no-store, no-cache, max-age=0, must-revalidate
+  Pragma: no-cache
 
 /*
   X-Frame-Options: DENY

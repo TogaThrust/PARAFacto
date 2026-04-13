@@ -40,6 +40,7 @@
       <h1 id="tTitle"></h1>
       <p id="tIntro"></p>
       <p id="tRemind" class="warn"></p>
+      <p id="serverVersionLine" class="muted" aria-live="polite"></p>
       <button type="button" class="primary" id="btnOk" disabled>OK</button>
       <p id="tNote" class="muted"></p>
     </div>
@@ -71,6 +72,7 @@
           after2: "À la fin de l’assistant d’installation, laissez cochée l’option « Lancer PARAFacto Native » pour rouvrir l’application automatiquement.",
           again: "Relancer le téléchargement",
           ver: "Version proposée : ",
+          serverLine: "Dernière version indiquée par le site central : ",
           err: "Impossible de récupérer les informations de version (réseau ou configuration). Vérifiez votre connexion ou ouvrez ",
           errLink: "parafacto.netlify.app"
         },
@@ -84,6 +86,7 @@
           after2: "At the end of the setup wizard, keep “Launch PARAFacto Native” checked to reopen the application automatically.",
           again: "Download again",
           ver: "Offered version: ",
+          serverLine: "Latest version reported by the central site: ",
           err: "Could not load version information (network or configuration). Check your connection or open ",
           errLink: "parafacto.netlify.app"
         },
@@ -97,6 +100,7 @@
           after2: "Aan het einde van de installatiewizard: laat « PARAFacto Native starten » aangevinkt om de applicatie automatisch opnieuw te openen.",
           again: "Download opnieuw starten",
           ver: "Aangeboden versie: ",
+          serverLine: "Laatste versie volgens de centrale site: ",
           err: "Versie-informatie kan niet worden geladen (netwerk of configuratie). Controleer uw verbinding of open ",
           errLink: "parafacto.netlify.app"
         }
@@ -123,6 +127,25 @@
           b.classList.toggle("active", b.getAttribute("data-lang") === lang);
         });
         try { localStorage.setItem("parafacto_update_lang", lang); } catch (_) {}
+        syncVersionLabels();
+      }
+
+      function syncVersionLabels() {
+        var lang = document.documentElement.lang || "fr";
+        var L = T[lang] || T.fr;
+        var sv = document.getElementById("serverVersionLine");
+        var vl = document.getElementById("versionLine");
+        if (latestVersion) {
+          sv.textContent = L.serverLine + latestVersion;
+          if (!document.getElementById("stepAfter").hidden) {
+            vl.textContent = L.ver + latestVersion;
+          } else {
+            vl.textContent = "";
+          }
+        } else {
+          sv.textContent = "";
+          vl.textContent = "";
+        }
       }
 
       function startDownload() {
@@ -142,18 +165,26 @@
         el.hidden = false;
         el.innerHTML = esc(L.err) + '<a href="https://parafacto.netlify.app/">' + esc(L.errLink) + "</a>.";
         document.getElementById("btnOk").disabled = true;
+        document.getElementById("serverVersionLine").textContent = "";
+      }
+
+      function fetchVersionJson() {
+        var url = VERSION_URL + "?_=" + Date.now();
+        return fetch(url, { cache: "no-store", mode: "cors" })
+          .then(function (r) { if (!r.ok) throw new Error("http"); return r.json(); });
+      }
+
+      function applyVersionPayload(j) {
+        installerUrl = (j.installerUrl || "").trim();
+        latestVersion = (j.latestVersion || "").trim();
+        if (!installerUrl) throw new Error("no url");
+        document.getElementById("btnOk").disabled = false;
+        syncVersionLabels();
       }
 
       function loadVersion() {
-        var url = VERSION_URL + "?_=" + Date.now();
-        return fetch(url, { cache: "no-store", mode: "cors" })
-          .then(function (r) { if (!r.ok) throw new Error("http"); return r.json(); })
-          .then(function (j) {
-            installerUrl = (j.installerUrl || "").trim();
-            latestVersion = (j.latestVersion || "").trim();
-            if (!installerUrl) throw new Error("no url");
-            document.getElementById("btnOk").disabled = false;
-          })
+        return fetchVersionJson()
+          .then(function (j) { applyVersionPayload(j); })
           .catch(function () {
             var lang = document.documentElement.lang || "fr";
             showError(lang);
@@ -161,17 +192,31 @@
       }
 
       document.getElementById("btnOk").addEventListener("click", function () {
-        if (!installerUrl) return;
-        startDownload();
-        document.getElementById("stepInitial").hidden = true;
-        document.getElementById("stepAfter").hidden = false;
-        var lang = document.documentElement.lang || "fr";
-        var L = T[lang] || T.fr;
-        document.getElementById("versionLine").textContent = L.ver + latestVersion;
+        var btn = document.getElementById("btnOk");
+        btn.disabled = true;
+        fetchVersionJson()
+          .then(function (j) {
+            applyVersionPayload(j);
+            startDownload();
+            document.getElementById("stepInitial").hidden = true;
+            document.getElementById("stepAfter").hidden = false;
+            syncVersionLabels();
+          })
+          .catch(function () {
+            btn.disabled = !!installerUrl;
+            var lang = document.documentElement.lang || "fr";
+            showError(lang);
+          });
       });
 
       document.getElementById("btnDlAgain").addEventListener("click", function () {
-        startDownload();
+        fetchVersionJson()
+          .then(function (j) { applyVersionPayload(j); })
+          .catch(function () { /* conserver l’URL déjà connue */ })
+          .finally(function () {
+            if (installerUrl) startDownload();
+            syncVersionLabels();
+          });
       });
 
       document.querySelectorAll(".lang button").forEach(function (b) {
