@@ -1,0 +1,4 @@
+# Site dédié « PARAFacto update » — déployer sur Netlify (ex. parafactoupdate.netlify.app).
+# Dans Netlify : New site from Git → même dépôt → Base directory : parafacto-update-site
+[build]
+  publish = "public"

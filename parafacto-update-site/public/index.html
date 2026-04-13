@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PARAFacto — Mise à jour</title>
+  <style>
+    :root { font-family: system-ui, Segoe UI, sans-serif; line-height: 1.5; color: #0f172a; }
+    body { max-width: 36rem; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.35rem; margin-top: 0; }
+    .lang { display: flex; gap: 0.35rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .lang button {
+      padding: 0.25rem 0.6rem; border: 1px solid #94a3b8; background: #fff; border-radius: 4px; cursor: pointer; font-size: 0.85rem;
+    }
+    .lang button.active { border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb inset; }
+    .warn {
+      background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 0.75rem 1rem; margin: 1rem 0;
+    }
+    .primary {
+      display: inline-block; margin-top: 0.75rem; padding: 0.65rem 1.4rem; font-size: 1rem;
+      background: #2563eb; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;
+    }
+    .primary:hover { background: #1d4ed8; }
+    .primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .muted { color: #64748b; font-size: 0.9rem; margin-top: 1rem; }
+    .err { background: #fee2e2; border: 1px solid #f87171; border-radius: 8px; padding: 0.75rem 1rem; margin: 1rem 0; }
+    #stepAfter { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <div class="lang" role="group" aria-label="Langue">
+    <button type="button" data-lang="fr" class="active">FR</button>
+    <button type="button" data-lang="en">EN</button>
+    <button type="button" data-lang="nl">NL</button>
+  </div>
+
+  <main>
+    <div id="stepInitial">
+      <h1 id="tTitle"></h1>
+      <p id="tIntro"></p>
+      <p id="tRemind" class="warn"></p>
+      <button type="button" class="primary" id="btnOk" disabled>OK</button>
+      <p id="tNote" class="muted"></p>
+    </div>
+
+    <div id="stepAfter" hidden>
+      <p id="tAfter1"></p>
+      <p id="tAfter2"></p>
+      <p id="versionLine" class="muted"></p>
+      <button type="button" class="primary" id="btnDlAgain"></button>
+    </div>
+
+    <div id="loadErr" class="err" hidden></div>
+  </main>
+
+  <script>
+    (function () {
+      var VERSION_URL = "https://parafacto.netlify.app/app-version.json";
+      var installerUrl = "";
+      var latestVersion = "";
+
+      var T = {
+        fr: {
+          title: "PARAFacto — Mise à jour",
+          intro: "Vous allez télécharger l’installateur de la dernière version publiée. Après validation, le téléchargement du fichier d’installation démarre.",
+          remind: "Important : si PARAFacto Native est encore ouvert, fermez-le complètement avant d’exécuter l’installateur, sinon la mise à jour peut échouer ou bloquer des fichiers.",
+          note: "Après avoir cliqué sur OK, cette page lance le téléchargement. Windows ou le navigateur peut demander une confirmation (« Conserver », « Ouvrir », etc.) : acceptez pour lancer l’installation lorsque vous y êtes invité.",
+          ok: "OK — lancer le téléchargement",
+          after1: "Le téléchargement de <code>PARAFactoNative_Installer.exe</code> a été demandé. Si rien ne se lance, utilisez le bouton ci-dessous ou ouvrez le lien depuis la barre de téléchargements du navigateur.",
+          after2: "À la fin de l’assistant d’installation, laissez cochée l’option « Lancer PARAFacto Native » pour rouvrir l’application automatiquement.",
+          again: "Relancer le téléchargement",
+          ver: "Version proposée : ",
+          err: "Impossible de récupérer les informations de version (réseau ou configuration). Vérifiez votre connexion ou ouvrez ",
+          errLink: "parafacto.netlify.app"
+        },
+        en: {
+          title: "PARAFacto — Update",
+          intro: "You are about to download the installer for the latest published version. After you confirm, the setup file download will start.",
+          remind: "Important: if PARAFacto Native is still running, close it completely before running the installer, otherwise the update may fail or lock files.",
+          note: "After you click OK, this page starts the download. Windows or the browser may ask for confirmation (“Keep”, “Open”, etc.): accept when you are ready to run the installer.",
+          ok: "OK — start download",
+          after1: "Download of <code>PARAFactoNative_Installer.exe</code> has been requested. If nothing starts, use the button below or open the file from the browser download bar.",
+          after2: "At the end of the setup wizard, keep “Launch PARAFacto Native” checked to reopen the application automatically.",
+          again: "Download again",
+          ver: "Offered version: ",
+          err: "Could not load version information (network or configuration). Check your connection or open ",
+          errLink: "parafacto.netlify.app"
+        },
+        nl: {
+          title: "PARAFacto — Bijwerken",
+          intro: "U staat op het punt het installatieprogramma van de laatst gepubliceerde versie te downloaden. Na bevestiging start het downloaden van het installatiebestand.",
+          remind: "Belangrijk: als PARAFacto Native nog open is, sluit het volledig voordat u het installatieprogramma start, anders kan de update mislukken of bestanden vergrendelen.",
+          note: "Na OK start deze pagina de download. Windows of de browser kan om bevestiging vragen (« Behouden », « Openen », enz.): aanvaard wanneer u klaar bent om het installatieprogramma te starten.",
+          ok: "OK — download starten",
+          after1: "Download van <code>PARAFactoNative_Installer.exe</code> is aangevraagd. Als er niets start, gebruik dan de knop hieronder of open het bestand via de downloadbalk van de browser.",
+          after2: "Aan het einde van de installatiewizard: laat « PARAFacto Native starten » aangevinkt om de applicatie automatisch opnieuw te openen.",
+          again: "Download opnieuw starten",
+          ver: "Aangeboden versie: ",
+          err: "Versie-informatie kan niet worden geladen (netwerk of configuratie). Controleer uw verbinding of open ",
+          errLink: "parafacto.netlify.app"
+        }
+      };
+
+      function esc(s) {
+        var d = document.createElement("div");
+        d.textContent = s;
+        return d.innerHTML;
+      }
+
+      function applyLang(lang) {
+        var L = T[lang] || T.fr;
+        document.documentElement.lang = lang;
+        document.getElementById("tTitle").textContent = L.title;
+        document.getElementById("tIntro").textContent = L.intro;
+        document.getElementById("tRemind").textContent = L.remind;
+        document.getElementById("tNote").textContent = L.note;
+        document.getElementById("btnOk").textContent = L.ok;
+        document.getElementById("tAfter1").innerHTML = L.after1;
+        document.getElementById("tAfter2").textContent = L.after2;
+        document.getElementById("btnDlAgain").textContent = L.again;
+        document.querySelectorAll(".lang button").forEach(function (b) {
+          b.classList.toggle("active", b.getAttribute("data-lang") === lang);
+        });
+        try { localStorage.setItem("parafacto_update_lang", lang); } catch (_) {}
+      }
+
+      function startDownload() {
+        if (!installerUrl) return;
+        var a = document.createElement("a");
+        a.href = installerUrl;
+        a.setAttribute("download", "PARAFactoNative_Installer.exe");
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+
+      function showError(lang) {
+        var L = T[lang] || T.fr;
+        var el = document.getElementById("loadErr");
+        el.hidden = false;
+        el.innerHTML = esc(L.err) + '<a href="https://parafacto.netlify.app/">' + esc(L.errLink) + "</a>.";
+        document.getElementById("btnOk").disabled = true;
+      }
+
+      function loadVersion() {
+        var url = VERSION_URL + "?_=" + Date.now();
+        return fetch(url, { cache: "no-store", mode: "cors" })
+          .then(function (r) { if (!r.ok) throw new Error("http"); return r.json(); })
+          .then(function (j) {
+            installerUrl = (j.installerUrl || "").trim();
+            latestVersion = (j.latestVersion || "").trim();
+            if (!installerUrl) throw new Error("no url");
+            document.getElementById("btnOk").disabled = false;
+          })
+          .catch(function () {
+            var lang = document.documentElement.lang || "fr";
+            showError(lang);
+          });
+      }
+
+      document.getElementById("btnOk").addEventListener("click", function () {
+        if (!installerUrl) return;
+        startDownload();
+        document.getElementById("stepInitial").hidden = true;
+        document.getElementById("stepAfter").hidden = false;
+        var lang = document.documentElement.lang || "fr";
+        var L = T[lang] || T.fr;
+        document.getElementById("versionLine").textContent = L.ver + latestVersion;
+      });
+
+      document.getElementById("btnDlAgain").addEventListener("click", function () {
+        startDownload();
+      });
+
+      document.querySelectorAll(".lang button").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var lang = b.getAttribute("data-lang") || "fr";
+          applyLang(lang);
+        });
+      });
+
+      var saved = "fr";
+      try { saved = localStorage.getItem("parafacto_update_lang") || "fr"; } catch (_) {}
+      applyLang(saved);
+      loadVersion();
+    })();
+  </script>
+</body>
+</html>

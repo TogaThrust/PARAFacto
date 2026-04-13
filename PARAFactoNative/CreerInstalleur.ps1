@@ -149,7 +149,7 @@ function Set-AppVersionJson {
     }
     # URL par tag GitHub (pas "releases/latest" : sinon on telecharge encore l'exe de l'ancienne release).
     $installerUrl = "https://github.com/TogaThrust/PARAFacto/releases/download/v$VersionText/PARAFactoNative_Installer.exe"
-    $downloadPageUrl = "https://parafacto.netlify.app/"
+    $downloadPageUrl = "https://parafactoupdate.netlify.app/"
     $content = "{`n  `"latestVersion`": `"$VersionText`",`n  `"installerUrl`": `"$installerUrl`",`n  `"downloadPageUrl`": `"$downloadPageUrl`"`n}`n"
     Set-Content -Path $JsonPath -Value $content -Encoding ASCII
 }

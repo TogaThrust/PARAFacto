@@ -244,9 +244,6 @@ public static class UiTextTranslator
         ["Envoi DB (sauvegarde) impossible."] = "DB backup email sending failed.",
         ["Impossible d'ouvrir le portail clients :"] = "Unable to open customer portal:",
         ["PARAFacto — Conformité"] = "PARAFacto — Compliance",
-        ["PARAFacto — Mise à jour"] = "PARAFacto — Update",
-        ["Une page web va s'ouvrir avec le lien de téléchargement et les consignes. L'application va se fermer tout de suite : lancez l'installateur seulement après cette fermeture, pour éviter tout conflit de fichiers."] =
-            "A web page will open with the download link and instructions. The application will close immediately: run the installer only after it has fully closed, to avoid any file conflict.",
         ["Votre acceptation a été enregistrée. Une preuve locale (horodatage, versions des documents et empreintes des textes) a été ajoutée au fichier d'audit."] = "Your acceptance has been recorded. Local proof (timestamp, document versions and text hashes) has been added to the audit file.",
         ["L’heure de début de journée doit être au moins 15 minutes avant la fin de journée."] = "Day start must be at least 15 minutes before day end.",
         ["L’heure de fin de journée doit être au moins 15 minutes après le début de journée."] = "Day end must be at least 15 minutes after day start.",
@@ -519,9 +516,6 @@ public static class UiTextTranslator
         ["Envoi DB (sauvegarde) impossible."] = "DB-back-up e-mail verzenden mislukt.",
         ["Impossible d'ouvrir le portail clients :"] = "Kan klantenportaal niet openen:",
         ["PARAFacto — Conformité"] = "PARAFacto — Naleving",
-        ["PARAFacto — Mise à jour"] = "PARAFacto — Bijwerken",
-        ["Une page web va s'ouvrir avec le lien de téléchargement et les consignes. L'application va se fermer tout de suite : lancez l'installateur seulement après cette fermeture, pour éviter tout conflit de fichiers."] =
-            "Er opent een webpagina met de downloadlink en instructies. De applicatie sluit meteen: start het installatieprogramma pas nadat ze volledig gesloten is, om bestandsconflicten te vermijden.",
         ["Votre acceptation a été enregistrée. Une preuve locale (horodatage, versions des documents et empreintes des textes) a été ajoutée au fichier d'audit."] = "Uw akkoord is geregistreerd. Lokaal bewijs (tijdstempel, documentversies en tekst-hashes) werd toegevoegd aan het auditbestand.",
         ["Abonnement PARAFacto"] = "PARAFacto-abonnement",
         ["Portail clients Stripe"] = "Stripe-klantenportaal",

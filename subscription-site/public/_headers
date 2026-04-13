@@ -1,3 +1,8 @@
+# CORS : page « parafactoupdate » (autre origine) lit app-version.json sur ce site.
+/app-version.json
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET
+
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff

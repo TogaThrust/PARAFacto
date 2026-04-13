@@ -28,8 +28,8 @@ namespace PARAFactoNative.ViewModels;
 public sealed class ConsoleViewModel : NotifyBase
 {
     private const string VersionInfoUrl = "https://parafacto.netlify.app/app-version.json";
-    /// <summary>Page avec instructions et bouton d'installateur (pas l'URL directe du .exe : le navigateur ne montre aucune page utile).</summary>
-    private const string DefaultDownloadPageUrl = "https://parafacto.netlify.app/";
+    /// <summary>Page « PARAFacto update » (instructions, OK, téléchargement installateur).</summary>
+    private const string DefaultDownloadPageUrl = "https://parafactoupdate.netlify.app/";
     private static readonly HttpClient UpdateHttpClient = new()
     {
         Timeout = TimeSpan.FromSeconds(15),
@@ -1048,13 +1048,6 @@ Voulez-vous l'imprimer maintenant ?",
             var landing = string.IsNullOrWhiteSpace(_downloadPageUrlOverride)
                 ? DefaultDownloadPageUrl
                 : _downloadPageUrlOverride;
-
-            MessageBox.Show(
-                UiTextTranslator.Translate(
-                    "Une page web va s'ouvrir avec le lien de téléchargement et les consignes. L'application va se fermer tout de suite : lancez l'installateur seulement après cette fermeture, pour éviter tout conflit de fichiers."),
-                UiTextTranslator.Translate("PARAFacto — Mise à jour"),
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
 
             Process.Start(new ProcessStartInfo
             {
