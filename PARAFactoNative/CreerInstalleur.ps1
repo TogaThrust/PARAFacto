@@ -6,6 +6,7 @@
 
 .DESCRIPTION
   Le script :
+    0) ecrit csproj + app-version.json, puis (sauf -SkipGitCommitPush) dotnet build et git commit/push de ces fichiers
     1) publie PARAFactoNative (Release, win-x64, self-contained) dans publish_output\win-x64
     2) compile l'installateur Inno : seul PARAFactoNative_Installer.exe est ecrit dans installer_output
 
@@ -20,6 +21,10 @@
     Sans -AppVersion, le script demande le numero (une seule saisie, ecrit partout).
     Avec -AppVersion "1.2.3", aucune question (CI / scripts).
 
+  Git (par defaut) :
+    Apres ecriture du csproj et des deux app-version.json : dotnet build -c Release, puis git add/commit/push
+    de ces 3 fichiers si changement, AVANT dotnet publish et Inno (sauf -SkipGitCommitPush).
+
   app-version.json :
     Contient latestVersion, installerUrl (exe GitHub par tag), downloadPageUrl (page Netlify avec consignes).
     Apres publication : creez sur GitHub une release avec le tag vVERSION (ex. v1.2.3) et joignez
@@ -30,7 +35,8 @@ param(
     [string]$AppVersion = "",
     [string]$Publisher = "PARAFacto",
     [string]$AppId = "{{95DA48C0-A83B-4F53-8A8A-7B81B81CC8E9}}",
-    [switch]$SiteSeulement
+    [switch]$SiteSeulement,
+    [switch]$SkipGitCommitPush
 )
 
 $ErrorActionPreference = "Stop"
@@ -209,6 +215,75 @@ function Show-VersionVerificationSummary {
     Write-Host ""
 }
 
+function Get-PathRelativeToRepoRoot {
+    param(
+        [string]$RepoRootFull,
+        [string]$FullPath
+    )
+    $ff = [System.IO.Path]::GetFullPath($FullPath)
+    if (-not $ff.StartsWith($RepoRootFull, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Chemin hors du depot git : $FullPath"
+    }
+    return ($ff.Substring($RepoRootFull.Length).TrimStart('\') -replace '\\', '/')
+}
+
+function Invoke-DotnetBuildAndGitCommitPushVersionFiles {
+    param(
+        [string]$RepoRoot,
+        [string]$CsprojPath,
+        [string[]]$GitRelativePaths,
+        [string]$VersionText,
+        [switch]$SkipGit
+    )
+    if ($SkipGit) {
+        Write-Host "SkipGitCommitPush : pas de dotnet build / git commit / push automatiques."
+        return
+    }
+
+    Write-Host "dotnet build -c Release (verification avant publication) ..."
+    & dotnet build $CsprojPath -c Release | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet build a echoue (code $LASTEXITCODE)."
+    }
+
+    $gitMarker = Join-Path $RepoRoot ".git"
+    if (-not (Test-Path $gitMarker)) {
+        Write-Warning "Pas de depot git (.git absent). Etape git automatique ignoree."
+        return
+    }
+    $gitExe = Get-Command git -ErrorAction SilentlyContinue
+    if (-not $gitExe) {
+        Write-Warning "git introuvable dans le PATH. Etape git automatique ignoree."
+        return
+    }
+
+    Push-Location $RepoRoot
+    try {
+        foreach ($rel in $GitRelativePaths) {
+            if ([string]::IsNullOrWhiteSpace($rel)) { continue }
+            & git add -- $rel | Out-Host
+        }
+        & git diff --cached --quiet
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Git : rien a committer (les 3 fichiers sont deja alignes sur $VersionText)."
+            return
+        }
+        $commitMsg = "Version ${VersionText}: csproj et app-version.json (CreerInstalleur)."
+        & git commit -m $commitMsg | Out-Host
+        if ($LASTEXITCODE -ne 0) {
+            throw "git commit a echoue (code $LASTEXITCODE)."
+        }
+        & git push | Out-Host
+        if ($LASTEXITCODE -ne 0) {
+            throw "git push a echoue (code $LASTEXITCODE). Verifiez la branche, le remote et l'authentification."
+        }
+        Write-Host "Git : commit et push effectues sur le depot."
+    }
+    finally {
+        Pop-Location
+    }
+}
+
 $scriptDir = $PSScriptRoot
 $csproj = Resolve-Project -BaseDir $scriptDir
 if (-not $csproj) {
@@ -231,6 +306,15 @@ Set-ProjectVersion -CsprojPath $csproj -VersionText $AppVersion
 Set-AppVersionJson -JsonPath $appVersionJsonRepoRoot -VersionText $AppVersion
 Set-AppVersionJson -JsonPath $appVersionJsonNativeCopy -VersionText $AppVersion
 
+$repoRootFull = [System.IO.Path]::GetFullPath($repoRoot)
+$gitRelVersionFiles = @(
+    (Get-PathRelativeToRepoRoot -RepoRootFull $repoRootFull -FullPath $csproj),
+    (Get-PathRelativeToRepoRoot -RepoRootFull $repoRootFull -FullPath $appVersionJsonRepoRoot),
+    (Get-PathRelativeToRepoRoot -RepoRootFull $repoRootFull -FullPath $appVersionJsonNativeCopy)
+)
+
+Invoke-DotnetBuildAndGitCommitPushVersionFiles -RepoRoot $repoRoot -CsprojPath $csproj -GitRelativePaths $gitRelVersionFiles -VersionText $AppVersion -SkipGit:$SkipGitCommitPush
+
 Write-Host "Projet  : $csproj"
 Write-Host "Version : $AppVersion"
 Write-Host ""
@@ -245,7 +329,7 @@ Write-Host ""
 
 if ($SiteSeulement) {
     Write-Host "OK - Site uniquement : csproj + app-version.json (racine repo et PARAFactoNative) mis a jour."
-    Write-Host "Ensuite : git add / commit / push ; laisser Netlify redeployer le site (dossier subscription-site)."
+    Write-Host "Si git automatique a reussi : declenchez un deploy Netlify (subscription-site). Sinon : -SkipGitCommitPush puis git manuel."
     Show-VersionVerificationSummary -CsprojPath $csproj -JsonRootPath $appVersionJsonRepoRoot -JsonProjectPath $appVersionJsonNativeCopy -Title "Fin (site uniquement) - controle des 3 fichiers"
     exit 0
 }
@@ -362,5 +446,5 @@ Write-Host "OK - Installateur genere."
 Write-Host "  App (publish) : $publishDir"
 Write-Host "  Installateur  : $installerExe"
 Write-Host "  Pensez a publier l'installateur .exe comme asset GitHub Release."
-Write-Host "  Et poussez aussi app-version.json (voir rappel plus haut) pour aligner Netlify avec la version $AppVersion."
+Write-Host "  Si -SkipGitCommitPush : poussez vous-meme les fichiers de version ; sinon le push git vient d'etre fait avant publish."
 Show-VersionVerificationSummary -CsprojPath $csproj -JsonRootPath $appVersionJsonRepoRoot -JsonProjectPath $appVersionJsonNativeCopy -Title "Fin (installateur) - controle des 3 fichiers"
