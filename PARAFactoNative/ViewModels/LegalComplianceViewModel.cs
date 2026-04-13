@@ -212,7 +212,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
     private void UpdateBlockingOverlayVisibility()
     {
         var state = _store.LoadLegalAcceptance();
-        var ok = state.IsCompleteForCurrentDocuments(PrivacyText, TermsText);
+        var ok = state.IsCompleteForCurrentDocuments();
         var docsMissing = DocumentsUnavailableForAcceptance;
         if (ok || docsMissing)
         {
@@ -226,7 +226,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
     private void ReloadAcceptanceUi()
     {
         var state = _store.LoadLegalAcceptance();
-        var ok = state.IsCompleteForCurrentDocuments(PrivacyText, TermsText);
+        var ok = state.IsCompleteForCurrentDocuments();
         var docsMissing = DocumentsUnavailableForAcceptance;
         var acceptancePending = !ok && !docsMissing;
 
@@ -237,7 +237,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
         {
             const string emailPdf =
                 " Merci aussi d'ajouter une adresse e-mail d'envoi des copies de vos documents PDF si vous le désirez (section courriel du même onglet).";
-            if (state.IsReacceptanceRequiredDueToNewLegalDocumentVersions(PrivacyText, TermsText))
+            if (state.IsReacceptanceRequiredDueToNewLegalDocumentVersions())
             {
                 LegalGateMessage =
                     "Une nouvelle version de la politique de confidentialité et/ou des conditions d'utilisation est fournie avec cette mise à jour. " +
@@ -266,7 +266,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
             if (!string.IsNullOrWhiteSpace(DocumentsLoadError))
                 AcceptanceSummary += " " + DocumentsLoadError;
         }
-        else if (state.IsReacceptanceRequiredDueToNewLegalDocumentVersions(PrivacyText, TermsText))
+        else if (state.IsReacceptanceRequiredDueToNewLegalDocumentVersions())
         {
             AcceptanceSummary =
                 "Les documents juridiques ont été mis à jour (nouvelle version publiée avec l'application). Lisez les textes ci-dessous, cochez les deux cases puis enregistrez votre acceptation — les autres onglets restent masqués par le message tant que ce n'est pas fait.";
@@ -312,8 +312,9 @@ public sealed class LegalComplianceViewModel : NotifyBase
         _store.SaveLegalAcceptanceWithProof(PrivacyText, TermsText);
         ReloadAcceptanceUi();
         MessageBox.Show(
-            "Votre acceptation a été enregistrée. Une preuve locale (horodatage, versions des documents et empreintes des textes) a été ajoutée au fichier d'audit.",
-            "PARAFacto — Conformité",
+            UiTextTranslator.Translate(
+                "Votre acceptation a été enregistrée. Une preuve locale (horodatage, versions des documents et empreintes des textes) a été ajoutée au fichier d'audit."),
+            UiTextTranslator.Translate("PARAFacto — Conformité"),
             MessageBoxButton.OK,
             MessageBoxImage.Information);
     }

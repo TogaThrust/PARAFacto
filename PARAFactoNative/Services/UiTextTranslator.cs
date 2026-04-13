@@ -320,6 +320,20 @@ public static class UiTextTranslator
         ["Ouvrir la page"] = "Open page",
         ["Ouvrir le dossier"] = "Open folder",
         ["Ouvrir l'onglet Données techniques"] = "Open Technical Data tab",
+        ["Une nouvelle version de la politique de confidentialité et/ou des conditions d'utilisation est fournie avec cette mise à jour. Ouvrez l'onglet « Données techniques » (bouton ci-dessous), lisez les textes et acceptez-les — vous ne pourrez pas utiliser les autres onglets tant que ce n'est pas fait. Merci aussi d'ajouter une adresse e-mail d'envoi des copies de vos documents PDF si vous le désirez (section courriel du même onglet)."] =
+            "A new version of the privacy policy and/or terms of use is included with this update. Open the Technical Data tab (button below), read the texts and accept them — you cannot use the other tabs until this is done. Please also add an email address for sending copies of your PDF documents if you wish (email section of the same tab).",
+        ["Ouvrez l'onglet « Données techniques » (bouton ci-dessous), lisez et acceptez la politique de confidentialité ainsi que les conditions d'utilisation. Merci aussi d'ajouter une adresse e-mail d'envoi des copies de vos documents PDF si vous le désirez (section courriel du même onglet)."] =
+            "Open the Technical Data tab (button below), read and accept the privacy policy and terms of use. Please also add an email address for sending copies of your PDF documents if you wish (email section of the same tab).",
+        ["Les textes de la politique de confidentialité et/ou des conditions d'utilisation sont introuvables ou vides (installation incomplète ou version ancienne). Vous pouvez utiliser la console : suivez la bannière « nouvelle version » ou téléchargez la dernière version du site, puis réinstallez. Ensuite, revenez ici pour lire et accepter les documents."] =
+            "The privacy policy and/or terms of use texts are missing or empty (incomplete installation or old version). You can use the dashboard: follow the \"new version\" banner or download the latest version from the website, then reinstall. Then return here to read and accept the documents.",
+        ["Les documents juridiques ont été mis à jour (nouvelle version publiée avec l'application). Lisez les textes ci-dessous, cochez les deux cases puis enregistrez votre acceptation — les autres onglets restent masqués par le message tant que ce n'est pas fait."] =
+            "The legal documents have been updated (new version shipped with the application). Read the texts below, check both boxes then save your acceptance — the other tabs stay hidden by this message until this is done.",
+        ["Veuillez lire les documents ci-dessous, cocher les deux cases puis enregistrer votre acceptation."] =
+            "Please read the documents below, check both boxes then save your acceptance.",
+        ["Fichiers juridiques introuvables dans le dossier d'installation (sous-dossier Legal). Réinstallez l'application ou contactez le support."] =
+            "Legal files were not found in the installation folder (Legal subfolder). Reinstall the application or contact support.",
+        ["Impossible de charger les documents : "] =
+            "Unable to load documents: ",
         ["Cash patient :"] = "Patient cash:",
         ["Facturé patient :"] = "Billed to patient:",
         ["Total tiers payant :"] = "Third-party payer total:",
@@ -574,6 +588,20 @@ public static class UiTextTranslator
         ["Ouvrir la page"] = "Pagina openen",
         ["Ouvrir le dossier"] = "Map openen",
         ["Ouvrir l'onglet Données techniques"] = "Tabblad Technische Gegevens openen",
+        ["Une nouvelle version de la politique de confidentialité et/ou des conditions d'utilisation est fournie avec cette mise à jour. Ouvrez l'onglet « Données techniques » (bouton ci-dessous), lisez les textes et acceptez-les — vous ne pourrez pas utiliser les autres onglets tant que ce n'est pas fait. Merci aussi d'ajouter une adresse e-mail d'envoi des copies de vos documents PDF si vous le désirez (section courriel du même onglet)."] =
+            "Er is een nieuwe versie van het privacybeleid en/of de gebruiksvoorwaarden bij deze update geleverd. Open het tabblad Technische Gegevens (knop hieronder), lees de teksten en aanvaard ze — u kunt de andere tabbladen niet gebruiken tot dit is gebeurd. Voeg indien gewenst ook een e-mailadres toe voor het verzenden van kopieën van uw PDF-documenten (e-mailgedeelte van hetzelfde tabblad).",
+        ["Ouvrez l'onglet « Données techniques » (bouton ci-dessous), lisez et acceptez la politique de confidentialité ainsi que les conditions d'utilisation. Merci aussi d'ajouter une adresse e-mail d'envoi des copies de vos documents PDF si vous le désirez (section courriel du même onglet)."] =
+            "Open het tabblad Technische Gegevens (knop hieronder), lees en aanvaard het privacybeleid en de gebruiksvoorwaarden. Voeg indien gewenst ook een e-mailadres toe voor het verzenden van kopieën van uw PDF-documenten (e-mailgedeelte van hetzelfde tabblad).",
+        ["Les textes de la politique de confidentialité et/ou des conditions d'utilisation sont introuvables ou vides (installation incomplète ou version ancienne). Vous pouvez utiliser la console : suivez la bannière « nouvelle version » ou téléchargez la dernière version du site, puis réinstallez. Ensuite, revenez ici pour lire et accepter les documents."] =
+            "De teksten van het privacybeleid en/of de gebruiksvoorwaarden ontbreken of zijn leeg (onvolledige installatie of oude versie). U kunt de console gebruiken: volg de banner « nieuwe versie » of download de nieuwste versie van de site en installeer opnieuw. Kom daarna hier terug om de documenten te lezen en te aanvaarden.",
+        ["Les documents juridiques ont été mis à jour (nouvelle version publiée avec l'application). Lisez les textes ci-dessous, cochez les deux cases puis enregistrez votre acceptation — les autres onglets restent masqués par le message tant que ce n'est pas fait."] =
+            "De juridische documenten zijn bijgewerkt (nieuwe versie meegeleverd met de applicatie). Lees de onderstaande teksten, vink beide vakjes aan en registreer uw aanvaarding — de andere tabbladen blijven verborgen door dit bericht tot dit is gebeurd.",
+        ["Veuillez lire les documents ci-dessous, cocher les deux cases puis enregistrer votre acceptation."] =
+            "Lees de onderstaande documenten, vink beide vakjes aan en registreer uw aanvaarding.",
+        ["Fichiers juridiques introuvables dans le dossier d'installation (sous-dossier Legal). Réinstallez l'application ou contactez le support."] =
+            "Juridische bestanden niet gevonden in de installatiemap (submap Legal). Installeer de applicatie opnieuw of neem contact op met de ondersteuning.",
+        ["Impossible de charger les documents : "] =
+            "Kan documenten niet laden: ",
         ["Cash patient :"] = "Cash patiënt:",
         ["Facturé patient :"] = "Gefactureerd patiënt:",
         ["Total tiers payant :"] = "Totaal derdebetaler:",

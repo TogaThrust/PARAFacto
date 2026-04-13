@@ -146,6 +146,61 @@ function Set-AppVersionJson {
     Set-Content -Path $JsonPath -Value $content -Encoding ASCII
 }
 
+function Read-LatestVersionFromJsonFile {
+    param([string]$JsonPath)
+    if (-not (Test-Path $JsonPath)) {
+        return "(fichier absent)"
+    }
+    $t = Get-Content -Path $JsonPath -Raw -Encoding UTF8
+    $m = [regex]::Match($t, '"latestVersion"\s*:\s*"([^"]+)"')
+    if (-not $m.Success) {
+        return "(latestVersion introuvable)"
+    }
+    return $m.Groups[1].Value.Trim()
+}
+
+function Read-VersionFromCsprojFile {
+    param([string]$CsprojPath)
+    if (-not (Test-Path $CsprojPath)) {
+        return "(fichier absent)"
+    }
+    $raw = Get-Content -Path $CsprojPath -Raw -Encoding UTF8
+    $m = [regex]::Match($raw, "<Version>\s*([^<\s]+)\s*</Version>", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    if (-not $m.Success) {
+        return "(balise Version introuvable)"
+    }
+    return $m.Groups[1].Value.Trim()
+}
+
+function Show-VersionVerificationSummary {
+    param(
+        [string]$CsprojPath,
+        [string]$JsonRootPath,
+        [string]$JsonProjectPath,
+        [string]$Title = "Controle des 3 fichiers version (lecture disque)"
+    )
+    $vProj = Read-VersionFromCsprojFile -CsprojPath $CsprojPath
+    $vJsonRoot = Read-LatestVersionFromJsonFile -JsonPath $JsonRootPath
+    $vJsonNative = Read-LatestVersionFromJsonFile -JsonPath $JsonProjectPath
+    Write-Host ""
+    Write-Host "=== $Title ==="
+    Write-Host "  1) csproj  <Version>     : $vProj"
+    Write-Host "     $CsprojPath"
+    Write-Host "  2) app-version (site racine repo, Netlify) : $vJsonRoot"
+    Write-Host "     $JsonRootPath"
+    Write-Host "  3) app-version (copie PARAFactoNative)     : $vJsonNative"
+    Write-Host "     $JsonProjectPath"
+    $ok = ($vProj -eq $vJsonRoot) -and ($vProj -eq $vJsonNative) -and ($vJsonRoot -eq $vJsonNative)
+    if ($ok) {
+        Write-Host "  => Les trois valeurs concordent."
+    }
+    else {
+        Write-Warning "  => Divergence entre fichiers : verifiez avant commit / deploy."
+    }
+    Write-Host "=============================================="
+    Write-Host ""
+}
+
 $scriptDir = $PSScriptRoot
 $csproj = Resolve-Project -BaseDir $scriptDir
 if (-not $csproj) {
@@ -161,9 +216,12 @@ $installerExe = Join-Path $installerDir "PARAFactoNative_Installer.exe"
 
 $AppVersion = Resolve-AppVersionText -FromParam $AppVersion -CsprojPath $csproj
 
+$appVersionJsonRepoRoot = Join-Path $repoRoot "subscription-site\public\app-version.json"
+$appVersionJsonNativeCopy = Join-Path $projectDir "subscription-site\public\app-version.json"
+
 Set-ProjectVersion -CsprojPath $csproj -VersionText $AppVersion
-Set-AppVersionJson -JsonPath (Join-Path $repoRoot "subscription-site\public\app-version.json") -VersionText $AppVersion
-Set-AppVersionJson -JsonPath (Join-Path $projectDir "subscription-site\public\app-version.json") -VersionText $AppVersion
+Set-AppVersionJson -JsonPath $appVersionJsonRepoRoot -VersionText $AppVersion
+Set-AppVersionJson -JsonPath $appVersionJsonNativeCopy -VersionText $AppVersion
 
 Write-Host "Projet  : $csproj"
 Write-Host "Version : $AppVersion"
@@ -172,6 +230,7 @@ Write-Host ""
 if ($SiteSeulement) {
     Write-Host "OK - Site uniquement : csproj + app-version.json (racine repo et PARAFactoNative) mis a jour."
     Write-Host "Ensuite : git add / commit / push ; laisser Netlify redeployer le site (dossier subscription-site)."
+    Show-VersionVerificationSummary -CsprojPath $csproj -JsonRootPath $appVersionJsonRepoRoot -JsonProjectPath $appVersionJsonNativeCopy -Title "Fin (site uniquement) - controle des 3 fichiers"
     exit 0
 }
 
@@ -214,6 +273,15 @@ if (-not (Test-Path $mainExe)) {
     throw "PARAFactoNative.exe introuvable dans $publishDir"
 }
 
+# Inno interprete \t, \n, etc. dans les chemins (ex. C:\Users\togat\...) : doubler chaque \ pour le fichier .iss.
+function Escape-InnoSetupPath {
+    param([string]$Path)
+    return $Path.Replace('\', '\\')
+}
+
+$publishDirInno = Escape-InnoSetupPath $publishDir
+$installerDirInno = Escape-InnoSetupPath $installerDir
+
 $innoScript = @"
 #define MyAppName "PARAFacto Native"
 #define MyAppVersion "$AppVersion"
@@ -227,7 +295,7 @@ AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\PARAFacto Native
 DefaultGroupName=PARAFacto Native
-OutputDir=$installerDir
+OutputDir=$installerDirInno
 OutputBaseFilename=PARAFactoNative_Installer
 Compression=lzma
 SolidCompression=yes
@@ -244,7 +312,7 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "desktopicon"; Description: "Creer un raccourci sur le Bureau"; GroupDescription: "Raccourcis :"; Flags: unchecked
 
 [Files]
-Source: "$publishDir\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "$publishDirInno\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\PARAFacto Native"; Filename: "{app}\{#MyAppExeName}"
@@ -277,3 +345,4 @@ Write-Host "OK - Installateur genere."
 Write-Host "  App (publish) : $publishDir"
 Write-Host "  Installateur  : $installerExe"
 Write-Host "  Pensez a publier l'installateur .exe comme asset GitHub Release."
+Show-VersionVerificationSummary -CsprojPath $csproj -JsonRootPath $appVersionJsonRepoRoot -JsonProjectPath $appVersionJsonNativeCopy -Title "Fin (installateur) - controle des 3 fichiers"
