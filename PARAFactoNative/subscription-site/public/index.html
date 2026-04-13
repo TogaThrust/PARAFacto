@@ -34,7 +34,7 @@
   </div>
   <p id="leadText"></p>
   <p>
-    <a id="downloadBtn" class="btn" href="https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe" download>Télécharger l’installateur (.exe)</a>
+    <a id="downloadBtn" class="btn" href="https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe" download>Télécharger l'installateur (.exe)</a>
   </p>
   <p><small id="afterText"></small></p>
   <script>
@@ -44,7 +44,7 @@
           title: "PARAFacto Native",
           lead: "Téléchargez l'installateur, lancez l'exe téléchargé. Quand l'app est installée, lancez l'app depuis le bureau. Rendez vous sur la page de paiements et souscrivez l'abonnement.",
           after: "Après avoir souscrit l'abonnement, vous recevez un code d'utilisateur. Copiez/collez ce code dans la fenêtre de demande de l'app. Lisez et approuvez les politiques de confidentialité et les conditions générales d'utilisation. Vous voilà prêt !",
-          btn: "Télécharger l’installateur (.exe)"
+          btn: "Télécharger l'installateur (.exe)"
         },
         en: {
           title: "PARAFacto Native",
@@ -85,6 +85,15 @@
       var saved = "fr";
       try { saved = localStorage.getItem("parafacto_site_lang") || "fr"; } catch (_) { }
       applyLanguage(saved);
+
+      fetch("app-version.json?_=" + Date.now(), { cache: "no-store" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (!j || typeof j.installerUrl !== "string") return;
+          var u = j.installerUrl.trim();
+          if (u.indexOf("https://") === 0 || u.indexOf("http://") === 0) downloadBtn.href = u;
+        })
+        .catch(function () { });
     })();
   </script>
 </body>
