@@ -24,6 +24,26 @@
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="MinWidth" Value="150"/>
         </Style>
+
+        <!-- Lien « mise à jour » : Button + style plat (MouseBinding sur TextBlock est souvent ignoré par WPF). -->
+        <Style x:Key="ConsoleUpdateLinkButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <ContentPresenter RecognizesAccessKey="False"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -202,20 +222,18 @@
                                           SelectedItem="{Binding Console.SelectedTarif}"
                                           DisplayMemberPath="Label"
                                           Width="280"/>
-                                <TextBlock Grid.Column="3"
-                                           VerticalAlignment="Center"
-                                           Foreground="#2563EB"
-                                           FontWeight="SemiBold"
-                                           TextWrapping="Wrap"
-                                           Text="Nouvelle version disponible, cliquez ici pour télécharger le fichier d'installation"
-                                           Cursor="Hand"
-                                           TextDecorations="Underline"
-                                           Visibility="{Binding Console.IsUpdateAvailable, Converter={StaticResource BoolToVisibility}}"
-                                           ToolTip="Ouvrir la page de téléchargement de l'installateur">
-                                    <TextBlock.InputBindings>
-                                        <MouseBinding Gesture="LeftClick" Command="{Binding Console.OpenInstallerDownloadCommand}"/>
-                                    </TextBlock.InputBindings>
-                                </TextBlock>
+                                <Button Grid.Column="3"
+                                        VerticalAlignment="Center"
+                                        Style="{StaticResource ConsoleUpdateLinkButtonStyle}"
+                                        Command="{Binding Console.OpenInstallerDownloadCommand}"
+                                        Visibility="{Binding Console.IsUpdateAvailable, Converter={StaticResource BoolToVisibility}}"
+                                        ToolTip="Ouvrir la page de téléchargement de l'installateur">
+                                    <TextBlock Foreground="#2563EB"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"
+                                               TextDecorations="Underline"
+                                               Text="Nouvelle version disponible, cliquez ici pour télécharger le fichier d'installation"/>
+                                </Button>
                             </Grid>
 
                             <WrapPanel Grid.Row="4">

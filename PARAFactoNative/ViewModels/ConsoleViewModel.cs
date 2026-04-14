@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.IO;
+using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
@@ -439,7 +440,8 @@ OpenWorkspaceFolderCommand = new RelayCommand(() => RequestOpenWorkspaceFolderRe
 OpenMonthFolderCommand = new RelayCommand(() => RequestOpenMonthFolderRequested?.Invoke(CurrentPeriod), () => !IsBusy);
 OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualMonthFolderRequested?.Invoke(), () => !IsBusy);
         ImportAgendaCommand = new RelayCommand(ImportAgendaForSelectedDay, () => !IsBusy);
-        OpenInstallerDownloadCommand = new RelayCommand(OpenInstallerDownloadPage, () => !IsBusy);
+        // Toujours cliquable : la mise à jour ne doit pas être bloquée par IsBusy ; le clic doit ouvrir le navigateur de façon fiable.
+        OpenInstallerDownloadCommand = new RelayCommand(OpenInstallerDownloadPage, () => true);
 
         var ms = _settings.LoadMailSettings();
         _recipientEmail = ms.RecipientEmail;
@@ -1054,7 +1056,8 @@ Voulez-vous l'imprimer maintenant ?",
                 FileName = landing,
                 UseShellExecute = true
             });
-            Application.Current.Shutdown(0);
+            // Laisser Windows lancer le navigateur avant de fermer l’app (sinon le shell peut ne pas afficher l’onglet).
+            _ = ShutdownAfterShortDelayAsync();
         }
         catch (Exception ex)
         {
@@ -1063,6 +1066,27 @@ Voulez-vous l'imprimer maintenant ?",
                 "PARAFacto",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
+        }
+    }
+
+    private static async Task ShutdownAfterShortDelayAsync()
+    {
+        try
+        {
+            await Task.Delay(800).ConfigureAwait(false);
+        }
+        catch
+        {
+            // ignore
+        }
+
+        try
+        {
+            Application.Current?.Dispatcher.Invoke(() => Application.Current.Shutdown(0));
+        }
+        catch
+        {
+            try { Environment.Exit(0); } catch { /* ignore */ }
         }
     }
 
