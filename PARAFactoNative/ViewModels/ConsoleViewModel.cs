@@ -59,6 +59,7 @@ public sealed class ConsoleViewModel : NotifyBase
 
     private readonly SeanceService _seances = new();
     private readonly AppointmentRepo _appointments = new();
+    private readonly UnavailabilityRepo _unavailabilities = new();
     private readonly PatientRepo _patientRepo = new();
     private readonly JournalierPdfService _journalierPdf = new();
     private readonly AppSettingsStore _settings = new();
@@ -780,15 +781,31 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
     {
         if (SelectedPatient is null || SelectedTarif is null) return;
 
+        long? createdAppointmentId = null;
         try
         {
             IsBusy = true;
+            var userNotes = string.IsNullOrWhiteSpace(SeanceNotes) ? null : SeanceNotes.Trim();
+            var finalComment = userNotes;
+
+            if (SeanceDate.Date == DateTime.Today)
+            {
+                if (TryCreateAgendaAppointmentForToday(SelectedPatient.Id, SelectedTarif.Id, SelectedTarif.Label, out var newAppointmentId, out var markerPrefix))
+                {
+                    createdAppointmentId = newAppointmentId;
+                    finalComment = SeanceRdvTimeHelper.MergeRdvMarkerWithUserInput(markerPrefix, userNotes);
+                }
+            }
+
             _seances.AddSeance(
                 SelectedPatient.Id,
                 SelectedTarif.Id,
                 SeanceDate,
                 IsCash,
-                string.IsNullOrWhiteSpace(SeanceNotes) ? null : SeanceNotes.Trim());
+                finalComment);
+
+            if (createdAppointmentId is > 0)
+                LinkedAgendaDataChanged?.Invoke();
 
             SeanceNotes = null;
             IsCash = false;
@@ -797,12 +814,82 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
         }
         catch (Exception ex)
         {
+            if (createdAppointmentId is > 0)
+            {
+                try { _appointments.Delete(createdAppointmentId.Value); } catch { /* ignore rollback best effort */ }
+            }
             MessageBox.Show(ex.Message, "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
             IsBusy = false;
         }
+    }
+
+    private bool TryCreateAgendaAppointmentForToday(
+        long patientId,
+        long tarifId,
+        string? tarifLabel,
+        out long appointmentId,
+        out string markerPrefix)
+    {
+        appointmentId = 0;
+        markerPrefix = "";
+
+        var day = DateTime.Today;
+        var sameDay = _appointments.ListForDay(day);
+        var unavailDay = _unavailabilities.ListForDay(day);
+        var (workdayStartMin, closingEndMin) = _settings.LoadAgendaWorkdayMinutes();
+        var lunch = _settings.LoadAgendaLunch();
+        int? lunchStart = lunch.enabled ? lunch.startMin : null;
+        int? lunchEnd = lunch.enabled ? lunch.endMin : null;
+
+        var now = DateTime.Now;
+        var earliestStart = now.Hour * 60 + now.Minute;
+        var durationMinutes = GuessDurationMinutesFromTarif(tarifLabel);
+
+        var slot = AppointmentScheduling.FindFirstAvailableStart(
+            sameDay,
+            unavailDay,
+            durationMinutes,
+            excludeAppointmentId: null,
+            workdayStartMin,
+            closingEndMin,
+            stepMinutes: 15,
+            earliestStartMinInclusive: earliestStart,
+            lunchBlockStartMin: lunchStart,
+            lunchBlockEndMin: lunchEnd);
+
+        if (string.IsNullOrWhiteSpace(slot))
+            return false;
+
+        appointmentId = _appointments.Insert(
+            patientId,
+            tarifId,
+            day.ToString("yyyy-MM-dd"),
+            slot,
+            durationMinutes);
+
+        markerPrefix = $"[RDV#{appointmentId}] {slot}";
+        return true;
+    }
+
+    private static int GuessDurationMinutesFromTarif(string? tarifLabel)
+    {
+        if (string.IsNullOrWhiteSpace(tarifLabel))
+            return 30;
+
+        var m = Regex.Match(tarifLabel, @"(\d{2,3})\s*MIN", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (!m.Success)
+            return 30;
+
+        if (!int.TryParse(m.Groups[1].Value, out var parsed))
+            return 30;
+
+        if (parsed < 15 || parsed > 180)
+            return 30;
+
+        return parsed;
     }
 
     private void UpdateSelectedSeance()
