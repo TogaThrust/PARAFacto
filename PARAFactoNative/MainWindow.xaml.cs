@@ -328,8 +328,7 @@ public partial class MainWindow
     {
         Dispatcher.Invoke(() =>
         {
-            foreach (Window w in Application.Current.Windows)
-                UiVisualLocalizer.Localize(w);
+            // Localize : déjà sur LanguageChanged dans App.xaml.cs pour toutes les fenêtres.
             UpdateLanguageButtonsVisual();
             UpdateWindowTitle();
         });

@@ -8,6 +8,7 @@
     <sys:String x:Key="Tab.Factures" xmlns:sys="clr-namespace:System;assembly=mscorlib">Facturen</sys:String>
     <sys:String x:Key="Tab.Agenda" xmlns:sys="clr-namespace:System;assembly=mscorlib">Afspraken</sys:String>
     <sys:String x:Key="Tab.Technical" xmlns:sys="clr-namespace:System;assembly=mscorlib">Technische Gegevens</sys:String>
+    <sys:String x:Key="Tab.Support" xmlns:sys="clr-namespace:System;assembly=mscorlib">Hulp</sys:String>
     <sys:String x:Key="Language.TooltipFr" xmlns:sys="clr-namespace:System;assembly=mscorlib">Frans</sys:String>
     <sys:String x:Key="Language.TooltipEn" xmlns:sys="clr-namespace:System;assembly=mscorlib">Engels</sys:String>
     <sys:String x:Key="Language.TooltipNl" xmlns:sys="clr-namespace:System;assembly=mscorlib">Nederlands</sys:String>
@@ -49,4 +50,27 @@
     <sys:String x:Key="Technical.Subscription.Subtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Stripe-klantenportaal</sys:String>
     <sys:String x:Key="Technical.Subscription.OpenPortal" xmlns:sys="clr-namespace:System;assembly=mscorlib">Toegang klantenportaal</sys:String>
     <sys:String x:Key="Technical.Smtp.AppPassword" xmlns:sys="clr-namespace:System;assembly=mscorlib">App-wachtwoord:</sys:String>
+
+    <sys:String x:Key="Help.Hero.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Help &amp; ondersteuning</sys:String>
+    <sys:String x:Key="Help.Hero.Subtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ondersteuningskanalen, veelgestelde vragen en leermiddelen — overzichtelijk op één plek.</sys:String>
+    <sys:String x:Key="Help.Email.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Helpdesk</sys:String>
+    <sys:String x:Key="Help.Email.Body" xmlns:sys="clr-namespace:System;assembly=mscorlib">Voor een technisch probleem, een vraag over het gebruik of een suggestie: neem contact op met ons team. Vermeld de versie in de venstertitel en voeg indien nuttig een schermafbeelding toe.</sys:String>
+    <sys:String x:Key="Help.Email.Address" xmlns:sys="clr-namespace:System;assembly=mscorlib">helpdesk@parafacto.be</sys:String>
+    <sys:String x:Key="Help.Email.Button" xmlns:sys="clr-namespace:System;assembly=mscorlib">E-mailprogramma openen</sys:String>
+    <sys:String x:Key="Help.Chat.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Livechat</sys:String>
+    <sys:String x:Key="Help.Chat.Badge" xmlns:sys="clr-namespace:System;assembly=mscorlib">Binnenkort beschikbaar</sys:String>
+    <sys:String x:Key="Help.Chat.Body" xmlns:sys="clr-namespace:System;assembly=mscorlib">Een livechat met ons team wordt in een toekomstige versie aangeboden. Tot die tijd is e-mail naar de helpdesk het aanbevolen kanaal voor een duidelijke en traceerbare opvolging.</sys:String>
+    <sys:String x:Key="Help.Faq.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Veelgestelde vragen</sys:String>
+    <sys:String x:Key="Help.Faq.Intro" xmlns:sys="clr-namespace:System;assembly=mscorlib">Klik een vraag open om het antwoord te lezen.</sys:String>
+    <sys:String x:Key="Help.Faq1.Q" xmlns:sys="clr-namespace:System;assembly=mscorlib">Hoe werk ik PARAFacto Native bij?</sys:String>
+    <sys:String x:Key="Help.Faq1.A" xmlns:sys="clr-namespace:System;assembly=mscorlib">Wanneer een nieuwe versie beschikbaar is, verschijnt een melding op het dashboard. Volg de link naar de downloadpagina, sluit de toepassing volledig en voer het installatieprogramma uit.</sys:String>
+    <sys:String x:Key="Help.Faq2.Q" xmlns:sys="clr-namespace:System;assembly=mscorlib">Waar beheer ik mijn abonnement of facturen?</sys:String>
+    <sys:String x:Key="Help.Faq2.A" xmlns:sys="clr-namespace:System;assembly=mscorlib">Onder Technische gegevens opent u het klantenportaal (Stripe) voor facturen, betaalmiddel en abonnementsopties, voor zover geactiveerd.</sys:String>
+    <sys:String x:Key="Help.Faq3.Q" xmlns:sys="clr-namespace:System;assembly=mscorlib">Hoe bewaar ik kopieën van mijn documenten?</sys:String>
+    <sys:String x:Key="Help.Faq3.A" xmlns:sys="clr-namespace:System;assembly=mscorlib">Gebruik de PDF-export en e-mailfuncties in de tabbladen Facturen en Sessies. Bewaar afhankelijk van het beleid van uw praktijk ook een kopie buiten de werkcomputer.</sys:String>
+    <sys:String x:Key="Help.Faq4.Q" xmlns:sys="clr-namespace:System;assembly=mscorlib">Wat bij dringende hulp?</sys:String>
+    <sys:String x:Key="Help.Faq4.A" xmlns:sys="clr-namespace:System;assembly=mscorlib">Mail de helpdesk met een korte beschrijving en stappen om het probleem na te bootsen. Als u vanaf die pc geen mail kunt versturen, gebruik dan een ander toestel en vermeld de naam van uw praktijk of account.</sys:String>
+    <sys:String x:Key="Help.Videos.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Uitlegvideo’s</sys:String>
+    <sys:String x:Key="Help.Videos.Body" xmlns:sys="clr-namespace:System;assembly=mscorlib">Handleidingen en demo’s worden op de PARAFacto-website gepubliceerd naarmate er versies uitkomen. Met de knop hieronder opent u de site — daar vindt u de actuele hulpinhoud.</sys:String>
+    <sys:String x:Key="Help.Videos.Button" xmlns:sys="clr-namespace:System;assembly=mscorlib">parafacto.be openen</sys:String>
 </ResourceDictionary>

@@ -12,6 +12,7 @@ public sealed class MainViewModel : NotifyBase
     public SeancesViewModel Seances { get; } = new();
     public FacturesViewModel Factures { get; } = new();
     public AgendaViewModel Agenda { get; } = new();
+    public HelpViewModel Help { get; } = new();
 
     private string _statusText = "Ready";
     public string StatusText

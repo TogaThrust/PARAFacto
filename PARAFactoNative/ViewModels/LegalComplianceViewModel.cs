@@ -8,7 +8,7 @@ namespace PARAFactoNative.ViewModels;
 public sealed class LegalComplianceViewModel : NotifyBase
 {
     /// <summary>Index de l'onglet « Données techniques » (doit rester aligné sur l’ordre des TabItem dans MainWindow.xaml).</summary>
-    public const int TechnicalTabIndex = 6;
+    public const int TechnicalTabIndex = 7;
 
     private readonly AppSettingsStore _store;
     private readonly string _baseDir;

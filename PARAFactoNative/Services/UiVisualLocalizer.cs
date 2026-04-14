@@ -84,12 +84,8 @@ public static class UiVisualLocalizer
                     ShouldLocalizeLocalString(gb, HeaderedContentControl.HeaderProperty))
                     gb.Header = TranslateFor(gb, "Header", hs);
                 break;
-            case TabItem ti:
-                if (ti.Header is string ths &&
-                    !BindingOperations.IsDataBound(ti, HeaderedContentControl.HeaderProperty) &&
-                    ShouldLocalizeLocalString(ti, HeaderedContentControl.HeaderProperty))
-                    ti.Header = TranslateFor(ti, "Header", ths);
-                break;
+            // TabItem : ne pas traduire ici — les en-têtes utilisent {DynamicResource Tab.*} et seraient
+            // écrasés par UiTextTranslator (ex. « Aide » absent des tables EN/NL → restait en français).
             case DataGrid dg:
                 LocalizeDataGridHeaders(dg);
                 break;

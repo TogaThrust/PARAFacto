@@ -371,6 +371,9 @@
             <TabItem Header="{DynamicResource Tab.Agenda}">
                 <views:AgendaView DataContext="{Binding Agenda}" />
             </TabItem>
+            <TabItem Header="{DynamicResource Tab.Support}">
+                <views:HelpView DataContext="{Binding Help}" />
+            </TabItem>
             <TabItem Header="{DynamicResource Tab.Technical}">
                 <ScrollViewer Margin="10"
                               VerticalScrollBarVisibility="Auto"
