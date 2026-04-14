@@ -1,0 +1,41 @@
+<Window x:Class="PARAFactoNative.Views.VideoPlayerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Tutoriel vidéo"
+        Width="980"
+        Height="620"
+        MinWidth="760"
+        MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        Background="#0B1220">
+    <DockPanel LastChildFill="True">
+        <Border DockPanel.Dock="Top"
+                Background="#111827"
+                BorderBrush="#1F2937"
+                BorderThickness="0,0,0,1"
+                Padding="10">
+            <DockPanel LastChildFill="False">
+                <TextBlock x:Name="VideoTitleText"
+                           VerticalAlignment="Center"
+                           Foreground="#E5E7EB"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis"
+                           Width="620"/>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <Button Content="Play" Click="ResumeButton_OnClick" Margin="0,0,8,0" Padding="12,6"/>
+                    <Button Content="Pause" Click="PauseButton_OnClick" Margin="0,0,8,0" Padding="12,6"/>
+                    <Button Content="Close" Click="CloseButton_OnClick" Padding="12,6"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid Margin="8">
+            <MediaElement x:Name="VideoPlayer"
+                          LoadedBehavior="Manual"
+                          UnloadedBehavior="Stop"
+                          Stretch="Uniform"
+                          MediaFailed="VideoPlayer_OnMediaFailed"/>
+        </Grid>
+    </DockPanel>
+</Window>

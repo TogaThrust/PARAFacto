@@ -157,9 +157,51 @@
                         <TextBlock Text="{DynamicResource Help.Videos.Title}" FontSize="17" FontWeight="SemiBold" Foreground="#0F172A" VerticalAlignment="Center"/>
                     </StackPanel>
                     <TextBlock Text="{DynamicResource Help.Videos.Body}" TextWrapping="Wrap" Foreground="#475569" FontSize="13" LineHeight="21" Margin="0,0,0,16"/>
-                    <Button Content="{DynamicResource Help.Videos.Button}"
-                            Command="{Binding OpenHelpVideosCommand}"
-                            Style="{StaticResource HelpSecondaryButton}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0"
+                                Command="{Binding OpenAccountVideoCommand}"
+                                Style="{StaticResource HelpSecondaryButton}"
+                                Padding="12"
+                                HorizontalContentAlignment="Left">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image Source="{Binding AccountVideoIcon}" Width="34" Height="34" Margin="0,0,10,0"/>
+                                <StackPanel>
+                                    <TextBlock Text="Tutoriel vidéo"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="#1E3A8A"/>
+                                    <TextBlock Text="Accéder à son compte client"
+                                               TextWrapping="Wrap"
+                                               FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column="2"
+                                Command="{Binding OpenInstallVideoCommand}"
+                                Style="{StaticResource HelpSecondaryButton}"
+                                Padding="12"
+                                HorizontalContentAlignment="Left">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image Source="{Binding InstallVideoIcon}" Width="34" Height="34" Margin="0,0,10,0"/>
+                                <StackPanel>
+                                    <TextBlock Text="Tutoriel vidéo"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="#1E3A8A"/>
+                                    <TextBlock Text="Installer une nouvelle version"
+                                               TextWrapping="Wrap"
+                                               FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
                 </StackPanel>
             </Border>
 
