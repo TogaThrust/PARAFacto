@@ -160,25 +160,25 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
-                                <TextBlock Margin="0,0,0,8" FontWeight="Bold" FontSize="13" Text="{DynamicResource Factures.SelectedPeriod}"/>
-                                <TextBlock Margin="0,2,0,0"><Run Text="{Binding Factures.PayeLabel, Mode=OneWay}"/><Run Text=" : "/><Run Text="{Binding Factures.StatsFiltered.PayeEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="IMPAYÉS : "/><Run Text="{Binding Factures.StatsFiltered.ImpayeEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="PARTIEL : "/><Run Text="{Binding Factures.StatsFiltered.PartielEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="TOTAL REÇU : "/><Run Text="{Binding Factures.StatsFiltered.TotalRecuEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="EN ATTENTE : "/><Run Text="{Binding Factures.StatsFiltered.EnAttenteEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="NOTES DE CRÉDIT : "/><Run Text="{Binding Factures.StatsFiltered.NcEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="{DynamicResource Factures.LossesLabel}"/><Run Text="{Binding Factures.StatsFiltered.PertesEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,0,0,8" FontWeight="Bold" FontSize="13" Foreground="#111111" Text="{DynamicResource Factures.SelectedPeriod}"/>
+                                <WrapPanel Margin="0,2,0,0"><TextBlock Foreground="#111111" Text="{Binding Factures.PayeLabel, Mode=OneWay}"/><TextBlock Foreground="#111111" Text=" : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsFiltered.PayeEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
+                                <WrapPanel Margin="0,4,0,0"><TextBlock Foreground="#111111" Text="IMPAYÉS : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsFiltered.ImpayeEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
+                                <WrapPanel Margin="0,4,0,0"><TextBlock Foreground="#111111" Text="PARTIEL : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsFiltered.PartielEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
+                                <WrapPanel Margin="0,4,0,0"><TextBlock Foreground="#111111" Text="TOTAL REÇU : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsFiltered.TotalRecuEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
+                                <WrapPanel Margin="0,4,0,0"><TextBlock Foreground="#111111" Text="EN ATTENTE : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsFiltered.EnAttenteEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
+                                <WrapPanel Margin="0,4,0,0"><TextBlock Foreground="#111111" Text="NOTES DE CRÉDIT : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsFiltered.NcEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
+                                <WrapPanel Margin="0,4,0,0"><TextBlock Foreground="#111111" Text="PERTES : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsFiltered.PertesEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
                             </StackPanel>
                             <Border Grid.Column="1" Width="1" Margin="12,0" BorderBrush="#CCC" BorderThickness="1,0,0,0" VerticalAlignment="Stretch"/>
                             <StackPanel Grid.Column="2">
-                                <TextBlock Margin="0,0,0,8" FontWeight="Bold" FontSize="13" Text="{DynamicResource Factures.TotalRecorded}"/>
-                                <TextBlock Margin="0,2,0,0"><Run Text="PAYE : "/><Run Text="{Binding Factures.StatsTotal.PayeEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="IMPAYÉS : "/><Run Text="{Binding Factures.StatsTotal.ImpayeEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="PARTIEL : "/><Run Text="{Binding Factures.StatsTotal.PartielEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="TOTAL REÇU : "/><Run Text="{Binding Factures.StatsTotal.TotalRecuEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="EN ATTENTE : "/><Run Text="{Binding Factures.StatsTotal.EnAttenteEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="NOTES DE CRÉDIT : "/><Run Text="{Binding Factures.StatsTotal.NcEuro, Mode=OneWay}"/></TextBlock>
-                                <TextBlock Margin="0,4,0,0"><Run Text="{DynamicResource Factures.LossesLabel}"/><Run Text="{Binding Factures.StatsTotal.PertesEuro, Mode=OneWay}"/></TextBlock>
+                                <TextBlock Margin="0,0,0,8" FontWeight="Bold" FontSize="13" Foreground="#111111" Text="{DynamicResource Factures.TotalRecorded}"/>
+                                <WrapPanel Margin="0,2,0,0"><TextBlock Foreground="#111111" Text="PAYE : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsTotal.PayeEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
+                                <WrapPanel Margin="0,4,0,0"><TextBlock Foreground="#111111" Text="IMPAYÉS : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsTotal.ImpayeEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
+                                <WrapPanel Margin="0,4,0,0"><TextBlock Foreground="#111111" Text="PARTIEL : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsTotal.PartielEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
+                                <WrapPanel Margin="0,4,0,0"><TextBlock Foreground="#111111" Text="TOTAL REÇU : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsTotal.TotalRecuEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
+                                <WrapPanel Margin="0,4,0,0"><TextBlock Foreground="#111111" Text="EN ATTENTE : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsTotal.EnAttenteEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
+                                <WrapPanel Margin="0,4,0,0"><TextBlock Foreground="#111111" Text="NOTES DE CRÉDIT : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsTotal.NcEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
+                                <WrapPanel Margin="0,4,0,0"><TextBlock Foreground="#111111" Text="PERTES : "/><TextBlock Foreground="#111111" Text="{Binding Factures.StatsTotal.PertesEuro, Mode=OneWay, FallbackValue=0.00 €, TargetNullValue=0.00 €}"/></WrapPanel>
                             </StackPanel>
                         </Grid>
 
