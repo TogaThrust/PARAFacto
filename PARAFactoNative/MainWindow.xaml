@@ -25,24 +25,36 @@
             <Setter Property="MinWidth" Value="150"/>
         </Style>
 
-        <!-- Lien « mise à jour » : Button + style plat (MouseBinding sur TextBlock est souvent ignoré par WPF). -->
-        <Style x:Key="ConsoleUpdateLinkButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
+        <Style x:Key="ConsoleUpdatePulseButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Margin" Value="0"/>
             <Setter Property="HorizontalAlignment" Value="Left"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#B91C1C"/>
+            <Setter Property="BorderBrush" Value="#7F1D1D"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <ContentPresenter RecognizesAccessKey="False"/>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+            <Style.Triggers>
+                <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                    <BeginStoryboard>
+                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                            <ColorAnimation Storyboard.TargetProperty="(Button.Background).(SolidColorBrush.Color)"
+                                            To="#FFFFFF"
+                                            Duration="0:0:0.75"/>
+                            <ColorAnimation Storyboard.TargetProperty="(Button.Foreground).(SolidColorBrush.Color)"
+                                            To="#B91C1C"
+                                            Duration="0:0:0.75"/>
+                            <ColorAnimation Storyboard.TargetProperty="(Button.BorderBrush).(SolidColorBrush.Color)"
+                                            To="#B91C1C"
+                                            Duration="0:0:0.75"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
 
@@ -224,15 +236,12 @@
                                           Width="280"/>
                                 <Button Grid.Column="3"
                                         VerticalAlignment="Center"
-                                        Style="{StaticResource ConsoleUpdateLinkButtonStyle}"
+                                        Style="{StaticResource ConsoleUpdatePulseButtonStyle}"
                                         Command="{Binding Console.OpenInstallerDownloadCommand}"
                                         Visibility="{Binding Console.IsUpdateAvailable, Converter={StaticResource BoolToVisibility}}"
                                         ToolTip="Ouvrir la page de téléchargement de l'installateur">
-                                    <TextBlock Foreground="#2563EB"
-                                               FontWeight="SemiBold"
-                                               TextWrapping="Wrap"
-                                               TextDecorations="Underline"
-                                               Text="Nouvelle version disponible, cliquez ici pour télécharger le fichier d'installation"/>
+                                    <TextBlock TextWrapping="Wrap"
+                                               Text="Nouvelle version disponible — Télécharger l'installation"/>
                                 </Button>
                             </Grid>
 

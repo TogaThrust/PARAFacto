@@ -267,6 +267,25 @@ public sealed class AgendaViewModel : NotifyBase
 
                 _lunchStartMin = w.StartTotalMinutes;
                 _lunchEndMin = w.EndTotalMinutes;
+
+                // Le rendu agenda clippe la pause lunch à la plage de journée.
+                // Si la pause est totalement hors plage, elle serait enregistrée mais invisible.
+                var overlapsWorkday = _lunchEndMin > _workdayStartMin && _lunchStartMin < _workdayClosingMin;
+                if (!overlapsWorkday)
+                {
+                    MessageBox.Show(
+                        $"La pause lunch ({AppointmentScheduling.FormatMinutesAsHhMm(_lunchStartMin)} – {AppointmentScheduling.FormatMinutesAsHhMm(_lunchEndMin)}) " +
+                        $"est en dehors de la plage de journée ({AppointmentScheduling.FormatMinutesAsHhMm(_workdayStartMin)} – {AppointmentScheduling.FormatMinutesAsHhMm(_workdayClosingMin)}).\n\n" +
+                        "Choisissez une heure qui recoupe la journée pour qu’elle soit visible dans le calendrier.",
+                        "Agenda",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    _suppressLunchToggle = true;
+                    Raise(nameof(LunchBreakEnabled));
+                    _suppressLunchToggle = false;
+                    return;
+                }
+
                 _lunchStartDisplay = AppointmentScheduling.FormatMinutesAsHhMm(_lunchStartMin);
                 _lunchEndDisplay = AppointmentScheduling.FormatMinutesAsHhMm(_lunchEndMin);
                 _appSettings.SaveAgendaLunch(true, _lunchStartDisplay, _lunchEndDisplay);
