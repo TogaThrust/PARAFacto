@@ -239,9 +239,9 @@
                                         Style="{StaticResource ConsoleUpdatePulseButtonStyle}"
                                         Command="{Binding Console.OpenInstallerDownloadCommand}"
                                         Visibility="{Binding Console.IsUpdateAvailable, Converter={StaticResource BoolToVisibility}}"
-                                        ToolTip="Ouvrir la page de téléchargement de l'installateur">
+                                        ToolTip="{DynamicResource Agenda.UpdateButton.Tooltip}">
                                     <TextBlock TextWrapping="Wrap"
-                                               Text="Nouvelle version disponible — Télécharger l'installation"/>
+                                               Text="{DynamicResource Agenda.UpdateButton.Text}"/>
                                 </Button>
                             </Grid>
 

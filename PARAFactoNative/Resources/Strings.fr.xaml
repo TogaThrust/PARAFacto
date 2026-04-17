@@ -40,6 +40,10 @@
     <sys:String x:Key="Factures.TotalRecorded" xmlns:sys="clr-namespace:System;assembly=mscorlib">TOTAL ENREGISTRÉ</sys:String>
     <sys:String x:Key="Factures.LossesLabel" xmlns:sys="clr-namespace:System;assembly=mscorlib">PERTES : </sys:String>
     <sys:String x:Key="Agenda.RatePrefillHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Le tarif est prérempli selon le statut du patient (fiche). Vous pouvez le changer.</sys:String>
+    <sys:String x:Key="Agenda.DayWorkdayOverrideHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Un double clic sur la date vous permet de modifier l'heure de début et de fin pour cette journée particulière (seulement en vue mois/semaine).</sys:String>
+    <sys:String x:Key="Agenda.DayLunchOverrideHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Un double clic sur l'heure de pause vous permet de modifier le créneau de pause déjeuner pour cette date particulière.</sys:String>
+    <sys:String x:Key="Agenda.UpdateButton.Text" xmlns:sys="clr-namespace:System;assembly=mscorlib">Nouvelle version disponible - Télécharger l'installation</sys:String>
+    <sys:String x:Key="Agenda.UpdateButton.Tooltip" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ouvrir la page de téléchargement de l'installateur</sys:String>
     <sys:String x:Key="Unavailability.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Indisponibilité</sys:String>
     <sys:String x:Key="Unavailability.ReasonOptional" xmlns:sys="clr-namespace:System;assembly=mscorlib">Raison (optionnel)</sys:String>
     <sys:String x:Key="Unavailability.TodayGroup" xmlns:sys="clr-namespace:System;assembly=mscorlib">Indisponibilités ce jour</sys:String>

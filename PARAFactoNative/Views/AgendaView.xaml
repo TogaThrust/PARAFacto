@@ -198,6 +198,10 @@
                     </WrapPanel>
                     <TextBlock Foreground="#64748B" FontSize="11" TextWrapping="Wrap"
                                Text="{DynamicResource Agenda.RatePrefillHint}"/>
+                    <TextBlock Margin="0,8,0,0" Foreground="#64748B" FontSize="11" TextWrapping="Wrap"
+                               Text="{DynamicResource Agenda.DayWorkdayOverrideHint}"/>
+                    <TextBlock Margin="0,6,0,0" Foreground="#64748B" FontSize="11" TextWrapping="Wrap"
+                               Text="{DynamicResource Agenda.DayLunchOverrideHint}"/>
                 </StackPanel>
             </ScrollViewer>
         </Border>

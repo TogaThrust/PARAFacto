@@ -34,6 +34,8 @@ public partial class WorkdayDayOverrideWindow : Window
         StartCombo.SelectedItem = _quarterHours.Contains(startStr) ? startStr : _quarterHours[36];
         EndCombo.SelectedItem = _quarterHours.Contains(endStr) ? endStr : _quarterHours[84];
         StartCombo.SelectionChanged += (_, _) => CoerceEndAfterStart();
+        StartCombo.LostFocus += (_, _) => CoerceEndAfterStart();
+        EndCombo.LostFocus += (_, _) => CoerceEndAfterStart();
         CoerceEndAfterStart();
     }
 
@@ -45,10 +47,10 @@ public partial class WorkdayDayOverrideWindow : Window
 
     private void CoerceEndAfterStart()
     {
-        if (StartCombo.SelectedItem is not string ss
-            || EndCombo.SelectedItem is not string es
-            || !TimeSpan.TryParse(ss.Trim(), CultureInfo.InvariantCulture, out var tsS)
-            || !TimeSpan.TryParse(es.Trim(), CultureInfo.InvariantCulture, out var tsE))
+        var ss = (StartCombo.Text ?? "").Trim();
+        var es = (EndCombo.Text ?? "").Trim();
+        if (!TimeSpan.TryParse(ss, CultureInfo.InvariantCulture, out var tsS)
+            || !TimeSpan.TryParse(es, CultureInfo.InvariantCulture, out var tsE))
             return;
 
         var sm = (int)tsS.TotalMinutes;
@@ -65,14 +67,16 @@ public partial class WorkdayDayOverrideWindow : Window
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (StartCombo.SelectedItem is not string startStr || EndCombo.SelectedItem is not string endStr)
+        var startStr = (StartCombo.Text ?? "").Trim();
+        var endStr = (EndCombo.Text ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(startStr) || string.IsNullOrWhiteSpace(endStr))
         {
             MessageBox.Show("Choisissez l’heure de début et de fin.", "Horaires du jour", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        if (!AppointmentScheduling.TryParseTimeToMinutes(startStr.Trim(), out var newStart)
-            || !AppointmentScheduling.TryParseTimeToMinutes(endStr.Trim(), out var newClose))
+        if (!AppointmentScheduling.TryParseTimeToMinutes(startStr, out var newStart)
+            || !AppointmentScheduling.TryParseTimeToMinutes(endStr, out var newClose))
         {
             MessageBox.Show("Heures invalides.", "Horaires du jour", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;

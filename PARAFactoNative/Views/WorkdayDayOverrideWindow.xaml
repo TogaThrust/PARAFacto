@@ -25,11 +25,11 @@
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" Margin="0,0,8,0">
                 <TextBlock Style="{StaticResource DialogSectionHeaderTextBlock}" Margin="0,0,0,4" Text="Début de journée"/>
-                <ComboBox x:Name="StartCombo" IsEditable="False"/>
+                <ComboBox x:Name="StartCombo" IsEditable="True" IsTextSearchEnabled="False"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Margin="8,0,0,0">
                 <TextBlock Style="{StaticResource DialogSectionHeaderTextBlock}" Margin="0,0,0,4" Text="Fin de journée"/>
-                <ComboBox x:Name="EndCombo" IsEditable="False"/>
+                <ComboBox x:Name="EndCombo" IsEditable="True" IsTextSearchEnabled="False"/>
             </StackPanel>
         </Grid>
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">

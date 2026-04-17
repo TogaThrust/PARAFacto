@@ -1254,22 +1254,53 @@ ORDER BY nom, prenom;
             && !string.IsNullOrWhiteSpace(win.SavedEndHhMm))
         {
             if (AppointmentScheduling.TryParseTimeToMinutes(win.SavedStartHhMm, out var ns)
-                && AppointmentScheduling.TryParseTimeToMinutes(win.SavedEndHhMm, out var ne)
-                && ns == _workdayStartMin
-                && ne == _workdayClosingMin)
+                && AppointmentScheduling.TryParseTimeToMinutes(win.SavedEndHhMm, out var ne))
             {
-                _workdayOverrideRepo.DeleteForDateIso(iso);
-                _workdayOverridesByDay.Remove(iso);
-            }
-            else
-            {
-                _workdayOverrideRepo.Upsert(iso, win.SavedStartHhMm, win.SavedEndHhMm);
-                _workdayOverridesByDay[iso] = new WorkdayDayOverrideRow
+                // Interdire une plage journaliere qui exclut des RDV existants.
+                var sameDay = _repo.ListForDay(day.Date);
+                var outOfRange = new List<string>();
+                foreach (var appt in sameDay)
                 {
-                    DateIso = iso,
-                    StartTime = win.SavedStartHhMm,
-                    EndTime = win.SavedEndHhMm
-                };
+                    if (!AppointmentScheduling.TryParseTimeToMinutes(appt.StartTime, out var sm)) continue;
+                    var dur = appt.DurationMinutes > 0 ? appt.DurationMinutes : 30;
+                    if (sm < ns || sm + dur > ne)
+                    {
+                        var sh = AppointmentScheduling.FormatMinutesAsHhMm(sm);
+                        var eh = AppointmentScheduling.FormatMinutesAsHhMm(sm + dur);
+                        var who = string.IsNullOrWhiteSpace(appt.PatientDisplay) ? "Patient inconnu" : appt.PatientDisplay.Trim();
+                        outOfRange.Add($"{sh}–{eh} : {who}");
+                    }
+                }
+
+                if (outOfRange.Count > 0)
+                {
+                    MessageBox.Show(
+                        "Impossible d'appliquer ces horaires pour cette journée.\n\n" +
+                        "Des rendez-vous existants sont en dehors de la plage choisie :\n- " +
+                        string.Join("\n- ", outOfRange.Take(8)) +
+                        (outOfRange.Count > 8 ? $"\n... (+{outOfRange.Count - 8} autre(s))" : "") +
+                        "\n\nAjustez d'abord les rendez-vous, puis réessayez.",
+                        "Agenda",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (ns == _workdayStartMin && ne == _workdayClosingMin)
+                {
+                    _workdayOverrideRepo.DeleteForDateIso(iso);
+                    _workdayOverridesByDay.Remove(iso);
+                }
+                else
+                {
+                    _workdayOverrideRepo.Upsert(iso, win.SavedStartHhMm, win.SavedEndHhMm);
+                    _workdayOverridesByDay[iso] = new WorkdayDayOverrideRow
+                    {
+                        DateIso = iso,
+                        StartTime = win.SavedStartHhMm,
+                        EndTime = win.SavedEndHhMm
+                    };
+                }
             }
 
             RefreshCalendar();
@@ -1989,7 +2020,7 @@ ORDER BY nom, prenom;
             TimeSlots.Add(s);
     }
 
-    /// <summary>Nouveau RDV uniquement : premier créneau libre après le dernier RDV de la journée (pas 15 min, aligné sur la liste « Heure de début »).</summary>
+    /// <summary>Nouveau RDV uniquement : premier créneau disponible selon l'heure actuelle et la durée choisie.</summary>
     private void SuggestNextAvailableStartIfNew()
     {
         if (_suppressTimeSuggest || EditingId > 0) return;
@@ -2001,20 +2032,6 @@ ORDER BY nom, prenom;
         {
             var n = DateTime.Now;
             earliest = n.Hour * 60 + n.Minute;
-        }
-
-        var lastApptEndMin = 0;
-        foreach (var a in list)
-        {
-            if (!AppointmentScheduling.TryParseTimeToMinutes(a.StartTime, out var sm)) continue;
-            var d = a.DurationMinutes > 0 ? a.DurationMinutes : 30;
-            lastApptEndMin = Math.Max(lastApptEndMin, sm + d);
-        }
-
-        if (lastApptEndMin > 0)
-        {
-            var afterLast = (lastApptEndMin + slotStepMin - 1) / slotStepMin * slotStepMin;
-            earliest = earliest.HasValue ? Math.Max(earliest.Value, afterLast) : afterLast;
         }
 
         int? lunchS = null, lunchE = null;
