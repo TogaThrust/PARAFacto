@@ -2186,15 +2186,8 @@ ORDER BY nom, prenom;
             return;
         }
 
-        if (AppointmentDate.Date == today)
-        {
-            var nowMin = DateTime.Now.Hour * 60 + DateTime.Now.Minute;
-            if (startMin < nowMin)
-            {
-                MessageBox.Show(MsgRdvDansLePasse, "Agenda", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-        }
+        // Règle métier: autorisé pour la journée en cours et les suivantes.
+        // Seules les dates strictement passées restent interdites.
 
         if (BelgianHolidayHelper.TryGetName(AppointmentDate.Date, out var ferieName))
         {
@@ -2858,16 +2851,8 @@ ORDER BY nom, prenom;
             return;
         }
 
-        if (AppointmentDate.Date == today)
-        {
-            var now = DateTime.Now;
-            var nowMin = now.Hour * 60 + now.Minute;
-            if (startMin < nowMin)
-            {
-                MessageBox.Show(MsgRdvDansLePasse, "Agenda", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-        }
+        // Règle métier: autorisé pour la journée en cours et les suivantes.
+        // Seules les dates strictement passées restent interdites.
 
         if (BelgianHolidayHelper.TryGetName(AppointmentDate.Date, out var ferieName))
         {
