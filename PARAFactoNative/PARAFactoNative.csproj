@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Outil local DemoDbSeed sous tools/ : ne pas le compiler dans l’app WPF. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);tools\**\*</DefaultItemExcludes>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>

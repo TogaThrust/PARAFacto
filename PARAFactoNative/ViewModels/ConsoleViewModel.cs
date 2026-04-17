@@ -162,6 +162,7 @@ public sealed class ConsoleViewModel : NotifyBase
             AddSeanceCommand.RaiseCanExecuteChanged();
             UpdateSeanceCommand.RaiseCanExecuteChanged();
             EditPatientCommand.RaiseCanExecuteChanged();
+            TryApplyTarifFromPatientStatut(_selectedPatient);
         }
     }
 
@@ -593,9 +594,12 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
             LoadTarifs();
             ApplyPatientFilter();
 
-            SelectedTarif = Tarifs.FirstOrDefault(t => string.Equals(t.Label, "BIM CABINET 30 MIN", StringComparison.OrdinalIgnoreCase))
-                            ?? Tarifs.FirstOrDefault();
             SelectedPatient ??= PatientResults.FirstOrDefault();
+            if (!TryApplyTarifFromPatientStatut(SelectedPatient))
+            {
+                SelectedTarif = Tarifs.FirstOrDefault(t => string.Equals(t.Label, "BIM CABINET 30 MIN", StringComparison.OrdinalIgnoreCase))
+                                ?? Tarifs.FirstOrDefault();
+            }
 
             RefreshTodaySeances();
 
@@ -641,6 +645,18 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
 
             _allPatients.Add(new PatientItem(id, code, nom, prenom, statut, mut));
         }
+    }
+
+    /// <summary>Aligne le tarif sélectionné sur <c>patients.statut</c> (même libellé que <c>tarifs.libelle</c>), si trouvé.</summary>
+    private bool TryApplyTarifFromPatientStatut(PatientItem? p)
+    {
+        if (p is null || Tarifs.Count == 0) return false;
+        var st = (p.Statut ?? "").Trim();
+        if (st.Length == 0) return false;
+        var match = Tarifs.FirstOrDefault(t => string.Equals(t.Label, st, StringComparison.OrdinalIgnoreCase));
+        if (match is null) return false;
+        SelectedTarif = match;
+        return true;
     }
 
     private void LoadTarifs()

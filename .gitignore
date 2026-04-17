@@ -7,3 +7,6 @@ PARAFactoNative/publish_output/
 PARAFactoNative/installer_output/
 # Local Netlify folder
 .netlify
+
+# Remplissage SQLite démo (local / PC vendeurs uniquement — ne pas pousser sur le dépôt)
+PARAFactoNative/tools/DemoDbSeed/
