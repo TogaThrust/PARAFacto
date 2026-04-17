@@ -796,6 +796,9 @@ public sealed class AgendaViewModel : NotifyBase
         try
         {
             RefreshCalendar();
+            RebuildAppointmentTimeSlots();
+            if (EditingId == 0)
+                SuggestNextAvailableStartIfNew();
         }
         catch
         {

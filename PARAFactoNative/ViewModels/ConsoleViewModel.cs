@@ -198,6 +198,21 @@ public sealed class ConsoleViewModel : NotifyBase
         }
     }
 
+    public ObservableCollection<string> SeanceTimeSlots { get; } = new();
+
+    private string _seanceStartTime = "09:00";
+    public string SeanceStartTime
+    {
+        get => _seanceStartTime;
+        set
+        {
+            var v = (value ?? "").Trim();
+            if (string.Equals(_seanceStartTime, v, StringComparison.Ordinal)) return;
+            _seanceStartTime = v;
+            OnPropertyChanged();
+        }
+    }
+
     private bool _isCash;
     public bool IsCash
     {
@@ -473,8 +488,24 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
         OnPropertyChanged(nameof(SmtpFromEmail));
         OnPropertyChanged(nameof(SmtpPassword));
 
+        BuildSeanceTimeSlots();
+        SeanceStartTime = RoundToQuarter(DateTime.Now.Hour * 60 + DateTime.Now.Minute);
+
         ReloadRefs();
         _ = CheckForUpdateAsync();
+    }
+
+    private void BuildSeanceTimeSlots()
+    {
+        SeanceTimeSlots.Clear();
+        for (var t = 0; t < 24 * 60; t += 15)
+            SeanceTimeSlots.Add(AppointmentScheduling.FormatMinutesAsHhMm(t));
+    }
+
+    private static string RoundToQuarter(int minutesSinceMidnight)
+    {
+        var m = Math.Clamp(((minutesSinceMidnight + 14) / 15) * 15, 0, 23 * 60 + 45);
+        return AppointmentScheduling.FormatMinutesAsHhMm(m);
     }
 
     private async Task CheckForUpdateAsync()
@@ -790,7 +821,7 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
 
             if (SeanceDate.Date == DateTime.Today)
             {
-                if (TryCreateAgendaAppointmentForToday(SelectedPatient.Id, SelectedTarif.Id, SelectedTarif.Label, out var newAppointmentId, out var markerPrefix))
+                if (TryCreateAgendaAppointmentForToday(SelectedPatient.Id, SelectedTarif.Id, SelectedTarif.Label, SeanceStartTime, out var newAppointmentId, out var markerPrefix))
                 {
                     createdAppointmentId = newAppointmentId;
                     finalComment = SeanceRdvTimeHelper.MergeRdvMarkerWithUserInput(markerPrefix, userNotes);
@@ -830,6 +861,7 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
         long patientId,
         long tarifId,
         string? tarifLabel,
+        string? requestedStartHhMm,
         out long appointmentId,
         out string markerPrefix)
     {
@@ -844,8 +876,24 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
         int? lunchStart = lunch.enabled ? lunch.startMin : null;
         int? lunchEnd = lunch.enabled ? lunch.endMin : null;
 
-        var now = DateTime.Now;
-        var earliestStart = now.Hour * 60 + now.Minute;
+        int? earliestStart = null;
+        var req = (requestedStartHhMm ?? "").Trim();
+        if (!string.IsNullOrWhiteSpace(req))
+        {
+            if (AppointmentScheduling.TryParseTimeToMinutes(req, out var reqMin))
+                earliestStart = reqMin;
+            else
+                MessageBox.Show(
+                    "Heure de séance invalide (format attendu HH:mm). Placement automatique sur le premier créneau disponible.",
+                    "PARAFacto",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+        }
+        if (!earliestStart.HasValue)
+        {
+            var now = DateTime.Now;
+            earliestStart = now.Hour * 60 + now.Minute;
+        }
         var durationMinutes = GuessDurationMinutesFromTarif(tarifLabel);
 
         var slot = AppointmentScheduling.FindFirstAvailableStart(
@@ -856,7 +904,7 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
             workdayStartMin,
             closingEndMin,
             stepMinutes: 15,
-            earliestStartMinInclusive: earliestStart,
+            earliestStartMinInclusive: earliestStart.Value,
             lunchBlockStartMin: lunchStart,
             lunchBlockEndMin: lunchEnd);
 

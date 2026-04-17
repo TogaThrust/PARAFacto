@@ -218,6 +218,11 @@
                             <WrapPanel Grid.Row="2">
                                 <TextBlock VerticalAlignment="Center" Text="Date:" Width="60"/>
                                 <DatePicker SelectedDate="{Binding Console.SeanceDate}" Width="140"/>
+                                <TextBlock VerticalAlignment="Center" Text="Heure:" Margin="16,0,0,0"/>
+                                <ComboBox Width="90"
+                                          IsEditable="True"
+                                          ItemsSource="{Binding Console.SeanceTimeSlots}"
+                                          SelectedItem="{Binding Console.SeanceStartTime}"/>
                                 <CheckBox Content="Cash cabinet (acquittée)" IsChecked="{Binding Console.IsCash}" Margin="20,0,0,0"/>
                             </WrapPanel>
 
