@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Threading;
 using System.Windows.Media.Imaging;
 using Dapper;
 using PARAFactoNative.Models;
@@ -738,13 +739,12 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
         try
         {
             IsBusy = true;
-            SeanceDate = DateTime.Today;
-            var day = DateTime.Today;
+            var day = SeanceDate.Date;
             var list = _appointments.ListForDay(day).OrderBy(a => a.StartTime).ToList();
             if (list.Count == 0)
             {
                 MessageBox.Show(
-                    $"Aucun rendez-vous dans l'agenda pour aujourd'hui ({day:dd/MM/yyyy}).",
+                    $"Aucun rendez-vous dans l'agenda pour le {day:dd/MM/yyyy} (date affichée en console).",
                     "PARAFacto — Agenda",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
@@ -771,7 +771,7 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
 
             if (skipped > 0)
                 sb.AppendLine($"{skipped} RDV déjà importé(s) (ignorés).");
-            sb.AppendLine($"{added} séance(s) ajoutée(s) depuis l'agenda (jour en cours uniquement).");
+            sb.AppendLine($"{added} séance(s) ajoutée(s) depuis l'agenda pour le {day:dd/MM/yyyy}.");
             MessageBox.Show(sb.ToString().Trim(), "IMPORTER AGENDA", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
@@ -1207,7 +1207,7 @@ Voulez-vous l'imprimer maintenant ?",
                 FileName = landing,
                 UseShellExecute = true
             });
-            // Laisser Windows lancer le navigateur avant de fermer l’app (sinon le shell peut ne pas afficher l’onglet).
+            // Laisser le shell ouvrir l’onglet, puis fermer l’app sur le thread UI (BeginInvoke évite blocages Invoke depuis le pool).
             _ = ShutdownAfterShortDelayAsync();
         }
         catch (Exception ex)
@@ -1233,7 +1233,25 @@ Voulez-vous l'imprimer maintenant ?",
 
         try
         {
-            Application.Current?.Dispatcher.Invoke(() => Application.Current.Shutdown(0));
+            var app = Application.Current;
+            if (app is null)
+            {
+                Environment.Exit(0);
+                return;
+            }
+
+            // Ne pas utiliser Dispatcher.Invoke ici : depuis le pool après await, ça peut ne jamais compléter selon l’état du message loop.
+            _ = app.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+            {
+                try
+                {
+                    app.Shutdown(0);
+                }
+                catch
+                {
+                    try { Environment.Exit(0); } catch { /* ignore */ }
+                }
+            }));
         }
         catch
         {

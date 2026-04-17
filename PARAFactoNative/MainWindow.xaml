@@ -312,7 +312,7 @@
                                     <Button DockPanel.Dock="Right"
                                             Style="{StaticResource ConsoleActionButtonStyle}"
                                             Content="IMPORTER AGENDA"
-                                            ToolTip="Importe les rendez-vous d’aujourd’hui uniquement et aligne la date des séances sur le jour en cours."
+                                            ToolTip="Importe les rendez-vous de l’agenda pour la date sélectionnée dans la console (passé ou futur) : une séance par RDV, avec la même date de séance."
                                             Command="{Binding Console.ImportAgendaCommand}"/>
                                     <TextBlock FontSize="14" FontWeight="Bold" Text="Séances du jour" VerticalAlignment="Center"/>
                                 </DockPanel>
