@@ -13,7 +13,7 @@
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <RootNamespace>PARAFactoNative</RootNamespace>
     <AssemblyName>PARAFactoNative</AssemblyName>
-    <Version>1.1.23</Version>
+    <Version>1.1.24</Version>
     <Product>PARAFacto</Product>
     <AssemblyTitle>PARAFacto</AssemblyTitle>
   </PropertyGroup>
