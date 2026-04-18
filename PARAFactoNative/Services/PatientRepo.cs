@@ -195,8 +195,57 @@ SET
   periode_accord=@PeriodeAccord,
   nomenclature=@Nomenclature,
   commentaire=@Commentaire
-WHERE id=@Id;
+            WHERE id=@Id;
 ", p);
+        }
+    }
+
+    public long CountSeancesForPatient(long patientId)
+    {
+        if (patientId <= 0) return 0;
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+        return cn.ExecuteScalar<long>("SELECT COUNT(1) FROM seances WHERE patient_id=@id;", new { id = patientId });
+    }
+
+    /// <summary>
+    /// Supprime le patient si aucune ligne dans <c>seances</c> (contrainte FK).
+    /// Les rendez-vous agenda (<c>appointments</c>) sont supprimés en cascade par SQLite.
+    /// </summary>
+    public bool TryDeletePatientIfNoSeances(long patientId, out string error)
+    {
+        error = "";
+        if (patientId <= 0)
+        {
+            error = "Identifiant patient invalide.";
+            return false;
+        }
+
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+
+        var n = cn.ExecuteScalar<long>("SELECT COUNT(1) FROM seances WHERE patient_id=@id;", new { id = patientId });
+        if (n > 0)
+        {
+            error = $"Impossible de supprimer ce patient : {n} séance(s) déjà enregistrée(s).";
+            return false;
+        }
+
+        try
+        {
+            var rows = cn.Execute("DELETE FROM patients WHERE id=@id;", new { id = patientId });
+            if (rows == 0)
+            {
+                error = "Patient introuvable.";
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
         }
     }
 }

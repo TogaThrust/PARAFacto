@@ -44,6 +44,8 @@ public sealed class ConsoleViewModel : NotifyBase
     // Navigation/events (consommés par MainWindow.xaml.cs)
     public event Action? RequestNewPatientRequested;
     public event Action<long?>? RequestEditPatientRequested;
+    /// <summary>Patient supprimé ou registre modifié : recharger les autres onglets.</summary>
+    public event Action? PatientRegistryChanged;
 #pragma warning disable CS0067 // Événement jamais utilisé (réservé pour usage futur)
     public event Action? RequestShowSeancesRequested;
     public event Action<DateTime>? RequestEditJournalierRequested;
@@ -94,6 +96,17 @@ public sealed class ConsoleViewModel : NotifyBase
                     var p = Path.Combine(root, "assets", "byTT.png");
                     if (File.Exists(p)) return p;
                 }
+
+                var baseDir = (AppContext.BaseDirectory ?? "").TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                if (baseDir.Length > 0)
+                {
+                    foreach (var rel in new[] { Path.Combine("Assets", "byTT.png"), "byTT.png" })
+                    {
+                        var p = Path.Combine(baseDir, rel);
+                        if (File.Exists(p)) return p;
+                    }
+                }
+
                 var fallback = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
                     "PARAFACTO_Native", "assets", "byTT.png");
@@ -150,6 +163,7 @@ public sealed class ConsoleViewModel : NotifyBase
             AddSeanceCommand.RaiseCanExecuteChanged();
             UpdateSeanceCommand.RaiseCanExecuteChanged();
             EditPatientCommand.RaiseCanExecuteChanged();
+            DeletePatientCommand.RaiseCanExecuteChanged();
             TryApplyTarifFromPatientStatut(_selectedPatient);
         }
     }
@@ -376,6 +390,7 @@ public sealed class ConsoleViewModel : NotifyBase
             ExportJournalierCommand.RaiseCanExecuteChanged();
             NewPatientCommand.RaiseCanExecuteChanged();
             EditPatientCommand.RaiseCanExecuteChanged();
+            DeletePatientCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -403,6 +418,7 @@ public sealed class ConsoleViewModel : NotifyBase
     // ===================== COMMANDS =====================
     public RelayCommand NewPatientCommand { get; }
     public RelayCommand EditPatientCommand { get; }
+    public RelayCommand DeletePatientCommand { get; }
     public RelayCommand AddSeanceCommand { get; }
     public RelayCommand UpdateSeanceCommand { get; }
     public RelayCommand DeleteSeanceCommand { get; }
@@ -436,6 +452,7 @@ public sealed class ConsoleViewModel : NotifyBase
         // => ne pas utiliser de lambda avec paramètre (_ => ...)
         NewPatientCommand = new RelayCommand(() => RequestNewPatientRequested?.Invoke(), () => !IsBusy);
         EditPatientCommand = new RelayCommand(() => RequestEditPatientRequested?.Invoke(SelectedPatient?.Id), () => !IsBusy && SelectedPatient is not null);
+        DeletePatientCommand = new RelayCommand(DeleteSelectedPatient, CanDeleteSelectedPatient);
 
         AddSeanceCommand = new RelayCommand(() => AddSeance(), () => !IsBusy && SelectedPatient is not null && SelectedTarif is not null);
         UpdateSeanceCommand = new RelayCommand(() => UpdateSelectedSeance(), () => !IsBusy && SelectedTodaySeance is not null && SelectedPatient is not null && SelectedTarif is not null);
@@ -578,6 +595,33 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
             SmtpFromEmail = SmtpFromEmail,
             SmtpPassword = SmtpPassword
         });
+    }
+
+    private bool CanDeleteSelectedPatient()
+        => !IsBusy
+           && SelectedPatient is not null
+           && SelectedPatient.Id > 0
+           && _patientRepo.CountSeancesForPatient(SelectedPatient.Id) == 0;
+
+    private void DeleteSelectedPatient()
+    {
+        if (!CanDeleteSelectedPatient() || SelectedPatient is null) return;
+
+        var p = SelectedPatient;
+        if (System.Windows.MessageBox.Show(
+                $"Supprimer définitivement ce patient ?\n\n{p.Display}\n\nLes rendez-vous agenda sans séance seront aussi retirés.",
+                "Confirmation",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+
+        if (!_patientRepo.TryDeletePatientIfNoSeances(p.Id, out var err))
+        {
+            MessageBox.Show(err, "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        PatientRegistryChanged?.Invoke();
     }
 
     public void ReloadRefs()

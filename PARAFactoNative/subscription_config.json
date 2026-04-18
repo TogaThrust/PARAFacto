@@ -1,6 +1,7 @@
 {
   "licenseCheckApiUrl": "https://parafacto.netlify.app/.netlify/functions/license-check",
-  "paymentPageUrl": "https://buy.stripe.com/00waEQ7sSc84cEabmeak000",
+  "paymentPageUrl": "https://buy.stripe.com/8x2bIUfZofkg5bI8a2ak001",
   "skipValidation": false,
-  "renewalWarningDays": 7
+  "renewalWarningDays": 7,
+  "_stripe_doc": "Netlify: soit PARAFACTO_PAYMENT_LINK_IDS=plink_... (souvent suffisant), soit PARAFACTO_PRICE_IDS=price promo + price standard, soit métadonnées parafacto sur le lien."
 }

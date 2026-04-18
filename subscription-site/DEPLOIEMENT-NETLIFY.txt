@@ -31,6 +31,15 @@ MÉTHODE RECOMMANDÉE (Git + Netlify)
   - Site settings > Environment variables :
       STRIPE_SECRET_KEY = sk_live_... (ou sk_test_... en test)
 
+  - Webhook checkout (fonction stripe-webhook.js) — au moins UN des filtres suivants doit matcher :
+      A) PARAFACTO_PAYMENT_LINK_IDS = id(s) du Payment Link Stripe, forme plink_xxxxxxxx
+         (Stripe > Liens de paiement > ouvrir le lien > copier l’ID, ex. dans l’URL du tableau de bord).
+         Si vous utilisez buy.stripe.com/..., c’est en général SUFFISANT : pas besoin de PARAFACTO_PRICE_IDS.
+      B) PARAFACTO_PRICE_IDS = price_xxx,price_yyy (liste des price autorisés sur la session Checkout).
+      C) Métadonnées sur la session / le lien : product_line=parafacto_native OU app=parafacto OU brand=parafacto
+      Exemple prix (si vous ajoutez B) : promo 19,99 EUR price_1TNE3n1Uq3SAnIi7m8Y965Z6 + standard 29,99 EUR
+        price_1TNE4U1Uq3SAnIi7edfHWutA ; retirer l’ancien price_1TJfyS1Uq3SAnIi7lS49bvvo.
+
 IMPORTANT — GLISSER-DÉPOSER SEUL
 ---------------------------------
   Un déploiement manuel en ne déposant QUE le dossier « public » ne publie PAS
@@ -62,6 +71,8 @@ URL À METTRE DANS subscription_config.json (application Windows)
     https://VOTRE-SITE.netlify.app/.netlify/functions/license-check
 
   paymentPageUrl :
-    le même lien Stripe que le bouton « Souscrire » sur index.html
+    URL du Payment Link Stripe actif (Produits > Liens de paiement > copier),
+    du type https://buy.stripe.com/...
+    Elle doit pointer vers l’offre avec les price_ ci-dessus (promo puis standard).
 
 ================================================================================

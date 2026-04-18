@@ -31,9 +31,9 @@
     de ces 3 fichiers si changement, AVANT dotnet publish et Inno (sauf -SkipGitCommitPush).
 
   app-version.json :
-    Contient latestVersion, installerUrl (exe GitHub par tag), downloadPageUrl (page Netlify avec consignes).
-    Apres publication : creez sur GitHub une release avec le tag vVERSION (ex. v1.2.3) et joignez
-    PARAFactoNative_Installer.exe, sinon le lien de telechargement renvoie 404 ou un ancien fichier.
+    Contient latestVersion, installerUrl (URL stable .../releases/latest/download/PARAFactoNative_Installer.exe),
+    downloadPageUrl (page Netlify avec consignes).
+    Deploiement : publiez l installateur sur GitHub (release marquee Latest), puis augmentez latestVersion pour l annonce MAJ.
 #>
 
 param(
@@ -159,8 +159,9 @@ function Set-AppVersionJson {
     if (-not (Test-Path $dir)) {
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
     }
-    # URL par tag GitHub (pas "releases/latest" : sinon on telecharge encore l'exe de l'ancienne release).
-    $installerUrl = "https://github.com/TogaThrust/PARAFacto/releases/download/v$VersionText/PARAFactoNative_Installer.exe"
+    # URL stable : toujours la pièce jointe de la release GitHub marquée « Latest » (évite 404 si le tag vX.Y.Z n’existe pas encore).
+    # Déploiement : publier d’abord la release + l’installateur sur GitHub, puis monter latestVersion ici pour que la MAJ s’affiche.
+    $installerUrl = "https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe"
     $downloadPageUrl = "https://parafactoupdate.netlify.app/"
     $content = "{`n  `"latestVersion`": `"$VersionText`",`n  `"installerUrl`": `"$installerUrl`",`n  `"downloadPageUrl`": `"$downloadPageUrl`"`n}`n"
     Set-Content -Path $JsonPath -Value $content -Encoding ASCII
@@ -401,9 +402,9 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish a echoue (code $LASTEXITCODE)."
 }
 
-$mainExe = Join-Path $publishDir "PARAFactoNative.exe"
+$mainExe = Join-Path $publishDir "PARAFacto.exe"
 if (-not (Test-Path $mainExe)) {
-    throw "PARAFactoNative.exe introuvable dans $publishDir"
+    throw "PARAFacto.exe introuvable dans $publishDir"
 }
 
 # Inno interprete \t, \n, etc. dans les chemins (ex. C:\Users\togat\...) : doubler chaque \ pour le fichier .iss.
@@ -419,7 +420,7 @@ $innoScript = @"
 #define MyAppName "PARAFacto"
 #define MyAppVersion "$AppVersion"
 #define MyAppPublisher "$Publisher"
-#define MyAppExeName "PARAFactoNative.exe"
+#define MyAppExeName "PARAFacto.exe"
 
 [Setup]
 AppId=$AppId
@@ -438,12 +439,21 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=yes
+UsePreviousAppDir=no
 
 [Languages]
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "Creer un raccourci sur le Bureau"; GroupDescription: "Raccourcis :"; Flags: unchecked
+
+[InstallDelete]
+Type: files; Name: "{app}\PARAFactoNative.exe"
+Type: files; Name: "{autodesktop}\PARAFacto Native.lnk"
+Type: files; Name: "{userdesktop}\PARAFacto Native.lnk"
+Type: files; Name: "{commondesktop}\PARAFacto Native.lnk"
+Type: files; Name: "{userprograms}\PARAFacto Native\PARAFacto Native.lnk"
+Type: files; Name: "{commonprograms}\PARAFacto Native\PARAFacto Native.lnk"
 
 [Files]
 Source: "$publishDirInno\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs

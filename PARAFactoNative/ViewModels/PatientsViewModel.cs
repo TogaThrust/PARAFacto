@@ -57,6 +57,7 @@ public sealed class PatientsViewModel : NotifyBase
             _selected = value;
             OnPropertyChanged();
             EditCommand.RaiseCanExecuteChanged();
+            DeletePatientCommand.RaiseCanExecuteChanged();
             ApplySelectionToEditor();
         }
     }
@@ -76,6 +77,7 @@ public sealed class PatientsViewModel : NotifyBase
             // IMPORTANT: RelayCommand ne se réévalue pas automatiquement
             SaveCommand.RaiseCanExecuteChanged();
             CancelCommand.RaiseCanExecuteChanged();
+            DeletePatientCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -95,6 +97,7 @@ public sealed class PatientsViewModel : NotifyBase
             _isNew = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsCode3ReadOnly));
+            DeletePatientCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -199,6 +202,7 @@ public sealed class PatientsViewModel : NotifyBase
     public RelayCommand EditCommand { get; }
     public RelayCommand SaveCommand { get; }
     public RelayCommand CancelCommand { get; }
+    public RelayCommand DeletePatientCommand { get; }
 
     public PatientsViewModel()
     {
@@ -212,6 +216,7 @@ public sealed class PatientsViewModel : NotifyBase
         EditCommand = new RelayCommand(() => EditOrSave(), () => Selected is not null || IsEditing);
         SaveCommand = new RelayCommand(() => Save(), () => IsEditing);
         CancelCommand = new RelayCommand(() => Cancel(), () => IsEditing);
+        DeletePatientCommand = new RelayCommand(DeleteSelectedPatient, CanDeleteSelectedPatient);
 
         ReloadTarifChoices();
         Reload();
@@ -277,8 +282,42 @@ public sealed class PatientsViewModel : NotifyBase
         }
 
         OnPropertyChanged(nameof(CountLabel));
+        DeletePatientCommand.RaiseCanExecuteChanged();
     }
 
+    private bool CanDeleteSelectedPatient()
+    {
+        if (IsNew) return false;
+        if (Selected is null) return false;
+        var id = GetId(Selected);
+        if (id <= 0) return false;
+        return _repo.CountSeancesForPatient(id) == 0;
+    }
+
+    private void DeleteSelectedPatient()
+    {
+        if (!CanDeleteSelectedPatient() || Selected is null) return;
+
+        var id = GetId(Selected);
+        var label = $"{(Selected.Code3 ?? "").Trim()} — {(Selected.LastName ?? "").Trim()} {(Selected.FirstName ?? "").Trim()}".Trim();
+        if (System.Windows.MessageBox.Show(
+                $"Supprimer définitivement ce patient ?\n\n{label}\n\nLes rendez-vous agenda sans séance seront aussi retirés.",
+                "Confirmation",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+
+        if (!_repo.TryDeletePatientIfNoSeances(id, out var err))
+        {
+            MessageBox.Show(err, "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        IsEditing = false;
+        IsNew = false;
+        EditingId = 0;
+        ImportCompleted?.Invoke();
+    }
 
     private void ApplySelectionToEditor()
     {

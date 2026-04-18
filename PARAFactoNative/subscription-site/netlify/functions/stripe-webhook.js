@@ -1,3 +1,11 @@
+/**
+ * Webhook Stripe — e-mails post-checkout PARAFacto.
+ *
+ * Netlify — au choix (le webhook accepte l’un OU l’autre OU les métadonnées produit) :
+ *   PARAFACTO_PAYMENT_LINK_IDS = plink_... (ID du Payment Link ; suffit souvent si checkout via buy.stripe.com)
+ *   PARAFACTO_PRICE_IDS = price_...,price_... (ex. promo 19,99 price_1TNE3n1Uq3SAnIi7m8Y965Z6 + 29,99 price_1TNE4U1Uq3SAnIi7edfHWutA)
+ * Ancien prix archivé : price_1TJfyS1Uq3SAnIi7lS49bvvo — à ne plus lister si vous utilisez PARAFACTO_PRICE_IDS.
+ */
 const Stripe = require("stripe");
 
 function parseCsvEnv(value) {

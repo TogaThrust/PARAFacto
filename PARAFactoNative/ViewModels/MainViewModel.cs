@@ -71,6 +71,7 @@ public sealed class MainViewModel : NotifyBase
 
         Console.LinkedAgendaDataChanged += () => Agenda.RefreshAppointmentsCalendar();
 
+        Console.PatientRegistryChanged += ReloadAll;
         Patients.ImportCompleted += ReloadAll;
 
         Tarifs.TariffsChanged += () =>

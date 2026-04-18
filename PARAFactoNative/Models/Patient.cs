@@ -45,7 +45,7 @@ public sealed class Patient
     public string? Phone { get; set; }
     public string? Email { get; set; }
 
-    // --- Statut (BIM / NON BIM)
+    // --- Tarif RDV par défaut (libellé tarif actif ; « NON BIM » reste défaut jusqu’à choix en fiche médicale)
     public string Statut { get; set; } = "NON BIM";
 
     // --- Mutuelle

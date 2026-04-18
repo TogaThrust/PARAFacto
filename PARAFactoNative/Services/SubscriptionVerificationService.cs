@@ -154,11 +154,16 @@ public static class SubscriptionVerificationService
 
     private static bool ShouldSkipValidation()
     {
+        // Installateur / exe « vendeur » (ParafactoLocalDemoBuild) : pas d’abonnement Stripe requis pour démo et support.
+#if PARAFACTO_LOCAL_DEMO_BUILD
+        return true;
+#else
         var env = Environment.GetEnvironmentVariable("PARAFACTO_SKIP_SUBSCRIPTION");
         if (string.Equals(env, "1", StringComparison.OrdinalIgnoreCase)
             || string.Equals(env, "true", StringComparison.OrdinalIgnoreCase))
             return true;
         return false;
+#endif
     }
 
     private static void MaybeShowRenewalWarning(
@@ -321,18 +326,41 @@ public static class SubscriptionVerificationService
 
     public static void OpenPaymentPage(string? paymentPageUrl)
     {
-        var url = paymentPageUrl;
-        if (string.IsNullOrWhiteSpace(url))
-            url = SubscriptionConfigLoader.LoadMergedConfig().PaymentPageUrl;
-        if (string.IsNullOrWhiteSpace(url))
+        var url = (paymentPageUrl ?? "").Trim();
+        if (url.Length == 0)
+            url = (SubscriptionConfigLoader.LoadMergedConfig().PaymentPageUrl ?? "").Trim();
+        if (url.Length == 0)
+        {
+            MessageBox.Show(
+                "Aucune URL de page de paiement n'est configurée (subscription_config.json : paymentPageUrl).",
+                "PARAFacto — Paiement",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
             return;
+        }
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            MessageBox.Show(
+                "Le lien de paiement configuré n'est pas une adresse http(s) valide. Vérifiez subscription_config.json (paymentPageUrl).",
+                "PARAFacto — Paiement",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
         try
         {
-            Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+            Process.Start(new ProcessStartInfo { FileName = uri.ToString(), UseShellExecute = true });
         }
-        catch
+        catch (Exception ex)
         {
-            // ignore
+            MessageBox.Show(
+                $"Impossible d'ouvrir le navigateur pour le paiement.\n\n{ex.Message}",
+                "PARAFacto — Paiement",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
         }
     }
 }
