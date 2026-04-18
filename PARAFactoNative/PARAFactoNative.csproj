@@ -13,7 +13,12 @@
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <RootNamespace>PARAFactoNative</RootNamespace>
     <AssemblyName>PARAFactoNative</AssemblyName>
-    <Version>1.1.19</Version>
+    <Version>1.1.20</Version>
+  </PropertyGroup>
+
+  <!-- Builds clients : ne pas définir ParafactoLocalDemoBuild. Démo locale : dotnet build -p:ParafactoLocalDemoBuild=true -->
+  <PropertyGroup Condition="'$(ParafactoLocalDemoBuild)' == 'true'">
+    <DefineConstants>$(DefineConstants);PARAFACTO_LOCAL_DEMO_BUILD</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -36,6 +41,7 @@
     <Content Include="Assets\french.jpg" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\english.jpg" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\dutch.jpg" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\default_professional_logo.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="subscription_config.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Legal\PolitiqueConfidentialite.txt" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Legal\ConditionsUtilisation.txt" CopyToOutputDirectory="PreserveNewest" />
