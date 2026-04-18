@@ -1,14 +1,45 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <sys:String x:Key="App.WindowTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">PARAFACTO Native</sys:String>
+    <sys:String x:Key="App.WindowTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">PARAFacto</sys:String>
     <sys:String x:Key="Tab.Console" xmlns:sys="clr-namespace:System;assembly=mscorlib">Console</sys:String>
     <sys:String x:Key="Tab.Patients" xmlns:sys="clr-namespace:System;assembly=mscorlib">Patients</sys:String>
     <sys:String x:Key="Tab.Tarifs" xmlns:sys="clr-namespace:System;assembly=mscorlib">Tarifs</sys:String>
+    <sys:String x:Key="Tab.Professional" xmlns:sys="clr-namespace:System;assembly=mscorlib">Données professionnelles</sys:String>
     <sys:String x:Key="Tab.Seances" xmlns:sys="clr-namespace:System;assembly=mscorlib">Séances</sys:String>
     <sys:String x:Key="Tab.Factures" xmlns:sys="clr-namespace:System;assembly=mscorlib">Factures</sys:String>
     <sys:String x:Key="Tab.Agenda" xmlns:sys="clr-namespace:System;assembly=mscorlib">Agenda RDV</sys:String>
     <sys:String x:Key="Tab.Technical" xmlns:sys="clr-namespace:System;assembly=mscorlib">Données techniques</sys:String>
     <sys:String x:Key="Tab.Support" xmlns:sys="clr-namespace:System;assembly=mscorlib">Aide</sys:String>
+    <sys:String x:Key="Professional.Intro" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ces informations apparaissent sur les factures patients, notes de crédit, factures acquittées et états récapitulatifs mutuelles. Le logo et le titre sont aussi affichés dans la console.</sys:String>
+    <sys:String x:Key="Professional.Reload" xmlns:sys="clr-namespace:System;assembly=mscorlib">Recharger depuis le disque</sys:String>
+    <sys:String x:Key="Professional.Save" xmlns:sys="clr-namespace:System;assembly=mscorlib">Enregistrer</sys:String>
+    <sys:String x:Key="Professional.LogoPreview" xmlns:sys="clr-namespace:System;assembly=mscorlib">Logo (aperçu)</sys:String>
+    <sys:String x:Key="Professional.PickImage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choisir une image…</sys:String>
+    <sys:String x:Key="Professional.RemoveLogo" xmlns:sys="clr-namespace:System;assembly=mscorlib">Retirer le logo</sys:String>
+    <sys:String x:Key="Professional.Label.ConsoleTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Console — titre à côté du logo</sys:String>
+    <sys:String x:Key="Professional.Label.InvoiceName" xmlns:sys="clr-namespace:System;assembly=mscorlib">Factures / NC — nom ou titre du praticien (ligne principale)</sys:String>
+    <sys:String x:Key="Professional.Label.ReminderSignature" xmlns:sys="clr-namespace:System;assembly=mscorlib">Rappels factures (signature WhatsApp / mail)</sys:String>
+    <sys:String x:Key="Professional.Section.Address" xmlns:sys="clr-namespace:System;assembly=mscorlib">Adresse et coordonnées (bloc facture patient)</sys:String>
+    <sys:String x:Key="Professional.Label.AddressLine1" xmlns:sys="clr-namespace:System;assembly=mscorlib">Adresse ligne 1</sys:String>
+    <sys:String x:Key="Professional.Label.AddressLine2" xmlns:sys="clr-namespace:System;assembly=mscorlib">Adresse ligne 2 (ex. CP Ville)</sys:String>
+    <sys:String x:Key="Professional.Label.Inami" xmlns:sys="clr-namespace:System;assembly=mscorlib">N° INAMI</sys:String>
+    <sys:String x:Key="Professional.Label.Vat" xmlns:sys="clr-namespace:System;assembly=mscorlib">N° TVA</sys:String>
+    <sys:String x:Key="Professional.Label.Phone" xmlns:sys="clr-namespace:System;assembly=mscorlib">Téléphone</sys:String>
+    <sys:String x:Key="Professional.Label.Email" xmlns:sys="clr-namespace:System;assembly=mscorlib">E-mail</sys:String>
+    <sys:String x:Key="Professional.Section.Payments" xmlns:sys="clr-namespace:System;assembly=mscorlib">Paiements (IBAN / BIC)</sys:String>
+    <sys:String x:Key="Professional.Label.IbanPatient" xmlns:sys="clr-namespace:System;assembly=mscorlib">IBAN (factures patients / NC)</sys:String>
+    <sys:String x:Key="Professional.Label.IbanMutuelle" xmlns:sys="clr-namespace:System;assembly=mscorlib">IBAN (état mutuelle)</sys:String>
+    <sys:String x:Key="Professional.Label.IbanCreditNote" xmlns:sys="clr-namespace:System;assembly=mscorlib">IBAN (notes de crédit — optionnel)</sys:String>
+    <sys:String x:Key="Professional.Label.Bic" xmlns:sys="clr-namespace:System;assembly=mscorlib">BIC</sys:String>
+    <sys:String x:Key="Professional.Section.MutualRecap" xmlns:sys="clr-namespace:System;assembly=mscorlib">État récapitulatif mutuelle</sys:String>
+    <sys:String x:Key="Professional.MutualRecap.Help" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ligne « Nom et prénom du prestataire » et adresse complète sur une seule ligne. Si l’adresse dédiée est vide, les lignes 1 et 2 ci-dessus sont combinées.</sys:String>
+    <sys:String x:Key="Professional.Label.MutualName" xmlns:sys="clr-namespace:System;assembly=mscorlib">Nom et prénom (ex. DUPONT Jean)</sys:String>
+    <sys:String x:Key="Professional.Label.MutualAddress" xmlns:sys="clr-namespace:System;assembly=mscorlib">Adresse (une ligne, optionnel)</sys:String>
+    <sys:String x:Key="Professional.PickLogo.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choisir le logo du praticien</sys:String>
+    <sys:String x:Key="Professional.PickLogo.Filter" xmlns:sys="clr-namespace:System;assembly=mscorlib">Images|*.jpg;*.jpeg;*.png;*.bmp;*.gif|Tous les fichiers|*.*</sys:String>
+    <sys:String x:Key="Professional.Validation.RequiredFields" xmlns:sys="clr-namespace:System;assembly=mscorlib">Le titre console et le nom sur les factures sont obligatoires.</sys:String>
+    <sys:String x:Key="Professional.Save.Success" xmlns:sys="clr-namespace:System;assembly=mscorlib">Données professionnelles enregistrées. Les prochains PDF utiliseront ces informations.</sys:String>
+    <sys:String x:Key="Professional.Save.ErrorTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Enregistrement — erreur</sys:String>
     <sys:String x:Key="Language.TooltipFr" xmlns:sys="clr-namespace:System;assembly=mscorlib">Français</sys:String>
     <sys:String x:Key="Language.TooltipEn" xmlns:sys="clr-namespace:System;assembly=mscorlib">Anglais</sys:String>
     <sys:String x:Key="Language.TooltipNl" xmlns:sys="clr-namespace:System;assembly=mscorlib">Néerlandais</sys:String>
@@ -29,6 +60,8 @@
     <sys:String x:Key="Factures.Button.CancelLoss" xmlns:sys="clr-namespace:System;assembly=mscorlib">Annuler perte</sys:String>
     <sys:String x:Key="Factures.Button.CreditNote" xmlns:sys="clr-namespace:System;assembly=mscorlib">Note de crédit</sys:String>
     <sys:String x:Key="Factures.Button.MutualEdit" xmlns:sys="clr-namespace:System;assembly=mscorlib">Modif mutuelle</sys:String>
+    <sys:String x:Key="Factures.Button.DeleteMutualMod" xmlns:sys="clr-namespace:System;assembly=mscorlib">Suppr. modif.</sys:String>
+    <sys:String x:Key="Factures.Tooltip.DeleteMutualMod" xmlns:sys="clr-namespace:System;assembly=mscorlib">Supprimer la facture mutuelle « modifiée » (-MOD) et réactiver l’originale si besoin</sys:String>
     <sys:String x:Key="Factures.Button.OpenFolder" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ouvrir dossier</sys:String>
     <sys:String x:Key="Factures.MonthDeletion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Suppression du mois</sys:String>
     <sys:String x:Key="Factures.DeleteAllMonth" xmlns:sys="clr-namespace:System;assembly=mscorlib">Supprimer toutes les factures du mois</sys:String>
@@ -40,8 +73,8 @@
     <sys:String x:Key="Factures.TotalRecorded" xmlns:sys="clr-namespace:System;assembly=mscorlib">TOTAL ENREGISTRÉ</sys:String>
     <sys:String x:Key="Factures.LossesLabel" xmlns:sys="clr-namespace:System;assembly=mscorlib">PERTES : </sys:String>
     <sys:String x:Key="Agenda.RatePrefillHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Le tarif est prérempli selon le statut du patient (fiche). Vous pouvez le changer.</sys:String>
-    <sys:String x:Key="Agenda.DayWorkdayOverrideHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Un double clic sur la date vous permet de modifier l'heure de début et de fin pour cette journée particulière (seulement en vue mois/semaine).</sys:String>
-    <sys:String x:Key="Agenda.DayLunchOverrideHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Un double clic sur l'heure de pause vous permet de modifier le créneau de pause déjeuner pour cette date particulière.</sys:String>
+    <sys:String x:Key="Agenda.DayWorkdayOverrideHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Maj + double clic sur la date : heure de début et de fin de journée pour ce jour (vues mois/semaine). En vue Jour : Maj + double clic sur la liste.</sys:String>
+    <sys:String x:Key="Agenda.DayLunchOverrideHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Double clic sur la date (vues mois/semaine) ou sur la liste du jour : pause déjeuner pour cette date, même sans bandeau jaune. Double clic sur la ligne jaune : idem.</sys:String>
     <sys:String x:Key="Agenda.UpdateButton.Text" xmlns:sys="clr-namespace:System;assembly=mscorlib">Nouvelle version disponible - Télécharger l'installation</sys:String>
     <sys:String x:Key="Agenda.UpdateButton.Tooltip" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ouvrir la page de téléchargement de l'installateur</sys:String>
     <sys:String x:Key="Unavailability.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Indisponibilité</sys:String>
@@ -66,7 +99,7 @@
     <sys:String x:Key="Help.Chat.Body" xmlns:sys="clr-namespace:System;assembly=mscorlib">Un chat en ligne avec notre équipe sera proposé dans une prochaine version. En attendant, l’e-mail vers le helpdesk reste le canal recommandé pour un suivi clair et tracé.</sys:String>
     <sys:String x:Key="Help.Faq.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Questions fréquentes</sys:String>
     <sys:String x:Key="Help.Faq.Intro" xmlns:sys="clr-namespace:System;assembly=mscorlib">Développez une question pour afficher la réponse.</sys:String>
-    <sys:String x:Key="Help.Faq1.Q" xmlns:sys="clr-namespace:System;assembly=mscorlib">Comment mettre à jour PARAFacto Native ?</sys:String>
+    <sys:String x:Key="Help.Faq1.Q" xmlns:sys="clr-namespace:System;assembly=mscorlib">Comment mettre à jour PARAFacto ?</sys:String>
     <sys:String x:Key="Help.Faq1.A" xmlns:sys="clr-namespace:System;assembly=mscorlib">Lorsqu’une nouvelle version est publiée, un message apparaît sur la console. Suivez le lien pour ouvrir la page de téléchargement, fermez complètement l’application puis exécutez l’installateur.</sys:String>
     <sys:String x:Key="Help.Faq2.Q" xmlns:sys="clr-namespace:System;assembly=mscorlib">Où gérer mon abonnement ou mes factures ?</sys:String>
     <sys:String x:Key="Help.Faq2.A" xmlns:sys="clr-namespace:System;assembly=mscorlib">Dans l’onglet Données techniques, le portail clients (Stripe) permet, selon les options activées, de consulter factures, moyen de paiement et abonnement.</sys:String>

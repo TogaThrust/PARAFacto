@@ -62,7 +62,7 @@ public sealed class DatabaseBackupEmailService
                 SmtpPassword = mailSettings.SmtpPassword
             };
 
-            var subject = $"DB Laura Grenier (sauvegarde) {DateTime.Now:dd-MM-yyyy HH:mm}";
+            var subject = $"PARAFacto — sauvegarde base {DateTime.Now:dd-MM-yyyy HH:mm}";
             var body = $"Copie de la base de données ({DbFileName}) générée automatiquement par PARAFACTO.\n\nPièce jointe : {Path.GetFileName(tempPath)}";
 
             if (!sender.TrySend(backupSettings, subject, body, attachments, out error))

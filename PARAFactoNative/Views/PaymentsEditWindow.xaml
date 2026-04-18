@@ -28,18 +28,29 @@
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
                       CanUserDeleteRows="False"
+                      IsReadOnly="False"
+                      EnableRowVirtualization="False"
+                      EnableColumnVirtualization="False"
                       SelectionMode="Single"
                       HeadersVisibility="Column"
                       Margin="0,0,0,0">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Date (YYYY-MM-DD)" Binding="{Binding PaidDateIso, UpdateSourceTrigger=PropertyChanged}" Width="140"/>
                     <DataGridTextColumn Header="Montant (€)" Binding="{Binding AmountEuroText, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
-                    <DataGridTemplateColumn Header="Méthode" Width="140">
+                    <DataGridTemplateColumn Header="Méthode" Width="160">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <ComboBox ItemsSource="{Binding Methods, RelativeSource={RelativeSource AncestorType=Window}}"
-                                          SelectedItem="{Binding Method, UpdateSourceTrigger=PropertyChanged}"
-                                          MinWidth="120"/>
+                                <!-- ComboBox dans une cellule DataGrid : clics / focus souvent cassés ; menu contextuel fiable. -->
+                                <Button MinWidth="130"
+                                        HorizontalContentAlignment="Left"
+                                        Padding="8,4"
+                                        Click="PaymentMethodButton_Click"
+                                        ToolTip="Cliquer pour choisir le moyen de paiement">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Method, Mode=OneWay}" VerticalAlignment="Center"/>
+                                        <TextBlock Margin="6,0,0,0" Text="▼" FontSize="10" VerticalAlignment="Center" Foreground="#666"/>
+                                    </StackPanel>
+                                </Button>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

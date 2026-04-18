@@ -40,7 +40,7 @@ public static class SubscriptionVerificationService
             MessageBox.Show(
                 owner,
                 "La configuration d'abonnement est incomplète (fichier subscription_config.json : licenseCheckApiUrl). Contactez votre distributeur.",
-                "PARAFacto Native — Abonnement",
+                "PARAFacto — Abonnement",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             return false;
@@ -81,7 +81,7 @@ public static class SubscriptionVerificationService
             for (;;)
             {
                 var invalidWin = new ActionChoiceWindow(
-                    "PARAFacto Native — Abonnement",
+                    "PARAFacto — Abonnement",
                     "Ce code n'est pas ou plus valable, merci de bien vouloir vous rendre sur la page des paiements.",
                     "Ouvrir la page de paiements",
                     "Corriger l'identifiant",
@@ -190,7 +190,7 @@ public static class SubscriptionVerificationService
             owner,
             $"Votre période d'abonnement se termine le {endLocal:dd/MM/yyyy HH:mm}.\n\n" +
             "Pensez à valider le paiement du mois à venir (carte, portail client Stripe) pour éviter toute interruption.",
-            "PARAFacto Native — Renouvellement",
+            "PARAFacto — Renouvellement",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
     }

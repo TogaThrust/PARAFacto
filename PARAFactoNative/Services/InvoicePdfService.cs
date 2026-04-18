@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using PARAFactoNative.Models;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -12,21 +13,7 @@ namespace PARAFactoNative.Services;
 
 public sealed class InvoicePdfService
 {
-    // NOTE: ces infos "prestataire" sont volontairement alignées sur tes PDFs exemples.
-    // Si tu veux, on les mettra ensuite dans un fichier de config / table (app_meta).
-    private const string ProviderName = "Laura GRENIER - Logopède";
-    private const string ProviderNameScomm = "Laura GRENIER - Logopède SCOM";
-    private const string ProviderAddress1 = "132, Rue Jules Destrée";
-    private const string ProviderAddress2 = "7390 Quaregnon";
-    private const string ProviderInami = "6-09258-96-801";
-    private const string ProviderVat = "BE1033.597.257";
-    private const string ProviderBce = "BE 1033.597.257";
-    private const string ProviderPhone = "0470/17.95.17";
-    private const string ProviderEmail = "lauragrenier.logo@gmail.com";
-    private const string ProviderIban = "BE02 7320 8593 1240";
-    private const string ProviderIbanMutu = "BE02 7320 8593 1240";
-    private const string ProviderIbanCredit = "BE02 7320 8593 1240";
-    private const string ProviderBicCredit = "CREGBEBB";
+    private static readonly Regex CreditNotePublicNumberFormat = new(@"^\d{2}-\d{4}-\d+$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public string EnsureFolder(string folder)
     {
@@ -68,23 +55,172 @@ public sealed class InvoicePdfService
 }
 
 
-    /// <summary>Même dossier que la facture mutuelle originale, nom avec suffixe -MOD pour rester à côté dans l'explorateur.</summary>
+    /// <summary>
+    /// Même dossier que la facture mutuelle originale. Fichier court distinct de l’état normal : <c>EtatRecap_MUT_04-2026_MOD.pdf</c>.
+    /// </summary>
     public string BuildMutualRecapModifPdfPath(string mutualName, string period)
     {
         var folder = WorkspacePaths.MutualMonthFolder(period, mutualName);
         var mmYYYY = WorkspacePaths.ToMMYYYY(period);
         var safe = MakeSafeFileName((mutualName ?? "").Trim().ToUpperInvariant());
-        return Path.Combine(folder, $"EtatRecap_{safe}_{mmYYYY}-MOD.pdf");
+        return Path.Combine(folder, $"EtatRecap_{safe}_{mmYYYY}_MOD.pdf");
+    }
+
+    private static readonly Regex EtatMutualInvoicePeriodRegex = new(
+        @"(?i)ETAT[^\d]*(\d{2})[^\d]*(\d{4})",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static string NormalizeDashesForInvoiceParse(string? s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        return s
+            .Replace('\u2011', '-')
+            .Replace('\u2012', '-')
+            .Replace('\u2013', '-')
+            .Replace('\u2014', '-')
+            .Replace('\u2010', '-')
+            .Replace('\u2212', '-');
+    }
+
+    /// <summary>
+    /// Chemins absolus des PDF d’état <c>-MOD</c> existants à supprimer (construits + recherche dans le dossier mutuelle du mois).
+    /// </summary>
+    public IEnumerable<string> GetMutualModificationPdfPathsForDeletion(
+        string? mutuelle, string? recipient, string? period, string? dateIso, string? invoiceNo)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        void addIfExists(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return;
+            try
+            {
+                var full = Path.GetFullPath(path.Trim());
+                if (File.Exists(full))
+                    result.Add(full);
+            }
+            catch
+            {
+                /* chemin invalide */
+            }
+        }
+
+        var mutualKeys = new List<string>();
+        foreach (var s in new[] { mutuelle, recipient })
+        {
+            var t = (s ?? "").Trim();
+            if (t.Length == 0) continue;
+            if (mutualKeys.Exists(x => string.Equals(x, t, StringComparison.OrdinalIgnoreCase))) continue;
+            mutualKeys.Add(t);
+        }
+
+        if (mutualKeys.Count == 0)
+            return result;
+
+        var periodHints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var p0 = (period ?? "").Trim();
+        if (p0.Length > 0) periodHints.Add(p0);
+        var di = (dateIso ?? "").Trim();
+        if (di.Length >= 7) periodHints.Add(di[..7]);
+        var noNorm = NormalizeDashesForInvoiceParse(invoiceNo);
+        var m = EtatMutualInvoicePeriodRegex.Match(noNorm);
+        if (m.Success)
+        {
+            var mm = m.Groups[1].Value;
+            var yyyy = m.Groups[2].Value;
+            periodHints.Add($"{yyyy}-{mm}");
+            periodHints.Add($"{mm}-{yyyy}");
+        }
+
+        if (periodHints.Count == 0)
+            return result;
+
+        var no = (invoiceNo ?? "").Trim();
+        var noUpperSafe = no.Length > 0 ? MakeSafeFileName(no.ToUpperInvariant()) : "";
+
+        foreach (var mk in mutualKeys)
+        {
+            foreach (var ph in periodHints)
+            {
+                addIfExists(BuildMutualRecapModifPdfPath(mk, ph));
+
+                var mmYYYY = WorkspacePaths.ToMMYYYY(ph);
+                var safe = MakeSafeFileName(mk.Trim().ToUpperInvariant());
+                var folder = WorkspacePaths.MutualMonthFolder(ph, mk);
+                addIfExists(Path.Combine(folder, $"EtatRecap_{safe}_{mmYYYY}-MOD.pdf"));
+                if (no.Length > 0 && noUpperSafe.Length > 0 &&
+                    !string.Equals(noUpperSafe, "Document", StringComparison.OrdinalIgnoreCase))
+                    addIfExists(Path.Combine(folder, $"EtatRecap_{safe}_{mmYYYY}_MOD_{noUpperSafe}.pdf"));
+
+                try
+                {
+                    if (!Directory.Exists(folder)) continue;
+                    var prefix = $"EtatRecap_{safe}_{mmYYYY}_";
+                    foreach (var file in Directory.EnumerateFiles(folder, "*.pdf", SearchOption.TopDirectoryOnly))
+                    {
+                        var fn = Path.GetFileName(file);
+                        if (!fn.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+                        if (fn.IndexOf("MOD", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                        addIfExists(file);
+                    }
+                }
+                catch
+                {
+                    /* dossier inaccessible */
+                }
+            }
+        }
+
+        return result;
     }
 
     /// <summary>Chemin du PDF de note de crédit : dossier du mois (selon la facture de référence) + sous-dossier NC.</summary>
+    /// <remarks>Fichier du type <c>NC_04-2026-01_Destinataire.pdf</c> : le n° de pièce est celui du document (sans redoubler <c>NC_</c> si le n° stocké commence par <c>NC-</c>).</remarks>
     public string BuildCreditNotePdfPath(string creditNo, string recipient, string periodYYYYMM, string refInvoiceKind)
     {
-        var safe = MakeSafeFileName(recipient);
+        var safeRecipient = MakeSafeFileName(recipient);
+        var docPart = NormalizeCreditNoteInvoiceNoForPdfFileName(creditNo);
         var folder = string.Equals(refInvoiceKind, "mutuelle", StringComparison.OrdinalIgnoreCase)
             ? WorkspacePaths.MutualMonthFolderNc(periodYYYYMM)
             : WorkspacePaths.PatientMonthFolderNc(periodYYYYMM);
-        return Path.Combine(folder, $"NC_{creditNo}_{safe}.pdf");
+        return Path.Combine(folder, $"NC_{docPart}_{safeRecipient}.pdf");
+    }
+
+    /// <summary>Affichage PDF / pied de page : <c>NC-04-2026-01</c> → <c>04-2026-01</c> (même style que les factures).</summary>
+    public static string FormatCreditNoteNoForPdfHeader(string? invoiceNo)
+    {
+        var s = (invoiceNo ?? "").Trim();
+        if (s.Length == 0) return "";
+        if (s.StartsWith("NC-", StringComparison.OrdinalIgnoreCase))
+        {
+            var rest = s.Substring(3).Trim();
+            if (CreditNotePublicNumberFormat.IsMatch(rest))
+                return rest;
+        }
+        return s;
+    }
+
+    /// <summary>Partie fichier après le préfixe <c>NC_</c> : n° document <c>MM-YYYY-NN</c>, sans préfixe <c>NC-</c> résiduel.</summary>
+    private static string NormalizeCreditNoteInvoiceNoForPdfFileName(string? invoiceNo)
+    {
+        var raw = (invoiceNo ?? "").Trim();
+        if (raw.Length == 0)
+            return "SansNumero";
+
+        var doc = raw;
+        if (doc.StartsWith("NC-", StringComparison.OrdinalIgnoreCase))
+        {
+            doc = doc.Substring(3).Trim();
+            while (doc.StartsWith("-", StringComparison.Ordinal))
+                doc = doc[1..].Trim();
+        }
+
+        if (doc.Length == 0)
+            doc = MakeSafeFileName(raw);
+        else
+            doc = MakeSafeFileName(doc);
+
+        return doc.Length > 0 ? doc : "SansNumero";
     }
 
     /// <param name="recipientAddressLines">Adresse du destinataire (rue, CP ville, pays) pour l'encadré FACTURÉ À, ou null.</param>
@@ -109,7 +245,8 @@ public sealed class InvoicePdfService
         var dueDate = issueDate.AddDays(6);
         var monthLabel = MonthName(inv.Period);
         var effectivePaidDate = paidDate ?? issueDate;
-        var logoPath = ResolveLogoPath();
+        var pr = ProfessionalProfileStore.Load();
+        var logoPath = ProfessionalProfileStore.ResolveLogoPath();
 
         EnsurePdfWritableOrThrow(outputPath);
 
@@ -134,14 +271,14 @@ public sealed class InvoicePdfService
                     {
                         r.RelativeItem().Column(left =>
                         {
-                            left.Item().Text(ProviderName).Bold();
-                            left.Item().Text(ProviderAddress1);
-                            left.Item().Text(ProviderAddress2);
-                            left.Item().Text($"INAMI {ProviderInami}");
-                            left.Item().Text($"Num TVA : {ProviderVat}");
-                            left.Item().Text($"Téléphone {ProviderPhone}");
-                            left.Item().Text($"Email : {ProviderEmail}");
-                            left.Item().Text($"IBAN {ProviderIban}");
+                            left.Item().Text(pr.InvoiceProviderName).Bold();
+                            left.Item().Text(pr.AddressLine1);
+                            left.Item().Text(pr.AddressLine2);
+                            left.Item().Text($"INAMI {pr.Inami}");
+                            left.Item().Text($"Num TVA : {pr.VatNumber}");
+                            left.Item().Text($"Téléphone {pr.Phone}");
+                            left.Item().Text($"Email : {pr.Email}");
+                            left.Item().Text($"IBAN {pr.Iban}");
                         });
                         r.ConstantItem(220).Column(right =>
                         {
@@ -233,23 +370,11 @@ public sealed class InvoicePdfService
                     var patientLabel = string.IsNullOrWhiteSpace(patientFirstNames)
                         ? "patient"
                         : patientFirstNames!;
-                    foot.Item().Text($"Paiement à effectuer dans les 7 jours sur le compte {ProviderIban}").FontSize(9);
+                    foot.Item().Text($"Paiement à effectuer dans les 7 jours sur le compte {pr.Iban}").FontSize(9);
                     foot.Item().Text($"Communication : Séances de prise en charge {patientLabel} - {monthLabel}").FontSize(9);
                 });
             });
         }).GeneratePdf(outputPath);
-    }
-
-    private static string? ResolveLogoPath()
-    {
-        var root = WorkspacePaths.TryFindWorkspaceRoot();
-        if (!string.IsNullOrEmpty(root))
-        {
-            var path = Path.Combine(root, "assets", "LOGO.jpg");
-            if (File.Exists(path)) return path;
-        }
-        var fallback = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "PARAFACTO_Native", "assets", "LOGO.jpg");
-        return File.Exists(fallback) ? fallback : null;
     }
 
     /// <summary>Arrondi belge obligatoire pour les paiements en espèces (au multiple de 0,05 € le plus proche).</summary>
@@ -288,13 +413,28 @@ public sealed class InvoicePdfService
         .PaddingVertical(4).PaddingHorizontal(6)
         .DefaultTextStyle(x => x.SemiBold());
 
-    public void GenerateCreditNotePdf(Invoice credit, Invoice refInvoice, List<InvoiceLineRow> lines, string outputPath)
+    /// <summary>Même gabarit que <see cref="GeneratePatientInvoicePdf"/> : libellés « note de crédit » / « crédité à ».</summary>
+    public void GenerateCreditNotePdf(
+        Invoice credit,
+        Invoice refInvoice,
+        List<InvoiceLineRow> lines,
+        string outputPath,
+        string? recipientAddressLines = null,
+        string? patientFirstNames = null)
     {
         QuestPDF.Settings.License = LicenseType.Community;
 
         var ci = CultureInfo.GetCultureInfo("fr-BE");
         var issueDate = ParseIso(credit.DateIso);
         var dueDate = issueDate.AddDays(6);
+        var monthLabel = MonthName(refInvoice.Period);
+        var pr = ProfessionalProfileStore.Load();
+        var logoPath = ProfessionalProfileStore.ResolveLogoPath();
+        var ibanNc = string.IsNullOrWhiteSpace(pr.IbanCreditNote) ? pr.Iban : pr.IbanCreditNote;
+        var refNo = (refInvoice.InvoiceNo ?? "").Trim();
+        var creditNoDisplay = FormatCreditNoteNoForPdfHeader(credit.InvoiceNo);
+
+        EnsurePdfWritableOrThrow(outputPath);
 
         Document.Create(container =>
         {
@@ -304,65 +444,97 @@ public sealed class InvoicePdfService
                 page.Margin(30);
                 page.DefaultTextStyle(x => x.FontSize(10));
 
-                page.Header().Column(col =>
+                page.Header().Column(headerCol =>
                 {
-                    col.Item().AlignCenter().Text("NOTE DE CRÉDIT").FontSize(16).Bold();
-                    col.Item().Row(r =>
+                    headerCol.Item().Row(headerRow =>
+                    {
+                        headerRow.RelativeItem().AlignLeft().Text("NOTE DE CRÉDIT").FontSize(18).Bold();
+                        if (!string.IsNullOrEmpty(logoPath) && File.Exists(logoPath))
+                            headerRow.ConstantItem(140).AlignRight().Height(90).Image(logoPath).FitArea();
+                    });
+                    headerCol.Item().PaddingTop(8).Row(r =>
                     {
                         r.RelativeItem().Column(left =>
                         {
-                            left.Item().Text($"{ProviderNameScomm}   N° : {credit.InvoiceNo}").Bold();
-                            left.Item().Text($"{ProviderAddress1}   Date : {issueDate:dd-MM-yyyy}");
-                            left.Item().Text($"{ProviderAddress2}   Réf. facture : {refInvoice.InvoiceNo}");
-                            left.Item().Text($"{ProviderBce}   Échéance : {dueDate:dd-MM-yyyy}");
-                            left.Item().Text($"INAMI {ProviderInami}   Période : {MonthName(refInvoice.Period)}");
-                            left.Item().Text($"Num TVA : {ProviderVat}");
-                            left.Item().Text($"Téléphone {ProviderPhone}");
-                            left.Item().Text($"Email : {ProviderEmail}");
-                            left.Item().Text($"IBAN {ProviderIbanCredit} - LAURA GRENIER - LOGOPEDE SCOMM");
-                            left.Item().Text($"BIC : {ProviderBicCredit}");
+                            left.Item().Text(pr.InvoiceProviderName).Bold();
+                            left.Item().Text(pr.AddressLine1);
+                            left.Item().Text(pr.AddressLine2);
+                            left.Item().Text($"INAMI {pr.Inami}");
+                            left.Item().Text($"Num TVA : {pr.VatNumber}");
+                            left.Item().Text($"Téléphone {pr.Phone}");
+                            left.Item().Text($"Email : {pr.Email}");
+                            left.Item().Text($"IBAN {ibanNc}");
                         });
-
                         r.ConstantItem(220).Column(right =>
                         {
-                            right.Item().Text("FACTURÉ À :").Bold();
-                            right.Item().Text(credit.Recipient); // (adresse à compléter ensuite)
+                            right.Item().AlignRight().Text($"N° : {creditNoDisplay}");
+                            right.Item().AlignRight().Text($"Date : {issueDate:dd-MM-yyyy}");
+                            right.Item().AlignRight().Text($"Échéance : {dueDate:dd-MM-yyyy}");
+                            right.Item().AlignRight().Text($"Séances du mois de {monthLabel}");
+                            if (refNo.Length > 0)
+                                right.Item().AlignRight().Text($"Pièce de référence n° : {refNo}");
                         });
                     });
-                    col.Item().PaddingTop(10).LineHorizontal(1);
                 });
 
-                page.Content().PaddingTop(10).Column(col =>
+                page.Content().Column(col =>
                 {
-                    col.Item().Table(table =>
+                    col.Item().PaddingTop(8).Border(1).BorderColor(Colors.Black).Padding(8).Column(box =>
+                    {
+                        box.Item().Text("CRÉDITÉ À :").Bold();
+                        box.Item().PaddingTop(4).AlignRight().Column(addr =>
+                        {
+                            addr.Item().Text(credit.Recipient ?? "");
+                            if (!string.IsNullOrWhiteSpace(recipientAddressLines))
+                            {
+                                foreach (var line in recipientAddressLines.Split('\n'))
+                                {
+                                    if (!string.IsNullOrWhiteSpace(line))
+                                        addr.Item().Text(line.Trim());
+                                }
+                            }
+                        });
+                    });
+                    col.Item().PaddingTop(10).LineHorizontal(1).LineColor(Colors.Black);
+
+                    col.Item().PaddingTop(10).Table(table =>
                     {
                         table.ColumnsDefinition(columns =>
                         {
-                            columns.ConstantColumn(80);
+                            columns.ConstantColumn(75);
                             columns.RelativeColumn();
-                            columns.ConstantColumn(80);
+                            columns.ConstantColumn(75);
                         });
 
                         table.Header(header =>
                         {
-                            header.Cell().Element(Th).Text("Date");
-                            header.Cell().Element(Th).Text("Détail");
-                            header.Cell().Element(Th).AlignRight().Text("Montant");
+                            header.Cell().Element(ThPatient).Text("Date");
+                            header.Cell().Element(ThPatient).Text("Détail");
+                            header.Cell().Element(ThPatient).AlignRight().Text("Montant");
                         });
 
+                        var totalNcCents = Math.Abs(credit.TotalCents);
                         foreach (var l in lines.OrderBy(x => x.DateIso))
                         {
-                            table.Cell().Element(Td).Text(FormatDate(l.DateIso));
-                            table.Cell().Element(Td).Text(l.Label);
-                            table.Cell().Element(Td).AlignRight().Text(FormatEuro(Math.Abs(l.TotalCents), ci));
+                            table.Cell().Element(TdPatient).Text(FormatDate(l.DateIso));
+                            table.Cell().Element(TdPatient).Text(l.Label);
+                            table.Cell().Element(TdPatient).AlignRight().Text(FormatEuro(Math.Abs(l.TotalCents), ci));
                         }
 
-                        table.Cell().ColumnSpan(2).Element(TdTotalLabel).Text("Total note de crédit");
-                        table.Cell().Element(TdTotalValue).AlignRight().Text(FormatEuro(Math.Abs(credit.TotalCents), ci));
+                        table.Cell().ColumnSpan(2).Element(TdTotalLabelPatient).Text("Total note de crédit");
+                        table.Cell().Element(TdTotalValuePatient).AlignRight().Text(FormatEuro(totalNcCents, ci));
                     });
+                });
 
-                    col.Item().PaddingTop(10).Text($"Paiement à effectuer dans les 7 jours sur le compte {ProviderIban}");
-                    col.Item().Text($"Communication : Note de crédit — réf. {refInvoice.InvoiceNo}");
+                page.Footer().Column(foot =>
+                {
+                    var nameHint = string.IsNullOrWhiteSpace(patientFirstNames) ? "patient" : patientFirstNames!.Trim();
+                    foot.Item().Text($"Paiement à effectuer dans les 7 jours sur le compte {ibanNc}").FontSize(9);
+                    foot.Item().Text(
+                            refNo.Length > 0
+                                ? $"Communication : Note de crédit n° {creditNoDisplay} — pièce n° {refNo} — séances {nameHint} - {monthLabel}"
+                                : $"Communication : Note de crédit n° {creditNoDisplay} — séances {nameHint} - {monthLabel}")
+                        .FontSize(9);
                 });
             });
         }).GeneratePdf(outputPath);
@@ -372,6 +544,11 @@ public sealed class InvoicePdfService
     /// Nouveau total AO (en centimes) après modification mutuelle.
     /// Null pour un état normal, non null pour un état modifié.
     /// </param>
+    /// <param name="initialTotalAoCentsForModification">
+    /// Pour un état modifié : total AO de la facture mutuelle d’origine (en centimes), affiché sur la ligne
+    /// « Total = somme totale… » lorsque le tableau n’a plus de lignes ou pour refléter le montant facturé initialement.
+    /// Null = conserver l’ancien comportement (somme des lignes du tableau uniquement).
+    /// </param>
     public void GenerateMutualRecapPdf(
         string mutualName,
         string period,
@@ -379,11 +556,16 @@ public sealed class InvoicePdfService
         MutualRecapMeta meta,
         string outputPath,
         bool isModification,
-        int? modifiedTotalAoCents = null)
+        int? modifiedTotalAoCents = null,
+        int? initialTotalAoCentsForModification = null)
     {
         QuestPDF.Settings.License = LicenseType.Community;
 
         var ci = CultureInfo.GetCultureInfo("fr-BE");
+        var pr = ProfessionalProfileStore.Load();
+        var mutualAddr = string.IsNullOrWhiteSpace(pr.MutualRecapAddressLine)
+            ? $"{pr.AddressLine1}, {pr.AddressLine2}".Trim(' ', ',')
+            : pr.MutualRecapAddressLine!.Trim();
 
         EnsurePdfWritableOrThrow(outputPath);
 
@@ -406,11 +588,11 @@ public sealed class InvoicePdfService
                     {
                         r.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Padding(6).Column(left =>
                         {
-                            left.Item().Text("*Nom et prénom du prestataire de soins : GRENIER Laura").Bold();
-                            left.Item().Text("Adresse : 132 Rue Jules Destrée, 7390 Quaregnon");
-                            left.Item().Text($"*N° BCE et / ou N° inami : {ProviderInami}");
+                            left.Item().Text($"*Nom et prénom du prestataire de soins : {pr.MutualRecapProviderName}").Bold();
+                            left.Item().Text($"Adresse : {mutualAddr}");
+                            left.Item().Text($"*N° BCE et / ou N° inami : {pr.Inami}");
                             left.Item().Text($"Ma référence pour cet état récapitulatif : {meta.Reference}");
-                            left.Item().Text($"Contact (téléphone et/ou e-mail) : {ProviderPhone}");
+                            left.Item().Text($"Contact (téléphone et/ou e-mail) : {pr.Phone}" + (string.IsNullOrWhiteSpace(pr.Email) ? "" : $" / {pr.Email}"));
                         });
 
                         r.ConstantItem(140).Height(50).Border(1).BorderColor(Colors.Grey.Lighten2)
@@ -454,8 +636,12 @@ public sealed class InvoicePdfService
                             table.Cell().Element(Td).AlignRight().Text(FormatEuro(r.TicketCents, ci));
                         }
 
-                        // Ligne de total
-                        var totalAo = rows.Sum(x => x.AoCents);
+                        // Ligne de total : pour une modification, le total « initial » doit suivre la facture d’origine
+                        // (total_cents), pas seulement la somme des lignes (souvent 0 s’il n’y a plus de séances AO ce mois).
+                        var totalAoFromRows = rows.Sum(x => x.AoCents);
+                        var totalAo = isModification && initialTotalAoCentsForModification.HasValue
+                            ? initialTotalAoCentsForModification.Value
+                            : totalAoFromRows;
                         var totalTicket = rows.Sum(x => x.TicketCents);
 
                         // Ligne de total "classique" (sans surlignage)
@@ -479,14 +665,16 @@ public sealed class InvoicePdfService
 
                     if (isModification)
                     {
-                        col.Item().PaddingTop(8).Text($"MODIFICATION (référence: {meta.Reference})").Bold();
-                        col.Item().Text($"Motif : {meta.Reason}");
-                        col.Item().Text($"Référence document mutuelle : {meta.ReferenceDoc}");
+                        col.Item().PaddingTop(8).Text($"MODIFICATION — pièce n° {meta.Reference}").Bold();
+                        if (modifiedTotalAoCents.HasValue)
+                            col.Item().Text($"Nouveau montant total AO : {FormatEuro(modifiedTotalAoCents.Value, ci)}");
+                        col.Item().Text($"Motif invoqué par la mutuelle : {meta.Reason}");
+                        col.Item().Text($"Document de référence (mutuelle) : {meta.ReferenceDoc}");
                         col.Item().Text("Le montant total AO a été modifié suite à la réponse de la mutuelle.");
                     }
 
                     col.Item().PaddingTop(8).Text("Si nécessaire, vous pouvez ajouter des lignes à ce tableau.");
-                    col.Item().PaddingTop(8).Text($"*Numéro de compte bancaire (IBAN) : {ProviderIbanMutu}");
+                    col.Item().PaddingTop(8).Text($"*Numéro de compte bancaire (IBAN) : {pr.IbanMutuelle}");
                     col.Item().Row(r =>
                     {
                         r.RelativeItem().Text("Cachet : (à apposer à la main)");

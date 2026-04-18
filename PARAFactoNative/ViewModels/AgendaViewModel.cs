@@ -130,12 +130,27 @@ public sealed class AgendaViewModel : NotifyBase
     /// <summary>Émis après suppression d’un RDV (pour rafraîchir la console si même jour).</summary>
     public event Action<DateTime>? AgendaAppointmentDeleted;
 
-    public List<string> ViewModes => new() { UiTextTranslator.Translate("Mois"), UiTextTranslator.Translate("Semaine"), UiTextTranslator.Translate("Jour") };
+    private List<string> _viewModesList = new();
+
+    /// <summary>Libellés de vue (même langue que l’UI) pour le ComboBox « Vue ».</summary>
+    public List<string> ViewModes => _viewModesList;
+
+    private void RebuildViewModesList()
+    {
+        _viewModesList = new List<string>
+        {
+            UiTextTranslator.Translate("Mois"),
+            UiTextTranslator.Translate("Semaine"),
+            UiTextTranslator.Translate("Jour")
+        };
+    }
 
     private string _viewMode = "Mois";
+
+    /// <summary>Canon interne Mois/Semaine/Jour ; getter exposé pour le binding = libellé traduit.</summary>
     public string ViewMode
     {
-        get => _viewMode;
+        get => UiTextTranslator.Translate(_viewMode);
         set
         {
             var canonical = NormalizeViewMode(value);
@@ -286,6 +301,22 @@ public sealed class AgendaViewModel : NotifyBase
                     return;
                 }
 
+                if (FindFirstFutureAppointmentOverlappingProposedRecurrentLunch(w.StartTotalMinutes, w.EndTotalMinutes) is { } hit)
+                {
+                    var dayLabel = hit.day.ToString("dddd d MMMM yyyy", UiCulture);
+                    MessageBox.Show(
+                        $"Ce lunch ({AppointmentScheduling.FormatMinutesAsHhMm(w.StartTotalMinutes)} – {AppointmentScheduling.FormatMinutesAsHhMm(w.EndTotalMinutes)}) " +
+                        $"entre en conflit avec au moins un rendez-vous ({hit.appt.PatientDisplay} le {dayLabel} à {NormalizeTime(hit.appt.StartTime)}).\n\n" +
+                        "Changez les heures de pause ou déplacez ce rendez-vous avant d’activer cette plage.",
+                        "Agenda — lunch",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    _suppressLunchToggle = true;
+                    Raise(nameof(LunchBreakEnabled));
+                    _suppressLunchToggle = false;
+                    return;
+                }
+
                 _lunchStartDisplay = AppointmentScheduling.FormatMinutesAsHhMm(_lunchStartMin);
                 _lunchEndDisplay = AppointmentScheduling.FormatMinutesAsHhMm(_lunchEndMin);
                 _appSettings.SaveAgendaLunch(true, _lunchStartDisplay, _lunchEndDisplay);
@@ -398,7 +429,7 @@ public sealed class AgendaViewModel : NotifyBase
             RebuildAppointmentTimeSlots();
             if (!_suppressTimeSuggest && EditingId == 0)
                 SuggestNextAvailableStartIfNew();
-            RefreshLunchResetButtonVisibility();
+            RefreshDayActionCommands();
             EncodeRecurringCommand.RaiseCanExecuteChanged();
         }
     }
@@ -472,18 +503,6 @@ public sealed class AgendaViewModel : NotifyBase
         private set => Set(ref _dayViewIsToday, value);
     }
 
-    private bool _showResetLunchForSelectedDay;
-    /// <summary>True si la date du formulaire a une exception lunch (omit ou moved) : proposer le retour au réglage récurrent.</summary>
-    public bool ShowResetLunchForSelectedDay
-    {
-        get => _showResetLunchForSelectedDay;
-        private set
-        {
-            if (!Set(ref _showResetLunchForSelectedDay, value)) return;
-            ResetLunchToRecurringCommand.RaiseCanExecuteChanged();
-        }
-    }
-
     public RelayCommand PrevCommand { get; }
     public RelayCommand NextCommand { get; }
     public RelayCommand TodayCommand { get; }
@@ -493,13 +512,14 @@ public sealed class AgendaViewModel : NotifyBase
     public RelayCommand<long?> SelectAppointmentCommand { get; }
     public RelayCommand IndisponibiliteCommand { get; }
     public RelayCommand<object?> SelectCalendarDayCommand { get; }
-    public RelayCommand ResetLunchToRecurringCommand { get; }
     public RelayCommand EncodeRecurringCommand { get; }
     public RelayCommand CopyDayRecurringCommand { get; }
     public RelayCommand DeleteDayCommand { get; }
 
     public AgendaViewModel()
     {
+        RebuildViewModesList();
+
         PrevCommand = new RelayCommand(() => Navigate(-1));
         NextCommand = new RelayCommand(() => Navigate(1));
         TodayCommand = new RelayCommand(() =>
@@ -528,7 +548,6 @@ public sealed class AgendaViewModel : NotifyBase
         });
         IndisponibiliteCommand = new RelayCommand(OpenUnavailabilityWindow);
         SelectCalendarDayCommand = new RelayCommand<object?>(SelectCalendarDay);
-        ResetLunchToRecurringCommand = new RelayCommand(ResetLunchToRecurring, () => ShowResetLunchForSelectedDay);
         EncodeRecurringCommand = new RelayCommand(EncodeRecurring, CanEncodeRecurring);
         CopyDayRecurringCommand = new RelayCommand(CopyDayRecurringUntilDate, CanCopyOrDeleteSelectedDay);
         DeleteDayCommand = new RelayCommand(DeleteSelectedDay, CanCopyOrDeleteSelectedDay);
@@ -548,7 +567,9 @@ public sealed class AgendaViewModel : NotifyBase
         Raise(nameof(LunchBreakEnabled));
         UiLanguageService.LanguageChanged += _ =>
         {
+            RebuildViewModesList();
             Raise(nameof(ViewModes));
+            Raise(nameof(ViewMode));
             RefreshDurationPresetLabels();
             UpdateHeader();
             RefreshCalendar();
@@ -602,176 +623,10 @@ public sealed class AgendaViewModel : NotifyBase
 
     private bool CanCopyOrDeleteSelectedDay() => AppointmentDate.Date >= DateTime.Today;
 
-    private void RefreshLunchResetButtonVisibility()
+    private void RefreshDayActionCommands()
     {
-        var iso = AppointmentDate.ToString("yyyy-MM-dd");
-        ShowResetLunchForSelectedDay = ResolveLunchOverrideRow(iso) is not null;
         CopyDayRecurringCommand.RaiseCanExecuteChanged();
         DeleteDayCommand.RaiseCanExecuteChanged();
-    }
-
-    /// <summary>Lunch récurrent (paramètres globaux), sans exception jour — pour contrôle avant « retour au récurrent ».</summary>
-    private bool TryGetRecurrentLunchBlockForDay(DateTime day, out int startMin, out int endMin)
-    {
-        startMin = 0;
-        endMin = 0;
-        if (day.DayOfWeek == DayOfWeek.Sunday) return false;
-        if (BelgianHolidayHelper.TryGetName(day.Date, out _)) return false;
-        if (!_lunchBreakEnabled || _lunchEndMin <= _lunchStartMin) return false;
-        startMin = _lunchStartMin;
-        endMin = _lunchEndMin;
-        return true;
-    }
-
-    private void ResetLunchToRecurring()
-    {
-        var iso = AppointmentDate.ToString("yyyy-MM-dd");
-        if (ResolveLunchOverrideRow(iso) is null) return;
-
-        var day = AppointmentDate.Date;
-        var owner = Application.Current?.MainWindow;
-        var editingIdNullable = EditingId > 0 ? EditingId : (long?)null;
-        var formStartMin = 0;
-        var formDur = 30;
-        if (EditingId > 0 && AppointmentScheduling.TryParseTimeToMinutes(SelectedTime, out var fs))
-        {
-            formStartMin = fs;
-            formDur = DurationMinutes > 0 ? DurationMinutes : 30;
-        }
-
-        if (TryGetRecurrentLunchBlockForDay(day, out var recLs, out var recLe))
-        {
-            while (true)
-            {
-                var sameDay = _repo.ListForDay(day);
-                var unavailDay = _unavailRepo.ListForDay(day);
-                var conflicts = AppointmentScheduling.ListAppointmentsOverlappingLunch(
-                    sameDay,
-                    recLs,
-                    recLe,
-                    editingIdNullable,
-                    formStartMin,
-                    formDur);
-
-                if (conflicts.Count == 0)
-                    break;
-
-                var first = conflicts[0];
-                var detail = $"Rendez-vous concerné : {first.PatientDisplay} à {NormalizeTime(first.StartTime)}.";
-                var choiceWin = new LunchVsAppointmentConflictWindow(
-                    detail,
-                    "Après retour au lunch récurrent, la plage habituelle empiète sur un rendez-vous existant. Modifier les heures de lunch (réglage global) ou déplacer le rendez-vous ?",
-                    "Modifier le lunch",
-                    "Déplacer le rendez-vous",
-                    "Agenda — lunch récurrent") { Owner = owner };
-
-                if (choiceWin.ShowDialog() != true)
-                    return;
-
-                if (choiceWin.Choice == LunchVsAppointmentConflictWindow.ConflictChoice.ModifyLunch)
-                {
-                    var lb = new LunchBreakWindow(_lunchStartDisplay, _lunchEndDisplay) { Owner = owner };
-                    if (lb.ShowDialog() != true)
-                        continue;
-
-                    _lunchStartMin = lb.StartTotalMinutes;
-                    _lunchEndMin = lb.EndTotalMinutes;
-                    _lunchStartDisplay = AppointmentScheduling.FormatMinutesAsHhMm(_lunchStartMin);
-                    _lunchEndDisplay = AppointmentScheduling.FormatMinutesAsHhMm(_lunchEndMin);
-                    _appSettings.SaveAgendaLunch(_lunchBreakEnabled, _lunchStartDisplay, _lunchEndDisplay);
-                    OnLunchSettingsChanged();
-
-                    if (!TryGetRecurrentLunchBlockForDay(day, out recLs, out recLe))
-                        break;
-                    continue;
-                }
-
-                if (choiceWin.Choice != LunchVsAppointmentConflictWindow.ConflictChoice.MoveAppointment)
-                    return;
-
-                var moveDur = first.DurationMinutes > 0 ? first.DurationMinutes : 30;
-                int? earliest = null;
-                if (day.Date == DateTime.Today)
-                {
-                    var n = DateTime.Now;
-                    earliest = n.Hour * 60 + n.Minute;
-                }
-
-                var (wdResetS, wdResetE) = GetEffectiveWorkdayMinutesForDay(day.Date);
-                var slots = AppointmentScheduling.ListAvailableStartTimes(
-                    sameDay,
-                    unavailDay,
-                    moveDur,
-                    excludeAppointmentId: first.Id,
-                    editingAppointmentId: editingIdNullable,
-                    editingStartMin: formStartMin,
-                    editingDurationMin: formDur,
-                    pendingNewRdvNotInDb: EditingId == 0,
-                    pendingStartMin: formStartMin,
-                    pendingDurationMin: formDur,
-                    wdResetS,
-                    wdResetE,
-                    5,
-                    earliest,
-                    recLs,
-                    recLe);
-
-                if (slots.Count == 0)
-                {
-                    var msg = AppointmentScheduling.BuildMessageWhenNoSameDayRelocateSlot(
-                        UiCulture,
-                        day,
-                        moveDur,
-                        wdResetS,
-                        wdResetE,
-                        d => _repo.ListForDay(d),
-                        d => _unavailRepo.ListForDay(d),
-                        d => TryGetEffectiveLunchForDay(d, out var ls, out var le) ? (true, ls, le) : (false, 0, 0));
-                    MessageBox.Show(msg, "Agenda — lunch", MessageBoxButton.OK, MessageBoxImage.Information);
-                    continue;
-                }
-
-                var phone = _patientRepo.GetTelephoneByPatientId(first.PatientId);
-                var dateFr = day.ToString("dddd d MMMM yyyy", UiCulture);
-                var relocateWin = new AppointmentRelocateSlotWindow(
-                    $"Patient : {first.PatientDisplay}",
-                    $"Date : {dateFr} — actuellement à {NormalizeTime(first.StartTime)} ({moveDur} min).",
-                    slots,
-                    phone) { Owner = owner };
-
-                if (relocateWin.ShowDialog() != true)
-                    return;
-                var newHhMm = relocateWin.SelectedSlotHhMm;
-                if (string.IsNullOrWhiteSpace(newHhMm)) return;
-
-                try
-                {
-                    _repo.Update(first.Id, first.PatientId, first.TarifId, iso, newHhMm.Trim(), moveDur, first.RecurrenceSeriesId);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message, "Agenda — déplacement", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                AppointmentResponsibleNotify.ShowNotifyResponsibleDialog(_patientRepo, first.PatientId);
-                RefreshCalendar();
-            }
-        }
-
-        try
-        {
-            _lunchOverrideRepo.DeleteForDateIso(iso);
-            _lunchOverridesByDay.Remove(iso);
-            RefreshCalendar();
-            RefreshLunchResetButtonVisibility();
-            if (EditingId == 0)
-                SuggestNextAvailableStartIfNew();
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(ex.Message, "Agenda — lunch", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
     }
 
     public void ReloadRefs()
@@ -787,6 +642,40 @@ public sealed class AgendaViewModel : NotifyBase
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Agenda — chargement", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>Reconstruit les choix de tarif depuis la base sans recharger la liste patients ni le calendrier.</summary>
+    public void RefreshTariffChoicesAfterDbChange()
+    {
+        try
+        {
+            var prevId = SelectedTarif?.Id ?? 0;
+            var prevLabel = SelectedTarif?.Label;
+            LoadTarifChoices();
+            if (prevId > 0)
+            {
+                var byId = TarifChoices.FirstOrDefault(t => t.Id == prevId);
+                if (byId is not null)
+                {
+                    SelectedTarif = byId;
+                    return;
+                }
+            }
+            if (!string.IsNullOrWhiteSpace(prevLabel))
+            {
+                var byLabel = TarifChoices.FirstOrDefault(t => string.Equals(t.Label, prevLabel, StringComparison.OrdinalIgnoreCase));
+                if (byLabel is not null)
+                {
+                    SelectedTarif = byLabel;
+                    return;
+                }
+            }
+            SelectedTarif = TarifChoices.FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Agenda — tarifs", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -910,6 +799,7 @@ ORDER BY nom, prenom;
         if (s.Contains("NON") && s.Contains("BIM"))
         {
             pick = TarifChoices.FirstOrDefault(t => string.Equals(t.Label.Trim(), "NON BIM CABINET 30", StringComparison.OrdinalIgnoreCase))
+                   ?? TarifChoices.FirstOrDefault(t => string.Equals(t.Label.Trim(), "NON BIM CABINET 30 MIN", StringComparison.OrdinalIgnoreCase))
                    ?? TarifChoices.FirstOrDefault(t =>
                    {
                        var u = t.Label.ToUpperInvariant();
@@ -920,6 +810,7 @@ ORDER BY nom, prenom;
         else if (s.Contains("PLEIN"))
         {
             pick = TarifChoices.FirstOrDefault(t => string.Equals(t.Label.Trim(), "PLEIN CABINET 30", StringComparison.OrdinalIgnoreCase))
+                   ?? TarifChoices.FirstOrDefault(t => string.Equals(t.Label.Trim(), "PLEIN CABINET 30 MIN", StringComparison.OrdinalIgnoreCase))
                    ?? TarifChoices.FirstOrDefault(t =>
                    {
                        var u = t.Label.ToUpperInvariant();
@@ -930,6 +821,7 @@ ORDER BY nom, prenom;
         else if (s == "BIM" || (s.Contains("BIM") && !s.Contains("NON")))
         {
             pick = TarifChoices.FirstOrDefault(t => string.Equals(t.Label.Trim(), "BIM CABINET 30", StringComparison.OrdinalIgnoreCase))
+                   ?? TarifChoices.FirstOrDefault(t => string.Equals(t.Label.Trim(), "BIM CABINET 30 MIN", StringComparison.OrdinalIgnoreCase))
                    ?? TarifChoices.FirstOrDefault(t =>
                    {
                        var u = t.Label.ToUpperInvariant();
@@ -951,7 +843,7 @@ ORDER BY nom, prenom;
 
     private void UpdateHeader()
     {
-        HeaderTitle = ViewMode switch
+        HeaderTitle = _viewMode switch
         {
             "Mois" => AnchorDate.ToString("MMMM yyyy", UiCulture),
             "Semaine" =>
@@ -962,7 +854,7 @@ ORDER BY nom, prenom;
 
     private void Navigate(int delta)
     {
-        AnchorDate = ViewMode switch
+        AnchorDate = _viewMode switch
         {
             "Mois" => AnchorDate.AddMonths(delta),
             "Semaine" => AnchorDate.AddDays(7 * delta),
@@ -998,7 +890,7 @@ ORDER BY nom, prenom;
         ApplyLineSelection();
         UpdateDayHolidayBanner();
         DayViewIsToday = IsDayView && AnchorDate.Date == DateTime.Today;
-        RefreshLunchResetButtonVisibility();
+        RefreshDayActionCommands();
     }
 
     private void ApplyLineSelection()
@@ -1141,6 +1033,14 @@ ORDER BY nom, prenom;
                 lines.Add(UnavailLineFrom(u, us, ue, historicalReadOnly, calendarDay.Date));
             }
 
+            if (TryGetEffectiveLunchForDay(calendarDay.Date, out var lS, out var lE))
+            {
+                var lunchClip0 = ClipBusyToWorkday(lS, lE, ws, we);
+                var dispS0 = lunchClip0?.s ?? lS;
+                var dispE0 = lunchClip0?.e ?? lE;
+                lines.Add(LunchLineFrom(dispS0, dispE0, historicalReadOnly, calendarDay.Date));
+            }
+
             lines.AddRange(ordered.Select(a => LineFrom(a, historicalReadOnly, calendarDay.Date)));
             SortAgendaLinesChronologically(lines);
             return lines;
@@ -1209,8 +1109,9 @@ ORDER BY nom, prenom;
         if (hasLunchForDay)
         {
             var lunchClip = ClipBusyToWorkday(lunchS, lunchE, ws, we);
-            if (lunchClip != null)
-                result.Add(LunchLineFrom(lunchClip.Value.s, lunchClip.Value.e, historicalReadOnly, calendarDay.Date));
+            var dispS = lunchClip?.s ?? lunchS;
+            var dispE = lunchClip?.e ?? lunchE;
+            result.Add(LunchLineFrom(dispS, dispE, historicalReadOnly, calendarDay.Date));
         }
 
         foreach (var a in ordered)
@@ -1244,8 +1145,8 @@ ORDER BY nom, prenom;
         w.ShowDialog();
     }
 
-    /// <summary>Double-clic sur la date d’une case (mois / semaine) : horaires pour ce jour uniquement.</summary>
-    public void OnCalendarDateHeaderDoubleClick(DateTime day)
+    /// <summary>Maj + double-clic sur la date (mois / semaine / zone jour) : début et fin de journée pour ce jour uniquement.</summary>
+    public void OnCalendarWorkdayDayOverrideDoubleClick(DateTime day)
     {
         if (day.Date < DateTime.Today) return;
         var owner = Application.Current?.MainWindow;
@@ -1318,19 +1219,83 @@ ORDER BY nom, prenom;
             AppointmentDate = day.Date;
     }
 
-    /// <summary>Double-clic sur la ligne lunch : déplacer la pause pour ce jour (annulation = date active au formulaire).</summary>
-    public void OnCalendarLunchLineDoubleClick(AgendaLineVm line)
+    /// <summary>Double-clic sur la date (sans Maj) ou sur la zone agenda en vue Jour : pause déjeuner pour cette journée, même sans ligne jaune.</summary>
+    public void OnCalendarDayLunchDoubleClick(DateTime day)
     {
-        if (line.CalendarOwnerDate is not { } day0) return;
-        var day = day0.Date;
-        if (day < DateTime.Today || !line.IsLunchBreak) return;
-        if (!TryGetEffectiveLunchForDay(day, out var ls, out var le)) return;
+        if (day.Date < DateTime.Today) return;
+        AppointmentDate = day.Date;
+        GetSeedLunchMinutesForDayEditor(day.Date, out var seedS, out var seedE);
+        RunDayLunchRescheduleEditor(day.Date, seedS, seedE);
+    }
 
+    private void GetSeedLunchMinutesForDayEditor(DateTime day, out int seedS, out int seedE)
+    {
+        if (TryGetEffectiveLunchForDay(day, out var ls, out var le))
+        {
+            seedS = ls;
+            seedE = le;
+            return;
+        }
+
+        var (ws, we) = GetEffectiveWorkdayMinutesForDay(day.Date);
+        if (day.DayOfWeek != DayOfWeek.Sunday
+            && !BelgianHolidayHelper.TryGetName(day.Date, out _))
+        {
+            if (_lunchBreakEnabled && _lunchEndMin > _lunchStartMin)
+            {
+                var clip = ClipBusyToWorkday(_lunchStartMin, _lunchEndMin, ws, we);
+                if (clip != null)
+                {
+                    seedS = clip.Value.s;
+                    seedE = clip.Value.e;
+                    return;
+                }
+
+                var dur = Math.Min(60, Math.Max(30, _lunchEndMin - _lunchStartMin));
+                var span = we - ws;
+                if (span > dur + 15)
+                {
+                    seedS = ws + Math.Max(0, (span - dur) / 2);
+                    seedE = seedS + dur;
+                    if (seedE > we)
+                    {
+                        seedE = we;
+                        seedS = Math.Max(ws, seedE - dur);
+                    }
+
+                    if (seedE > seedS + 14)
+                        return;
+                }
+            }
+            else
+            {
+                const int defaultDur = 60;
+                var spanOff = we - ws;
+                if (spanOff > defaultDur + 15)
+                {
+                    seedS = ws + Math.Max(0, (spanOff - defaultDur) / 2);
+                    seedE = seedS + defaultDur;
+                    if (seedE > we)
+                    {
+                        seedE = we;
+                        seedS = Math.Max(ws, seedE - defaultDur);
+                    }
+
+                    if (seedE > seedS + 14)
+                        return;
+                }
+            }
+        }
+
+        seedS = 12 * 60;
+        seedE = 13 * 60;
+    }
+
+    private void RunDayLunchRescheduleEditor(DateTime day, int seedLunchS, int seedLunchE)
+    {
         var owner = Application.Current?.MainWindow;
         var iso = day.ToString("yyyy-MM-dd");
         var unavailDay = _unavailRepo.ListForDay(day);
-        var seedLunchS = ls;
-        var seedLunchE = le;
 
         outer:
         while (true)
@@ -1339,7 +1304,7 @@ ORDER BY nom, prenom;
             if (lunchWin.ShowDialog() != true)
             {
                 AppointmentDate = day;
-                RefreshLunchResetButtonVisibility();
+                RefreshDayActionCommands();
                 return;
             }
 
@@ -1372,7 +1337,7 @@ ORDER BY nom, prenom;
                         StartTime = lunchWin.StartHhMm,
                         EndTime = lunchWin.EndHhMm
                     };
-                    RefreshLunchResetButtonVisibility();
+                    RefreshDayActionCommands();
                     RefreshCalendar();
                     if (AppointmentDate.Date == day)
                         RebuildAppointmentTimeSlots();
@@ -1478,6 +1443,17 @@ ORDER BY nom, prenom;
                 RefreshCalendar();
             }
         }
+    }
+
+    /// <summary>Double-clic sur la ligne lunch jaune : même éditeur que pour la date.</summary>
+    public void OnCalendarLunchLineDoubleClick(AgendaLineVm line)
+    {
+        if (line.CalendarOwnerDate is not { } day0) return;
+        var day = day0.Date;
+        if (day < DateTime.Today || !line.IsLunchBreak) return;
+        if (!TryGetEffectiveLunchForDay(day, out var ls, out var le)) return;
+        AppointmentDate = day;
+        RunDayLunchRescheduleEditor(day, ls, le);
     }
 
     private void RebuildMonthCells(
@@ -1768,6 +1744,16 @@ ORDER BY nom, prenom;
         return row;
     }
 
+    /// <summary>
+    /// Supprime une exception « moved » illisible (bug / enregistrement incomplet) pour ne pas masquer le lunch récurrent indéfiniment.
+    /// Le mode « omit » (pas de lunch ce jour) n’est pas touché.
+    /// </summary>
+    private void RepairInvalidLunchMovedOverride(string dateIso)
+    {
+        _lunchOverrideRepo.DeleteForDateIso(dateIso);
+        _lunchOverridesByDay.Remove(dateIso);
+    }
+
     private WorkdayDayOverrideRow? ResolveWorkdayOverrideRow(string dateIso)
     {
         if (_workdayOverridesByDay.TryGetValue(dateIso, out var cached)) return cached;
@@ -1790,22 +1776,21 @@ ORDER BY nom, prenom;
         return (_workdayStartMin, _workdayClosingMin);
     }
 
-    /// <summary>Lunch effectif pour une date : réglage récurrent, sauf dimanche / férié BE / exception jour (omit ou moved).</summary>
+    /// <summary>Lunch effectif pour une date : exception jour (omit ou moved) d’abord, puis dimanche / férié BE, puis réglage récurrent.</summary>
     private bool TryGetEffectiveLunchForDay(DateTime day, out int startMin, out int endMin)
     {
         startMin = 0;
         endMin = 0;
-        if (day.DayOfWeek == DayOfWeek.Sunday) return false;
-        if (BelgianHolidayHelper.TryGetName(day.Date, out _)) return false;
 
         var iso = day.ToString("yyyy-MM-dd");
         var ov = ResolveLunchOverrideRow(iso);
         if (ov is not null)
         {
-            if (string.Equals(ov.Mode, "omit", StringComparison.OrdinalIgnoreCase))
+            var mode = (ov.Mode ?? "").Trim();
+            if (string.Equals(mode, "omit", StringComparison.OrdinalIgnoreCase))
                 return false;
-            if (string.Equals(ov.Mode, "moved", StringComparison.OrdinalIgnoreCase)
-                && AppointmentScheduling.TryParseTimeToMinutes(ov.StartTime, out var s)
+
+            if (AppointmentScheduling.TryParseTimeToMinutes(ov.StartTime, out var s)
                 && AppointmentScheduling.TryParseTimeToMinutes(ov.EndTime, out var e)
                 && e > s)
             {
@@ -1814,13 +1799,95 @@ ORDER BY nom, prenom;
                 return true;
             }
 
-            return false;
+            if (string.Equals(mode, "moved", StringComparison.OrdinalIgnoreCase))
+                RepairInvalidLunchMovedOverride(iso);
+            else if (mode.Length > 0)
+                return false;
         }
+
+        if (day.DayOfWeek == DayOfWeek.Sunday) return false;
+        if (BelgianHolidayHelper.TryGetName(day.Date, out _)) return false;
 
         if (!_lunchBreakEnabled || _lunchEndMin <= _lunchStartMin) return false;
         startMin = _lunchStartMin;
         endMin = _lunchEndMin;
         return true;
+    }
+
+    /// <summary>
+    /// Lunch effectif pour une date si l’on enregistrait ces heures <b>récurrentes</b> (sans encore mettre à jour le VM).
+    /// Même règles que <see cref="TryGetEffectiveLunchForDay"/> : exceptions jour avant dimanche / férié, puis proposition récurrente.
+    /// </summary>
+    private bool TryGetEffectiveLunchForDayWithRecurrentProposal(
+        DateTime day,
+        int recurrentProposalStartMin,
+        int recurrentProposalEndMin,
+        out int startMin,
+        out int endMin)
+    {
+        startMin = 0;
+        endMin = 0;
+
+        var iso = day.ToString("yyyy-MM-dd");
+        var ov = ResolveLunchOverrideRow(iso);
+        if (ov is not null)
+        {
+            var mode = (ov.Mode ?? "").Trim();
+            if (string.Equals(mode, "omit", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (AppointmentScheduling.TryParseTimeToMinutes(ov.StartTime, out var s)
+                && AppointmentScheduling.TryParseTimeToMinutes(ov.EndTime, out var e)
+                && e > s)
+            {
+                startMin = s;
+                endMin = e;
+                return true;
+            }
+
+            if (string.Equals(mode, "moved", StringComparison.OrdinalIgnoreCase))
+                RepairInvalidLunchMovedOverride(iso);
+            else if (mode.Length > 0)
+                return false;
+        }
+
+        if (day.DayOfWeek == DayOfWeek.Sunday) return false;
+        if (BelgianHolidayHelper.TryGetName(day.Date, out _)) return false;
+
+        if (recurrentProposalEndMin <= recurrentProposalStartMin) return false;
+        startMin = recurrentProposalStartMin;
+        endMin = recurrentProposalEndMin;
+        return true;
+    }
+
+    /// <summary>Premier RDV futur qui chevauche le lunch récurrent proposé (hors dimanches / fériés sans lunch ; exceptions jour respectées).</summary>
+    private (AppointmentRow appt, DateTime day)? FindFirstFutureAppointmentOverlappingProposedRecurrentLunch(
+        int proposedStartMin,
+        int proposedEndMin)
+    {
+        if (proposedEndMin <= proposedStartMin) return null;
+        var from = DateTime.Today;
+        var to = from.AddDays(730);
+        var rows = _repo.ListBetweenInclusive(from.ToString("yyyy-MM-dd"), to.ToString("yyyy-MM-dd"));
+        foreach (var group in rows.GroupBy(r => r.DateIso).OrderBy(g => g.Key, StringComparer.Ordinal))
+        {
+            if (!DateTime.TryParseExact(group.Key, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day))
+                continue;
+            if (day.Date < DateTime.Today.Date) continue;
+            if (!TryGetEffectiveLunchForDayWithRecurrentProposal(day, proposedStartMin, proposedEndMin, out var ls, out var le))
+                continue;
+            var conflicts = AppointmentScheduling.ListAppointmentsOverlappingLunch(
+                group.ToList(),
+                ls,
+                le,
+                null,
+                0,
+                0);
+            if (conflicts.Count > 0)
+                return (conflicts[0], day);
+        }
+
+        return null;
     }
 
     /// <summary>Si le RDV empiète sur le lunch : confirmations puis omit ou moved (avec résolution des RDV déjà planifiés sous le nouveau lunch). False = abandon.</summary>
@@ -1857,7 +1924,7 @@ ORDER BY nom, prenom;
         {
             _lunchOverrideRepo.UpsertOmit(dateIso);
             _lunchOverridesByDay[dateIso] = new LunchDayOverrideRow { DateIso = dateIso, Mode = "omit" };
-            RefreshLunchResetButtonVisibility();
+            RefreshDayActionCommands();
             return true;
         }
 
@@ -1898,7 +1965,7 @@ ORDER BY nom, prenom;
                         StartTime = lunchWin.StartHhMm,
                         EndTime = lunchWin.EndHhMm
                     };
-                    RefreshLunchResetButtonVisibility();
+                    RefreshDayActionCommands();
                     return true;
                 }
 
@@ -2585,7 +2652,7 @@ ORDER BY nom, prenom;
                                         StartTime = lunchWin.StartHhMm,
                                         EndTime = lunchWin.EndHhMm
                                     };
-                                    RefreshLunchResetButtonVisibility();
+                                    RefreshDayActionCommands();
                                     RefreshCalendar();
                                     if (CanInsertRecurringSlotAt(day, startMin, durSave))
                                     {

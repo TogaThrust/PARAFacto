@@ -799,9 +799,10 @@ VALUES (@invoice_id, @revision_no, @changed_at, @new_total_cents, @reason, @refe
 
             if (existingModId is null)
             {
+                var userComment = InvoiceRepo.BuildMutualModifiedInvoiceUserComment(motif, refDoc);
                 cn.Execute(@"
-INSERT INTO invoices(invoice_no, kind, patient_id, mutuelle, date_iso, total_cents, paid_cents, status, ref_invoice_id, reason, ref_doc, recipient, period)
-VALUES (@invoice_no, 'mutuelle', NULL, @mutuelle, @date_iso, @total_cents, @paid_cents, 'modified', @ref_invoice_id, @reason, @ref_doc, @recipient, @period);",
+INSERT INTO invoices(invoice_no, kind, patient_id, mutuelle, date_iso, total_cents, paid_cents, status, ref_invoice_id, reason, ref_doc, recipient, period, user_comment)
+VALUES (@invoice_no, 'mutuelle', NULL, @mutuelle, @date_iso, @total_cents, @paid_cents, 'modified', @ref_invoice_id, @reason, @ref_doc, @recipient, @period, @user_comment);",
                     new
                     {
                         invoice_no = modInvoiceNo,
@@ -813,14 +814,16 @@ VALUES (@invoice_no, 'mutuelle', NULL, @mutuelle, @date_iso, @total_cents, @paid
                         reason = motif,
                         ref_doc = refDoc,
                         recipient = orig.recipient ?? mutuelle,
-                        period = orig.period ?? ""
+                        period = orig.period ?? "",
+                        user_comment = userComment
                     }, transaction: tx);
                 count++;
             }
             else
             {
-                cn.Execute("UPDATE invoices SET total_cents=@t, paid_cents=@t, reason=@r, ref_doc=@d WHERE id=@id;",
-                    new { t = nouveauMontant, r = motif, d = refDoc, id = existingModId.Value }, transaction: tx);
+                var userComment = InvoiceRepo.BuildMutualModifiedInvoiceUserComment(motif, refDoc);
+                cn.Execute("UPDATE invoices SET total_cents=@t, paid_cents=@t, reason=@r, ref_doc=@d, user_comment=@u WHERE id=@id;",
+                    new { t = nouveauMontant, r = motif, d = refDoc, u = userComment, id = existingModId.Value }, transaction: tx);
                 var revNo = cn.ExecuteScalar<int>("SELECT COALESCE(MAX(revision_no),0)+1 FROM mutual_invoice_revisions WHERE invoice_id=@id;", new { id = origId.Value }, transaction: tx);
                 cn.Execute(@"
 INSERT INTO mutual_invoice_revisions(invoice_id, revision_no, changed_at, new_total_cents, reason, reference_doc)

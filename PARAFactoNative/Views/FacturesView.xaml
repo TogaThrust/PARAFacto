@@ -31,25 +31,25 @@
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding StatusLower}" Value="paid">
+                            <DataTrigger Binding="{Binding StatusLowerForRowStyle}" Value="paid">
                                 <Setter Property="Background" Value="LightGreen"/>
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding StatusLower}" Value="unpaid">
+                            <DataTrigger Binding="{Binding StatusLowerForRowStyle}" Value="unpaid">
                                 <Setter Property="Background" Value="Orange"/>
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding StatusLower}" Value="acquittee">
+                            <DataTrigger Binding="{Binding StatusLowerForRowStyle}" Value="acquittee">
                                 <Setter Property="Background" Value="#E6E6FA"/>
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding StatusLower}" Value="partial">
+                            <DataTrigger Binding="{Binding StatusLowerForRowStyle}" Value="partial">
                                 <Setter Property="Background" Value="LightPink"/>
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding StatusLower}" Value="loss">
+                            <DataTrigger Binding="{Binding StatusLowerForRowStyle}" Value="loss">
                                 <Setter Property="Background" Value="LightCoral"/>
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding StatusLower}" Value="modified">
+                            <DataTrigger Binding="{Binding StatusLowerForRowStyle}" Value="modified">
                                 <Setter Property="Background" Value="LightYellow"/>
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding StatusLower}" Value="superseded">
+                            <DataTrigger Binding="{Binding StatusLowerForRowStyle}" Value="superseded">
                                 <Setter Property="Background" Value="LightGray"/>
                             </DataTrigger>
                         </Style.Triggers>
@@ -64,8 +64,34 @@
                     <DataGridTextColumn Header="Total" Binding="{Binding TotalEuro}" Width="76" IsReadOnly="True"/>
                     <DataGridTextColumn Header="PAYE" Binding="{Binding PaidEuro}" Width="76" IsReadOnly="True"/>
                     <DataGridTextColumn Header="NC" Binding="{Binding NcEuro}" Width="76" IsReadOnly="True"/>
-                    <DataGridTextColumn Header="Perte" Binding="{Binding LossEuro}" Width="76" IsReadOnly="True"/>
-                    <DataGridTextColumn Header="Solde" Binding="{Binding BalanceEuro}" Width="76" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Perte" Binding="{Binding LossEuro}" Width="76" IsReadOnly="True">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding LossCellHighlight}" Value="True">
+                                        <Setter Property="Background" Value="LightCoral"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTemplateColumn Header="Solde" Width="76" IsReadOnly="True">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding BalanceEuro}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding BalanceCellHighlight}" Value="True">
+                                                    <Setter Property="Background" Value="#FFF7CC"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTemplateColumn Header="PDF" Width="Auto">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -88,6 +114,8 @@
                         <WrapPanel>
                             <Button Content="{DynamicResource Factures.Button.CreditNote}" Command="{Binding Factures.CreateCreditNoteCommand}" Margin="0,0,8,8"/>
                             <Button Content="{DynamicResource Factures.Button.MutualEdit}" Command="{Binding Factures.CreateMutualRevisionCommand}" Margin="0,0,8,8"/>
+                            <Button Content="{DynamicResource Factures.Button.DeleteMutualMod}" Command="{Binding Factures.DeleteModifiedMutualInvoiceCommand}" Margin="0,0,8,8"
+                                    ToolTip="{DynamicResource Factures.Tooltip.DeleteMutualMod}"/>
                         </WrapPanel>
                         <WrapPanel>
                             <Button Content="{DynamicResource Factures.Button.OpenFolder}" Command="{Binding Factures.OpenFolderCommand}" Margin="0,0,8,8"/>

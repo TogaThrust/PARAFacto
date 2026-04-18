@@ -17,6 +17,11 @@
   -SiteSeulement :
     Met a jour <Version> dans le csproj et les deux app-version.json, puis quitte sans publish ni installateur.
 
+  -Vendeur :
+    Compile avec ParafactoLocalDemoBuild=true (boutons console purge / reset base + CLI --reset-demo-db).
+    Sortie : publish_output\win-x64-vendeur et installer_output_vendeur\PARAFactoNative_Installer_Vendeur.exe
+    Meme numero de version que sans -Vendeur : lancez une fois sans (clients), une fois avec (vendeurs), ou seulement -Vendeur pour une build interne.
+
   Version :
     Sans -AppVersion, le script demande le numero (une seule saisie, ecrit partout).
     Avec -AppVersion "1.2.3", aucune question (CI / scripts).
@@ -36,7 +41,8 @@ param(
     [string]$Publisher = "PARAFacto",
     [string]$AppId = "{{95DA48C0-A83B-4F53-8A8A-7B81B81CC8E9}}",
     [switch]$SiteSeulement,
-    [switch]$SkipGitCommitPush
+    [switch]$SkipGitCommitPush,
+    [switch]$Vendeur
 )
 
 $ErrorActionPreference = "Stop"
@@ -233,15 +239,22 @@ function Invoke-DotnetBuildAndGitCommitPushVersionFiles {
         [string]$CsprojPath,
         [string[]]$GitRelativePaths,
         [string]$VersionText,
-        [switch]$SkipGit
+        [switch]$SkipGit,
+        [switch]$ParafactoLocalDemoBuild
     )
     if ($SkipGit) {
         Write-Host "SkipGitCommitPush : pas de dotnet build / git commit / push automatiques."
         return
     }
 
-    Write-Host "dotnet build -c Release (verification avant publication) ..."
-    & dotnet build $CsprojPath -c Release | Out-Host
+    if ($ParafactoLocalDemoBuild) {
+        Write-Host "dotnet build -c Release -p:ParafactoLocalDemoBuild=true (build vendeurs / outils demo console) ..."
+        & dotnet build $CsprojPath -c Release -p:ParafactoLocalDemoBuild=true | Out-Host
+    }
+    else {
+        Write-Host "dotnet build -c Release (verification avant publication, build clients) ..."
+        & dotnet build $CsprojPath -c Release | Out-Host
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet build a echoue (code $LASTEXITCODE)."
     }
@@ -292,10 +305,18 @@ if (-not $csproj) {
 
 $projectDir = Split-Path $csproj -Parent
 $repoRoot = Split-Path $projectDir -Parent
-$publishDir = Join-Path $projectDir "publish_output\win-x64"
-$installerDir = Join-Path $projectDir "installer_output"
+if ($Vendeur) {
+    $publishDir = Join-Path $projectDir "publish_output\win-x64-vendeur"
+    $installerDir = Join-Path $projectDir "installer_output_vendeur"
+    $innoOutputBase = "PARAFactoNative_Installer_Vendeur"
+}
+else {
+    $publishDir = Join-Path $projectDir "publish_output\win-x64"
+    $installerDir = Join-Path $projectDir "installer_output"
+    $innoOutputBase = "PARAFactoNative_Installer"
+}
 $issPath = Join-Path $env:TEMP ("PARAFactoNative_Setup_{0}.iss" -f [Guid]::NewGuid().ToString("N"))
-$installerExe = Join-Path $installerDir "PARAFactoNative_Installer.exe"
+$installerExe = Join-Path $installerDir "$innoOutputBase.exe"
 
 $AppVersion = Resolve-AppVersionText -FromParam $AppVersion -CsprojPath $csproj
 
@@ -313,10 +334,16 @@ $gitRelVersionFiles = @(
     (Get-PathRelativeToRepoRoot -RepoRootFull $repoRootFull -FullPath $appVersionJsonNativeCopy)
 )
 
-Invoke-DotnetBuildAndGitCommitPushVersionFiles -RepoRoot $repoRoot -CsprojPath $csproj -GitRelativePaths $gitRelVersionFiles -VersionText $AppVersion -SkipGit:$SkipGitCommitPush
+Invoke-DotnetBuildAndGitCommitPushVersionFiles -RepoRoot $repoRoot -CsprojPath $csproj -GitRelativePaths $gitRelVersionFiles -VersionText $AppVersion -SkipGit:$SkipGitCommitPush -ParafactoLocalDemoBuild:$Vendeur
 
 Write-Host "Projet  : $csproj"
 Write-Host "Version : $AppVersion"
+if ($Vendeur) {
+    Write-Host "Cible   : VENDEURS (ParafactoLocalDemoBuild=true, boutons demo console)"
+}
+else {
+    Write-Host "Cible   : CLIENTS (sans outils demo console)"
+}
 Write-Host ""
 Write-Host "app-version.json vient d'etre ecrit sur ce PC (2 fichiers) avec cette version."
 Write-Host "  -> $appVersionJsonRepoRoot"
@@ -357,12 +384,18 @@ if (Test-Path $installerDir) {
 }
 New-Item -ItemType Directory -Path $installerDir -Force | Out-Null
 
-dotnet publish $csproj `
-    -c Release `
-    -r win-x64 `
-    --self-contained true `
-    -p:PublishSingleFile=false `
-    -o $publishDir
+$publishArgs = @(
+    "publish", $csproj,
+    "-c", "Release",
+    "-r", "win-x64",
+    "--self-contained", "true",
+    "-p:PublishSingleFile=false",
+    "-o", $publishDir
+)
+if ($Vendeur) {
+    $publishArgs += "-p:ParafactoLocalDemoBuild=true"
+}
+& dotnet @publishArgs | Out-Host
 
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish a echoue (code $LASTEXITCODE)."
@@ -383,7 +416,7 @@ $publishDirInno = Escape-InnoSetupPath $publishDir
 $installerDirInno = Escape-InnoSetupPath $installerDir
 
 $innoScript = @"
-#define MyAppName "PARAFacto Native"
+#define MyAppName "PARAFacto"
 #define MyAppVersion "$AppVersion"
 #define MyAppPublisher "$Publisher"
 #define MyAppExeName "PARAFactoNative.exe"
@@ -393,10 +426,10 @@ AppId=$AppId
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={autopf}\PARAFacto Native
-DefaultGroupName=PARAFacto Native
+DefaultDirName={autopf}\PARAFacto
+DefaultGroupName=PARAFacto
 OutputDir=$installerDirInno
-OutputBaseFilename=PARAFactoNative_Installer
+OutputBaseFilename=$innoOutputBase
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -416,11 +449,11 @@ Name: "desktopicon"; Description: "Creer un raccourci sur le Bureau"; GroupDescr
 Source: "$publishDirInno\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\PARAFacto Native"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\PARAFacto Native"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{group}\PARAFacto"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\PARAFacto"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Lancer PARAFacto Native"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "Lancer PARAFacto"; Flags: nowait postinstall skipifsilent
 "@
 
 Set-Content -Path $issPath -Value $innoScript -Encoding ASCII

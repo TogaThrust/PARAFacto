@@ -79,13 +79,13 @@ public sealed class HelpViewModel
         var (subject, body) = UiLanguageService.Current switch
         {
             UiLanguageService.En => (
-                "PARAFacto Native — Support request",
+                "PARAFacto — Support request",
                 "Hello,\n\n"),
             UiLanguageService.Nl => (
-                "PARAFacto Native — Ondersteuningsverzoek",
+                "PARAFacto — Ondersteuningsverzoek",
                 "Dag,\n\n"),
             _ => (
-                "PARAFacto Native — Demande d’assistance",
+                "PARAFacto — Demande d’assistance",
                 "Bonjour,\n\n")
         };
 

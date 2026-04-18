@@ -67,7 +67,28 @@ WHERE 1=1
             var statusLower = status.ToLowerInvariant();
             if (statusLower == "paid")
             {
-                sql += " AND (i.status = 'paid' OR (i.status = 'loss' AND i.paid_cents > 0))\n";
+                // Payé = facture soldée (hors « loss » partiellement payée : celle-ci va dans Partielles + Pertes).
+                sql += " AND (lower(trim(i.status)) = 'paid' OR lower(trim(i.status)) = 'acquittee')\n";
+            }
+            else if (statusLower == "partial")
+            {
+                sql += @" AND (
+  lower(trim(i.status)) = 'partial'
+  OR (
+    lower(trim(i.status)) = 'loss'
+    AND lower(trim(COALESCE(i.kind,''))) <> 'credit_note'
+    AND i.paid_cents > 0
+    AND i.paid_cents < i.total_cents
+  )
+)
+";
+            }
+            else if (statusLower == "loss")
+            {
+                // Exclure les factures encore marquées « loss » sans perte nette (statut obsolète ou somme des lignes = 0).
+                sql += @" AND i.status = 'loss'
+  AND COALESCE((SELECT SUM(l.amount_cents) FROM losses l WHERE l.invoice_id = i.id), 0) != 0
+";
             }
             else
             {
@@ -107,20 +128,33 @@ WHERE 1=1
 
         if (q.Length > 0)
         {
+            // Inclure recipient : c’est souvent ce qui alimente « Facturé à » (mutuelles, libellés métier) alors que nom/prénom patient sont vides ou différents.
             sql += @" AND (
-  i.invoice_no LIKE @q OR
-  i.mutuelle   LIKE @q OR
-  p.nom        LIKE @q OR
-  p.prenom     LIKE @q OR
-  i.ref_doc    LIKE @q
+  i.invoice_no LIKE @q ESCAPE '\' OR
+  i.mutuelle   LIKE @q ESCAPE '\' OR
+  i.recipient  LIKE @q ESCAPE '\' OR
+  p.nom        LIKE @q ESCAPE '\' OR
+  p.prenom     LIKE @q ESCAPE '\' OR
+  i.ref_doc    LIKE @q ESCAPE '\' OR
+  i.user_comment LIKE @q ESCAPE '\'
 )
 ";
-            dyn.Add("q", $"%{q}%");
+            dyn.Add("q", EscapeLikePattern(q));
         }
 
         sql += "ORDER BY i.date_iso DESC, i.invoice_no DESC;";
 
         return cn.Query<Invoice>(sql, dyn).ToList();
+    }
+
+    /// <summary>Construit le motif LIKE avec échappement de % _ \ (ESCAPE '\').</summary>
+    private static string EscapeLikePattern(string raw)
+    {
+        var s = (raw ?? "")
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
+        return $"%{s}%";
     }
 
     private static int? ParseIntOrNull(string? s)
@@ -426,6 +460,43 @@ SELECT rue, numero, adresse, cp, ville, pays FROM patients WHERE id = @id;", new
         public string ReferenceDoc { get; init; } = "";
     }
 
+    /// <summary>Texte du champ commentaires (<c>user_comment</c>) pour une facture mutuelle modifiée.</summary>
+    public static string BuildMutualModifiedInvoiceUserComment(string? reason, string? referenceDoc)
+    {
+        var r = (reason ?? "").Trim();
+        var d = (referenceDoc ?? "").Trim();
+        if (r.Length == 0 && d.Length == 0) return "";
+        if (d.Length == 0) return r;
+        if (r.Length == 0) return "Réf. document mutuelle : " + d;
+        return $"{r}\nRéf. document mutuelle : {d}";
+    }
+
+    /// <summary>Dernière révision + total d’origine, pour affichage détail / PDF (réf. mutuelle distincte du <c>ref_doc</c> PDF).</summary>
+    public MutualRevisionDetails? GetLastMutualRevisionDetails(long originalInvoiceId)
+    {
+        if (originalInvoiceId <= 0) return null;
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+        var origTotal = cn.ExecuteScalar<int?>("SELECT total_cents FROM invoices WHERE id=@id;", new { id = originalInvoiceId });
+        if (!origTotal.HasValue) return null;
+
+        var row = cn.QueryFirstOrDefault<(string? ModifiedAt, string? Reason, string? ReferenceDoc)>(@"
+SELECT changed_at AS ModifiedAt, reason AS Reason, reference_doc AS ReferenceDoc
+FROM mutual_invoice_revisions
+WHERE invoice_id=@id
+ORDER BY revision_no DESC
+LIMIT 1;
+", new { id = originalInvoiceId });
+
+        return new MutualRevisionDetails
+        {
+            OriginalTotalCents = origTotal.Value,
+            ModifiedAt = (row.ModifiedAt ?? "").Trim(),
+            Reason = (row.Reason ?? "").Trim(),
+            ReferenceDoc = (row.ReferenceDoc ?? "").Trim()
+        };
+    }
+
     public PaymentApplyResult AddPayment(long invoiceId, string paidDateIso, int amountCents, string method, string reference)
     {
         if (invoiceId <= 0 || amountCents <= 0) return new PaymentApplyResult();
@@ -466,21 +537,30 @@ VALUES (@invoice_id, @paid_date, @amount_cents, @method, @reference);
         });
 
         var newPaid = inv.PaidCents + amountCents;
-        var over = Math.Max(0, newPaid - inv.TotalCents);
-        var paidToStore = Math.Min(newPaid, inv.TotalCents);
+        if (string.Equals(inv.Kind, "credit_note", StringComparison.OrdinalIgnoreCase))
+        {
+            var ncMag = Math.Abs(inv.TotalCents);
+            var paidToStore = newPaid;
+            var over = Math.Max(0, newPaid - ncMag);
+            var newStatus = paidToStore >= ncMag ? "paid" : (paidToStore > 0 ? "partial" : "unpaid");
+            cn.Execute("UPDATE invoices SET paid_cents=@p, status=@s WHERE id=@id;", new { p = paidToStore, s = newStatus, id = invoiceId });
+            return new PaymentApplyResult { OverpaidCents = over };
+        }
 
-        var newStatus = paidToStore >= inv.TotalCents ? "paid" : "partial";
-        cn.Execute("UPDATE invoices SET paid_cents=@p, status=@s WHERE id=@id;", new { p = paidToStore, s = newStatus, id = invoiceId });
+        var overPatient = Math.Max(0, newPaid - inv.TotalCents);
+        var paidToStorePatient = newPaid;
+        var newStatusPatient = paidToStorePatient >= inv.TotalCents ? "paid" : "partial";
+        cn.Execute("UPDATE invoices SET paid_cents=@p, status=@s WHERE id=@id;", new { p = paidToStorePatient, s = newStatusPatient, id = invoiceId });
 
         // Si la facture était en PERTE (losses existants) mais est maintenant payée, supprimer la perte.
         // Sinon, la ligne restera rouge (status=loss) / incohérente lors des rafraîchissements.
-        if (paidToStore >= inv.TotalCents)
+        if (paidToStorePatient >= inv.TotalCents)
         {
             try { cn.Execute("DELETE FROM losses WHERE invoice_id=@id;", new { id = invoiceId }); } catch { /* table absente sur vieux schémas */ }
             cn.Execute("UPDATE invoices SET status='paid' WHERE id=@id;", new { id = invoiceId });
         }
 
-        return new PaymentApplyResult { OverpaidCents = over };
+        return new PaymentApplyResult { OverpaidCents = overPatient };
     }
 
     /// <summary>Historique des paiements d'une facture (ordre chronologique).</summary>
@@ -505,7 +585,7 @@ ORDER BY paid_date, id;", new { id = invoiceId }).ToList();
         using var tx = cn.BeginTransaction();
 
         var inv = cn.QueryFirstOrDefault<Invoice>(@"
-SELECT id AS Id, total_cents AS TotalCents, status AS Status
+SELECT id AS Id, total_cents AS TotalCents, status AS Status, kind AS Kind
 FROM invoices
 WHERE id=@id;", new { id = invoiceId }, transaction: tx);
         if (inv is null) { tx.Rollback(); return; }
@@ -514,7 +594,7 @@ WHERE id=@id;", new { id = invoiceId }, transaction: tx);
 
         foreach (var p in payments)
         {
-            if (p.amountCents <= 0) continue;
+            if (p.amountCents == 0) continue;
             var date = (p.paidDateIso ?? "").Trim();
             if (date.Length < 10) continue;
             date = date.Substring(0, 10);
@@ -532,7 +612,32 @@ VALUES (@invoice_id, @paid_date, @amount_cents, @method, @reference);",
         }
 
         var paidSum = cn.ExecuteScalar<long>("SELECT COALESCE(SUM(amount_cents), 0) FROM payments WHERE invoice_id=@id;", new { id = invoiceId }, transaction: tx);
-        var paidToStore = (int)Math.Min(paidSum, inv.TotalCents);
+        var paidToStore = paidSum > int.MaxValue ? int.MaxValue : (int)paidSum;
+
+        if (string.Equals(inv.Kind, "credit_note", StringComparison.OrdinalIgnoreCase))
+        {
+            var ncMag = Math.Abs(inv.TotalCents);
+            if (paidToStore >= ncMag)
+            {
+                try { cn.Execute("DELETE FROM losses WHERE invoice_id=@id;", new { id = invoiceId }, transaction: tx); } catch { }
+                cn.Execute("UPDATE invoices SET paid_cents=@p, status='paid' WHERE id=@id;", new { p = paidToStore, id = invoiceId }, transaction: tx);
+            }
+            else
+            {
+                long lossNetNc = 0;
+                try
+                {
+                    lossNetNc = cn.ExecuteScalar<long?>("SELECT COALESCE(SUM(amount_cents), 0) FROM losses WHERE invoice_id=@id;", new { id = invoiceId }, transaction: tx) ?? 0;
+                }
+                catch { lossNetNc = 0; }
+
+                var statusNc = lossNetNc != 0 ? "loss" : (paidToStore > 0 ? "partial" : "unpaid");
+                cn.Execute("UPDATE invoices SET paid_cents=@p, status=@s WHERE id=@id;", new { p = paidToStore, s = statusNc, id = invoiceId }, transaction: tx);
+            }
+
+            tx.Commit();
+            return;
+        }
 
         // Si paiement total : supprimer la perte éventuelle et mettre paid
         if (paidToStore >= inv.TotalCents)
@@ -542,15 +647,15 @@ VALUES (@invoice_id, @paid_date, @amount_cents, @method, @reference);",
         }
         else
         {
-            // Si des pertes existent, on garde le statut loss; sinon unpaid/partial selon les paiements
-            var hasLoss = false;
+            // Perte nette non nulle → statut loss ; sinon partiel / impayé (évite loss avec somme des lignes = 0)
+            long lossNet = 0;
             try
             {
-                hasLoss = cn.ExecuteScalar<long>("SELECT COUNT(1) FROM losses WHERE invoice_id=@id;", new { id = invoiceId }, transaction: tx) > 0;
+                lossNet = cn.ExecuteScalar<long?>("SELECT COALESCE(SUM(amount_cents), 0) FROM losses WHERE invoice_id=@id;", new { id = invoiceId }, transaction: tx) ?? 0;
             }
-            catch { hasLoss = false; }
+            catch { lossNet = 0; }
 
-            var status = hasLoss ? "loss" : (paidToStore > 0 ? "partial" : "unpaid");
+            var status = lossNet != 0 ? "loss" : (paidToStore > 0 ? "partial" : "unpaid");
             cn.Execute("UPDATE invoices SET paid_cents=@p, status=@s WHERE id=@id;", new { p = paidToStore, s = status, id = invoiceId }, transaction: tx);
         }
 
@@ -599,8 +704,39 @@ LIMIT 500;
         return rows.Select(i => new CreditNoteCandidate
         {
             InvoiceId = i.Id,
-            Label = $"{i.InvoiceNo} — {i.Recipient} — {(i.TotalCents / 100m):0.00} €"
+            Label = FormatCreditNoteCandidateLabel(i)
         }).ToList();
+    }
+
+    /// <summary>Aligné sur le solde affiché en grille (facture patient / mutuelle, même règle que <c>BalanceCents</c>).</summary>
+    public int GetInvoiceBalanceDisplayCents(long invoiceId)
+    {
+        var inv = GetById(invoiceId);
+        if (inv is null) return 0;
+        if (string.Equals(inv.Kind, "credit_note", StringComparison.OrdinalIgnoreCase))
+        {
+            var lossMag = Math.Abs(GetLossTotalCents(invoiceId));
+            return Math.Abs(inv.TotalCents) - inv.PaidCents - lossMag;
+        }
+
+        var lossMag2 = Math.Abs(GetLossTotalCents(invoiceId));
+        var nc = GetCreditNoteTotalCents(invoiceId);
+        var raw = inv.TotalCents - inv.PaidCents - lossMag2;
+        if (raw < 0)
+            return Math.Min(0, raw + nc);
+        if (raw == 0)
+            return 0;
+        return raw - nc;
+    }
+
+    private string FormatCreditNoteCandidateLabel(Invoice i)
+    {
+        var no = (i.InvoiceNo ?? "").Trim();
+        var who = (i.Recipient ?? "").Trim();
+        var totalEuro = i.TotalCents / 100m;
+        var bal = GetInvoiceBalanceDisplayCents(i.Id);
+        var balEuro = bal / 100m;
+        return $"{no} — {who} — total {totalEuro:0.00} €, solde {balEuro:0.00} €";
     }
 
     /// <summary>Somme des montants des notes de crédit ayant cette facture en référence (en centimes).</summary>
@@ -615,21 +751,58 @@ WHERE kind = 'credit_note' AND ref_invoice_id = @id;", new { id = refInvoiceId }
         return (int)(sum ?? 0);
     }
 
-    public void CreateCreditNoteFromInvoice(long refInvoiceId, int amountCents, string dateIso)
+    /// <summary>
+    /// Corrige le montant TTC enregistré d'une note de crédit (colonne liste / stats).
+    /// En base, les NC ont <c>total_cents</c> négatif ; le PDF utilise <c>Math.Abs(total_cents)</c>.
+    /// </summary>
+    /// <param name="creditInvoiceId"><c>invoices.id</c> de la ligne <c>kind = 'credit_note'</c>.</param>
+    /// <param name="amountCentsPositive">Montant crédité en centimes (ex. 2295 pour 22,95 €).</param>
+    /// <param name="regeneratePdf">Si vrai, régénère le PDF depuis le nouveau montant (écrase le fichier).</param>
+    public bool TryUpdateCreditNoteTotalCents(long creditInvoiceId, int amountCentsPositive, bool regeneratePdf = false)
     {
-        if (refInvoiceId <= 0 || amountCents <= 0) return;
+        if (creditInvoiceId <= 0 || amountCentsPositive <= 0) return false;
+
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+        var kind = cn.ExecuteScalar<string?>("SELECT kind FROM invoices WHERE id=@id;", new { id = creditInvoiceId });
+        if (!string.Equals(kind, "credit_note", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var stored = -Math.Abs(amountCentsPositive);
+        var n = cn.Execute("UPDATE invoices SET total_cents=@t WHERE id=@id AND kind='credit_note';", new { t = stored, id = creditInvoiceId });
+        if (n <= 0)
+            return false;
+
+        if (regeneratePdf)
+            return TryGenerateCreditNotePdf(creditInvoiceId);
+
+        return true;
+    }
+
+    /// <returns>Identifiant de la note de crédit créée, ou 0 si échec.</returns>
+    public long CreateCreditNoteFromInvoice(long refInvoiceId, int amountCents, string dateIso)
+    {
+        if (refInvoiceId <= 0 || amountCents <= 0) return 0;
 
         using var cn = Db.Open();
         cn.Execute("PRAGMA foreign_keys = ON;");
 
         var inv = cn.QueryFirstOrDefault<Invoice>("SELECT * FROM invoices WHERE id=@id;", new { id = refInvoiceId });
-        if (inv is null) return;
+        if (inv is null) return 0;
 
-        var ncNo = $"NC-{inv.InvoiceNo}";
+        // Série propre aux NC : NC-MM-YYYY-NN (1ère NC du mois = …-01), indépendante des factures patient.
+        var mmYyyy = WorkspacePaths.ToMMYYYY(ResolvePeriodYyyyMmForNumbering(inv));
+        var nextSuffix = GetNextMonthlyCreditNoteSuffix(cn, mmYyyy);
+        var ncNo = $"NC-{mmYyyy}-{nextSuffix:00}";
+
+        var refNo = (inv.InvoiceNo ?? "").Trim();
+        var userComment = refNo.Length == 0
+            ? "NC relative à la facture (n° inconnu)"
+            : $"NC relative à la facture {refNo}";
 
         cn.Execute(@"
-INSERT INTO invoices(invoice_no, kind, patient_id, mutuelle, date_iso, total_cents, paid_cents, status, ref_invoice_id, reason, ref_doc, recipient, period)
-VALUES (@invoice_no, 'credit_note', @patient_id, @mutuelle, @date_iso, @total_cents, 0, 'paid', @ref_invoice_id, @reason, @ref_doc, @recipient, @period);
+INSERT INTO invoices(invoice_no, kind, patient_id, mutuelle, date_iso, total_cents, paid_cents, status, ref_invoice_id, reason, ref_doc, recipient, period, user_comment)
+VALUES (@invoice_no, 'credit_note', @patient_id, @mutuelle, @date_iso, @total_cents, 0, 'unpaid', @ref_invoice_id, @reason, @ref_doc, @recipient, @period, @user_comment);
 ", new
         {
             invoice_no = ncNo,
@@ -641,20 +814,76 @@ VALUES (@invoice_no, 'credit_note', @patient_id, @mutuelle, @date_iso, @total_ce
             reason = "Note de crédit",
             ref_doc = "",
             recipient = inv.Recipient,
-            period = inv.Period
+            period = inv.Period,
+            user_comment = userComment
         });
+
+        return cn.ExecuteScalar<long>("SELECT last_insert_rowid();");
     }
 
-    public void CreateMutualRevision(long invoiceId, int newTotalCents, string reason, string referenceDoc)
+    /// <summary>Génère le PDF de la note de crédit et met à jour <c>ref_doc</c> (chemin relatif).</summary>
+    public bool TryGenerateCreditNotePdf(long creditInvoiceId)
     {
-        if (invoiceId <= 0 || newTotalCents <= 0) return;
+        if (creditInvoiceId <= 0) return false;
+        try
+        {
+            var credit = GetById(creditInvoiceId);
+            if (credit is null || !string.Equals(credit.Kind, "credit_note", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var refId = credit.RefInvoiceId ?? 0;
+            var refInv = refId > 0 ? GetById(refId) : null;
+            if (refInv is null) return false;
+
+            var period = !string.IsNullOrWhiteSpace(refInv.Period)
+                ? refInv.Period!
+                : ((refInv.DateIso ?? "").Length >= 7 ? refInv.DateIso![..7] : "0000-00");
+
+            var pdf = new InvoicePdfService();
+            var path = pdf.BuildCreditNotePdfPath(credit.InvoiceNo, credit.Recipient, period, refInv.Kind ?? "patient");
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
+            var lineTotal = Math.Abs(credit.TotalCents);
+            var lines = new List<InvoiceLineRow>
+            {
+                new(
+                    string.IsNullOrWhiteSpace(credit.DateIso)
+                        ? DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+                        : credit.DateIso.Trim(),
+                    (credit.Reason ?? "Note de crédit").Trim(),
+                    lineTotal)
+            };
+
+            var recipientAddress = GetPatientAddressLines(credit.PatientId);
+            pdf.GenerateCreditNotePdf(credit, refInv, lines, path, recipientAddress);
+
+            var root = WorkspacePaths.TryFindWorkspaceRoot();
+            var rel = WorkspacePaths.MakeRelativeToRoot(root, path);
+            UpdateRefDoc(credit.InvoiceNo, rel);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Crée une révision mutuelle (facture d’origine en <c>superseded</c>, copie <c>-MOD</c> en <c>modified</c>).</summary>
+    /// <returns>Chemin absolu du PDF d’état modifié si généré, sinon null ; message d’erreur PDF éventuel.</returns>
+    public (string? PdfAbsolutePath, string? PdfError) CreateMutualRevision(long invoiceId, int newTotalCents, string reason, string referenceDoc)
+    {
+        if (invoiceId <= 0 || newTotalCents <= 0)
+            return (null, null);
 
         using var cn = Db.Open();
         cn.Execute("PRAGMA foreign_keys = ON;");
 
         var inv = GetById(invoiceId);
-        if (inv is null) return;
-        if (!string.Equals(inv.Kind, "mutuelle", StringComparison.OrdinalIgnoreCase)) return;
+        if (inv is null) return (null, null);
+        if (!string.Equals(inv.Kind, "mutuelle", StringComparison.OrdinalIgnoreCase))
+            return (null, null);
 
         var next = cn.ExecuteScalar<int>(@"
 SELECT COALESCE(MAX(revision_no),0)+1
@@ -678,8 +907,8 @@ VALUES (@invoice_id, @revision_no, datetime('now'), @new_total_cents, @reason, @
 
         var newNo = BuildModifiedMutualInvoiceNo(inv.InvoiceNo ?? "");
         cn.Execute(@"
-INSERT INTO invoices(invoice_no, kind, patient_id, mutuelle, date_iso, total_cents, paid_cents, status, ref_invoice_id, reason, ref_doc, recipient, period)
-VALUES (@invoice_no, 'mutuelle', NULL, @mutuelle, @date_iso, @total_cents, 0, 'modified', @ref_invoice_id, @reason, @ref_doc, @recipient, @period);
+INSERT INTO invoices(invoice_no, kind, patient_id, mutuelle, date_iso, total_cents, paid_cents, status, ref_invoice_id, reason, ref_doc, recipient, period, user_comment)
+VALUES (@invoice_no, 'mutuelle', NULL, @mutuelle, @date_iso, @total_cents, 0, 'modified', @ref_invoice_id, @reason, @ref_doc, @recipient, @period, @user_comment);
 ", new
         {
             invoice_no = newNo,
@@ -690,34 +919,517 @@ VALUES (@invoice_no, 'mutuelle', NULL, @mutuelle, @date_iso, @total_cents, 0, 'm
             reason = reason ?? "",
             ref_doc = referenceDoc ?? "",
             recipient = inv.Recipient,
-            period = inv.Period
+            period = inv.Period,
+            user_comment = BuildMutualModifiedInvoiceUserComment(reason, referenceDoc)
         });
 
-        // Générer un PDF de révision (état modifié) et le lier à la nouvelle facture
+        // PDF même sans lignes de récap (plus aucune séance AO pour la mutuelle / le mois) : le bloc « nouveau total AO » reste pertinent.
         try
         {
             var pdf = new InvoicePdfService();
             var rows = BuildMutualRecap(inv.Mutuelle ?? "", inv.Period ?? "");
-            if (rows.Count > 0)
-            {
-                var meta = new MutualRecapMeta(newNo, reason ?? "", referenceDoc ?? "", DateTime.Today);
-                var path = pdf.BuildMutualRecapModifPdfPath(inv.Mutuelle ?? "", inv.Period ?? "");
-                pdf.GenerateMutualRecapPdf(inv.Mutuelle ?? "", inv.Period ?? "", rows, meta, path, isModification: true, modifiedTotalAoCents: newTotalCents);
+            var meta = new MutualRecapMeta(newNo, reason ?? "", referenceDoc ?? "", DateTime.Today);
+            var path = pdf.BuildMutualRecapModifPdfPath(inv.Mutuelle ?? "", inv.Period ?? "");
+            pdf.GenerateMutualRecapPdf(
+                inv.Mutuelle ?? "",
+                inv.Period ?? "",
+                rows,
+                meta,
+                path,
+                isModification: true,
+                modifiedTotalAoCents: newTotalCents,
+                initialTotalAoCentsForModification: inv.TotalCents);
 
-                var root = WorkspacePaths.TryFindWorkspaceRoot();
-                var rel = WorkspacePaths.MakeRelativeToRoot(root, path);
-                UpdateRefDoc(newNo, rel);
+            var root = WorkspacePaths.TryFindWorkspaceRoot();
+            var rel = WorkspacePaths.MakeRelativeToRoot(root, path);
+            UpdateRefDoc(newNo, rel);
+
+            if (!string.IsNullOrWhiteSpace(root) && !string.IsNullOrWhiteSpace(rel))
+            {
+                var abs = WorkspacePaths.ResolvePath(root, rel);
+                if (File.Exists(abs))
+                    return (abs, null);
+            }
+
+            return File.Exists(path) ? (path, null) : (null, "PDF introuvable après génération.");
+        }
+        catch (Exception ex)
+        {
+            return (null, ex.Message);
+        }
+    }
+
+    /// <summary>Supprime une facture mutuelle <c>status=modified</c> (-MOD), retire la dernière ligne de <c>mutual_invoice_revisions</c> sur l’originale et réactive celle-ci s’il ne reste plus de copie modifiée.</summary>
+    public bool TryDeleteModifiedMutualInvoice(long modifiedInvoiceId)
+    {
+        if (modifiedInvoiceId <= 0) return false;
+
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+
+        var inv = cn.QueryFirstOrDefault<Invoice>("SELECT * FROM invoices WHERE id=@id;", new { id = modifiedInvoiceId });
+        if (inv is null) return false;
+        if (!string.Equals(inv.Kind, "mutuelle", StringComparison.OrdinalIgnoreCase)) return false;
+        var noNorm = NormalizeMutualInvoiceNoForModCheck(inv.InvoiceNo);
+        var isModifiedRow = string.Equals(inv.Status, "modified", StringComparison.OrdinalIgnoreCase)
+                            || noNorm.EndsWith("-MOD", StringComparison.OrdinalIgnoreCase);
+        if (!isModifiedRow) return false;
+
+        using var tx = cn.BeginTransaction();
+        try
+        {
+            var effectiveOrigId = ResolveEffectiveOriginalMutualInvoiceId(inv, noNorm, modifiedInvoiceId, cn, tx);
+
+            // Supprimer la ligne modifiée même si ref_invoice_id est NULL (origine supprimée / données legacy) ou si le tiret du n° n’est pas ASCII.
+            var deleted = cn.Execute(
+                @"DELETE FROM invoices
+WHERE id=@id AND kind='mutuelle'
+  AND (
+        lower(trim(COALESCE(status,'')))='modified'
+     OR replace(replace(replace(trim(COALESCE(invoice_no,'')), char(8211), '-'), char(8213), '-'), char(8209), '-') LIKE '%-MOD'
+  );",
+                new { id = modifiedInvoiceId }, transaction: tx);
+            if (deleted == 0)
+            {
+                tx.Rollback();
+                return false;
+            }
+
+            if (effectiveOrigId > 0)
+            {
+                var origExists = cn.ExecuteScalar<long>(
+                    "SELECT COUNT(1) FROM invoices WHERE id=@id;",
+                    new { id = effectiveOrigId }, transaction: tx) > 0;
+
+                if (origExists)
+                {
+                    var maxRev = cn.ExecuteScalar<int?>(
+                        "SELECT MAX(revision_no) FROM mutual_invoice_revisions WHERE invoice_id=@id;",
+                        new { id = effectiveOrigId }, transaction: tx);
+                    if (maxRev is > 0)
+                    {
+                        cn.Execute(
+                            "DELETE FROM mutual_invoice_revisions WHERE invoice_id=@id AND revision_no=@r;",
+                            new { id = effectiveOrigId, r = maxRev.Value }, transaction: tx);
+                    }
+
+                    var linkedMods = (int)(cn.ExecuteScalar<long>(
+                        "SELECT COUNT(1) FROM invoices WHERE ref_invoice_id=@oid AND kind='mutuelle';",
+                        new { oid = effectiveOrigId }, transaction: tx));
+
+                    var orphanMods = CountOrphanModifiedMutualRowsSameBase(
+                        cn, tx, inv.Mutuelle, inv.Recipient, StripMutualModSuffixFromNormalized(noNorm));
+
+                    if (linkedMods == 0 && orphanMods == 0)
+                    {
+                        var paid = cn.ExecuteScalar<long?>("SELECT paid_cents FROM invoices WHERE id=@id;", new { id = effectiveOrigId }, transaction: tx) ?? 0;
+                        var total = cn.ExecuteScalar<long?>("SELECT total_cents FROM invoices WHERE id=@id;", new { id = effectiveOrigId }, transaction: tx) ?? 0;
+                        var st = paid >= total ? "paid" : (paid > 0 ? "partial" : "unpaid");
+                        cn.Execute("UPDATE invoices SET status=@s WHERE id=@id;", new { s = st, id = effectiveOrigId }, transaction: tx);
+                    }
+                }
+            }
+
+            tx.Commit();
+        }
+        catch
+        {
+            tx.Rollback();
+            return false;
+        }
+
+        // Ne jamais faire échouer la suppression en base si le PDF est absent, le chemin est invalide ou le fichier est verrouillé.
+        try
+        {
+            TryDeleteMutualModificationPdfsOnDisk(inv);
+        }
+        catch
+        {
+            /* chemins ref_doc corrompus, caractères invalides, etc. */
+        }
+
+        return true;
+    }
+
+    /// <summary>Efface du disque le(s) PDF d'état modifié (ref_doc, nom actuel avec n° -MOD, ancien suffixe <c>-MOD.pdf</c>).</summary>
+    private static void TryDeleteMutualModificationPdfsOnDisk(Invoice inv)
+    {
+        try
+        {
+            var rel = (inv.RefDoc ?? "").Trim();
+
+            var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            void addCandidate(string? path)
+            {
+                if (string.IsNullOrWhiteSpace(path)) return;
+                try
+                {
+                    var full = Path.GetFullPath(path.Trim());
+                    if (File.Exists(full))
+                        candidates.Add(full);
+                }
+                catch
+                {
+                    /* chemin invalide */
+                }
+            }
+
+            if (rel.Length > 0)
+            {
+                try
+                {
+                    if (Path.IsPathRooted(rel))
+                        addCandidate(rel);
+                    else
+                    {
+                        var root = WorkspacePaths.TryFindWorkspaceRoot();
+                        if (!string.IsNullOrWhiteSpace(root))
+                            addCandidate(WorkspacePaths.ResolvePath(root, rel));
+                    }
+                }
+                catch
+                {
+                    /* ref_doc illisible (ex. ancienne valeur non chemin) */
+                }
+            }
+
+            var pdf = new InvoicePdfService();
+            foreach (var abs in pdf.GetMutualModificationPdfPathsForDeletion(
+                         inv.Mutuelle, inv.Recipient, inv.Period, inv.DateIso, inv.InvoiceNo))
+                candidates.Add(abs);
+
+            foreach (var p in candidates)
+            {
+                try
+                {
+                    File.Delete(p);
+                }
+                catch
+                {
+                    /* fichier absent ou verrouillé */
+                }
             }
         }
         catch
         {
-            // en cas d'erreur de génération du PDF, on laisse tout de même la révision en base
+            /* aucune exception ne doit remonter : la ligne DB est déjà supprimée */
         }
     }
 
     /// <summary>Numéro de la facture mutuelle modifiée : numéro original + suffixe "-MOD".</summary>
     private static string BuildModifiedMutualInvoiceNo(string originalInvoiceNo)
         => $"{originalInvoiceNo.Trim()}-MOD";
+
+    /// <summary>Normalise tirets typographiques pour reconnaître le suffixe <c>-MOD</c>.</summary>
+    private static string NormalizeMutualInvoiceNoForModCheck(string? invoiceNo)
+    {
+        var s = (invoiceNo ?? "").Trim();
+        if (s.Length == 0) return "";
+        return s
+            .Replace('\u2011', '-') // non-breaking hyphen
+            .Replace('\u2012', '-') // figure dash
+            .Replace('\u2013', '-') // en dash
+            .Replace('\u2014', '-') // em dash
+            .Replace('\u2010', '-') // hyphen
+            .Replace('\u2212', '-'); // minus sign
+    }
+
+    /// <summary>Retire le suffixe <c>-MOD</c> (insensible à la casse) sur un numéro déjà normalisé.</summary>
+    private static string StripMutualModSuffixFromNormalized(string normalizedNo)
+    {
+        if (normalizedNo.Length < 4) return normalizedNo;
+        if (normalizedNo.EndsWith("-MOD", StringComparison.OrdinalIgnoreCase))
+            return normalizedNo[..^4];
+        return normalizedNo;
+    }
+
+    /// <summary>Compare mutuelle / destinataire entre deux lignes (champs parfois permutés en base).</summary>
+    private static bool MutualIdentityCrossMatch(string? aMutuelle, string? aRecipient, string? bMutuelle, string? bRecipient)
+    {
+        static string Z(string? s) => (s ?? "").Trim();
+        var am = Z(aMutuelle);
+        var ar = Z(aRecipient);
+        var bm = Z(bMutuelle);
+        var br = Z(bRecipient);
+        static bool Eq(string x, string y) =>
+            x.Length > 0 && y.Length > 0 && string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
+        return Eq(am, bm) || Eq(am, br) || Eq(ar, bm) || Eq(ar, br);
+    }
+
+    /// <summary>
+    /// Résout l’identifiant de la facture mutuelle d’origine pour une ligne <c>-MOD</c> :
+    /// <c>ref_invoice_id</c> si valide, sinon recherche d’une ligne <c>superseded</c> avec le même n° de base et la même mutuelle (données legacy sans FK).
+    /// </summary>
+    private static long ResolveEffectiveOriginalMutualInvoiceId(
+        Invoice modInv, string normalizedModNo, long modifiedInvoiceId, IDbConnection cn, IDbTransaction tx)
+    {
+        var origId = modInv.RefInvoiceId ?? 0;
+        if (origId > 0)
+        {
+            var n = cn.ExecuteScalar<long>("SELECT COUNT(1) FROM invoices WHERE id=@id;", new { id = origId }, transaction: tx);
+            if (n > 0) return origId;
+        }
+
+        var baseNo = StripMutualModSuffixFromNormalized(normalizedModNo);
+        if (string.IsNullOrEmpty(baseNo)) return 0;
+
+        var mut = modInv.Mutuelle;
+        var recip = modInv.Recipient;
+        var period = (modInv.Period ?? "").Trim();
+
+        var rows = cn.Query<(long Id, string? InvoiceNo, string? Period, string? Mutuelle, string? Recipient)>(@"
+SELECT id, invoice_no, period, mutuelle, recipient FROM invoices
+WHERE kind='mutuelle'
+  AND lower(trim(COALESCE(status,'')))='superseded'
+  AND id <> @modId;",
+            new { modId = modifiedInvoiceId }, transaction: tx).ToList();
+
+        var matches = rows
+            .Where(r => string.Equals(NormalizeMutualInvoiceNoForModCheck(r.InvoiceNo), baseNo, StringComparison.OrdinalIgnoreCase))
+            .Where(r => MutualIdentityCrossMatch(r.Mutuelle, r.Recipient, mut, recip))
+            .ToList();
+
+        if (matches.Count == 0) return 0;
+        if (matches.Count == 1) return matches[0].Id;
+
+        if (period.Length > 0)
+        {
+            var narrowed = matches
+                .Where(r => string.Equals((r.Period ?? "").Trim(), period, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (narrowed.Count == 1) return narrowed[0].Id;
+        }
+
+        return 0;
+    }
+
+    /// <summary>
+    /// Compte les factures mutuelles modifiées encore présentes sans <c>ref_invoice_id</c> (legacy),
+    /// avec le même n° de base et la même mutuelle que la ligne <c>-MOD</c> supprimée.
+    /// </summary>
+    private static int CountOrphanModifiedMutualRowsSameBase(
+        IDbConnection cn, IDbTransaction tx, string? mutuelle, string? recipient, string baseNoNormalized)
+    {
+        if (string.IsNullOrEmpty(baseNoNormalized)) return 0;
+
+        var rows = cn.Query<(long Id, string? InvoiceNo, string? Mutuelle, string? Recipient)>(@"
+SELECT id, invoice_no, mutuelle, recipient FROM invoices
+WHERE kind='mutuelle'
+  AND COALESCE(ref_invoice_id,0) = 0
+  AND (
+        lower(trim(COALESCE(status,'')))='modified'
+     OR replace(replace(replace(trim(COALESCE(invoice_no,'')), char(8211), '-'), char(8213), '-'), char(8209), '-') LIKE '%-MOD'
+  );", transaction: tx).ToList();
+
+        var c = 0;
+        foreach (var row in rows)
+        {
+            if (!MutualIdentityCrossMatch(row.Mutuelle, row.Recipient, mutuelle, recipient)) continue;
+            var n = NormalizeMutualInvoiceNoForModCheck(row.InvoiceNo);
+            if (!n.EndsWith("-MOD", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!string.Equals(StripMutualModSuffixFromNormalized(n), baseNoNormalized, StringComparison.OrdinalIgnoreCase))
+                continue;
+            c++;
+        }
+
+        return c;
+    }
+
+    /// <summary>
+    /// Réactive les factures mutuelles encore en <c>superseded</c> alors qu’aucune copie <c>-MOD</c> ne subsiste
+    /// (suppression hors application, base importée, etc.). À appeler avant l’affichage de la liste des factures.
+    /// </summary>
+    public int RepairStrandedSupersededMutualInvoices()
+    {
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+
+        var ids = cn.Query<long>(@"
+SELECT id FROM invoices
+WHERE kind='mutuelle' AND lower(trim(COALESCE(status,'')))='superseded';").ToList();
+        if (ids.Count == 0) return 0;
+
+        var repaired = 0;
+        foreach (var oid in ids)
+        {
+            using var tx = cn.BeginTransaction();
+            try
+            {
+                var orig = cn.QueryFirstOrDefault<Invoice>("SELECT * FROM invoices WHERE id=@id;", new { id = oid }, transaction: tx);
+                if (orig is null)
+                {
+                    tx.Rollback();
+                    continue;
+                }
+
+                var linked = (int)(cn.ExecuteScalar<long>(
+                    "SELECT COUNT(1) FROM invoices WHERE kind='mutuelle' AND ref_invoice_id=@id;",
+                    new { id = oid }, transaction: tx));
+                if (linked > 0)
+                {
+                    tx.Rollback();
+                    continue;
+                }
+
+                var noNorm = NormalizeMutualInvoiceNoForModCheck(orig.InvoiceNo);
+                var baseNo = StripMutualModSuffixFromNormalized(noNorm);
+                if (CountOrphanModifiedMutualRowsSameBase(cn, tx, orig.Mutuelle, orig.Recipient, baseNo) > 0)
+                {
+                    tx.Rollback();
+                    continue;
+                }
+
+                cn.Execute("DELETE FROM mutual_invoice_revisions WHERE invoice_id=@id;", new { id = oid }, transaction: tx);
+
+                var paid = cn.ExecuteScalar<long?>("SELECT paid_cents FROM invoices WHERE id=@id;", new { id = oid }, transaction: tx) ?? 0;
+                var total = cn.ExecuteScalar<long?>("SELECT total_cents FROM invoices WHERE id=@id;", new { id = oid }, transaction: tx) ?? 0;
+                var st = paid >= total ? "paid" : (paid > 0 ? "partial" : "unpaid");
+                cn.Execute("UPDATE invoices SET status=@s WHERE id=@id;", new { s = st, id = oid }, transaction: tx);
+
+                tx.Commit();
+                repaired++;
+            }
+            catch
+            {
+                tx.Rollback();
+            }
+        }
+
+        return repaired;
+    }
+
+    /// <summary>
+    /// Remet un statut cohérent (payé / partiel / impayé) sur les factures encore en <c>loss</c> sans perte nette enregistrée.
+    /// </summary>
+    public int RepairStaleLossInvoiceStatus()
+    {
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+        if (cn.ExecuteScalar<long>("SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name='losses';") == 0)
+            return 0;
+
+        return cn.Execute(@"
+UPDATE invoices
+SET status = CASE
+  WHEN lower(trim(COALESCE(kind,''))) = 'credit_note' AND paid_cents >= ABS(total_cents) THEN 'paid'
+  WHEN lower(trim(COALESCE(kind,''))) = 'credit_note' AND paid_cents > 0 THEN 'partial'
+  WHEN lower(trim(COALESCE(kind,''))) = 'credit_note' THEN 'unpaid'
+  WHEN paid_cents >= total_cents THEN 'paid'
+  WHEN paid_cents > 0 THEN 'partial'
+  ELSE 'unpaid'
+END
+WHERE lower(trim(COALESCE(status,''))) = 'loss'
+  AND COALESCE((SELECT SUM(l.amount_cents) FROM losses l WHERE l.invoice_id = invoices.id), 0) = 0;
+");
+    }
+
+    /// <summary>Résultat de <see cref="PurgeNonDemoSessionsInvoicesMutualsAndJournalierPdfs"/>.</summary>
+    public sealed class PurgeNonDemoBillingResult
+    {
+        public int SeancesDeleted { get; init; }
+        public int InvoicesDeleted { get; init; }
+        public int JournalierPdfsDeleted { get; init; }
+    }
+
+    /// <summary>
+    /// Patient « démo » : nom, prénom ou référend contenant <c>-Démo</c> ou <c>-Demo</c> (insensible à la casse).
+    /// Supprime les séances hors démo, les factures patients et NC liées, toutes les factures mutuelles, puis les PDF journaliers générés.
+    /// </summary>
+    public PurgeNonDemoBillingResult PurgeNonDemoSessionsInvoicesMutualsAndJournalierPdfs()
+    {
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+
+        var nonDemoPatientIds = cn.Query<long>(@"
+SELECT id FROM patients
+WHERE NOT (
+  instr(lower(trim(COALESCE(nom,'')||' '||COALESCE(prenom,'')||' '||COALESCE(referend,''))), '-démo') > 0
+  OR instr(lower(trim(COALESCE(nom,'')||' '||COALESCE(prenom,'')||' '||COALESCE(referend,''))), '-demo') > 0
+);").ToList();
+
+        var sentinel = new List<long> { -1L };
+        var patientIdParam = nonDemoPatientIds.Count > 0 ? nonDemoPatientIds : sentinel;
+
+        var patientInvoiceIds = cn.Query<long>(@"
+SELECT id FROM invoices WHERE kind='patient' AND patient_id IN @ids;", new { ids = patientIdParam }).ToList();
+
+        var pinvParam = patientInvoiceIds.Count > 0 ? patientInvoiceIds : sentinel;
+        var creditNoteIds = cn.Query<long>(@"
+SELECT id FROM invoices
+WHERE kind='credit_note'
+  AND (patient_id IN @pids OR ref_invoice_id IN @pinv);",
+            new { pids = patientIdParam, pinv = pinvParam }).ToList();
+
+        var mutualInvoiceIds = cn.Query<long>("SELECT id FROM invoices WHERE kind='mutuelle';").ToList();
+
+        var allInvoiceIds = patientInvoiceIds
+            .Concat(creditNoteIds)
+            .Concat(mutualInvoiceIds)
+            .Distinct()
+            .ToList();
+
+        var seancesDeleted = 0;
+        var invoicesDeleted = 0;
+
+        using (var tx = cn.BeginTransaction())
+        {
+            if (nonDemoPatientIds.Count > 0)
+                seancesDeleted = cn.Execute("DELETE FROM seances WHERE patient_id IN @ids;", new { ids = nonDemoPatientIds }, transaction: tx);
+
+            if (allInvoiceIds.Count > 0)
+            {
+                cn.Execute("DELETE FROM payments WHERE invoice_id IN @ids;", new { ids = allInvoiceIds }, transaction: tx);
+
+                if (cn.ExecuteScalar<long>("SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name='losses';", transaction: tx) > 0)
+                    cn.Execute("DELETE FROM losses WHERE invoice_id IN @ids;", new { ids = allInvoiceIds }, transaction: tx);
+
+                if (cn.ExecuteScalar<long>("SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name='mutual_invoice_revisions';", transaction: tx) > 0)
+                    cn.Execute("DELETE FROM mutual_invoice_revisions WHERE invoice_id IN @ids;", new { ids = allInvoiceIds }, transaction: tx);
+
+                cn.Execute("DELETE FROM invoice_lines WHERE invoice_id IN @ids;", new { ids = allInvoiceIds }, transaction: tx);
+                invoicesDeleted = cn.Execute("DELETE FROM invoices WHERE id IN @ids;", new { ids = allInvoiceIds }, transaction: tx);
+            }
+
+            tx.Commit();
+        }
+
+        var journalierDeleted = 0;
+        try
+        {
+            var root = WorkspacePaths.TryFindWorkspaceRoot();
+            if (!string.IsNullOrWhiteSpace(root))
+            {
+                var dir = Path.Combine(root, "JOURNALIERS PDF");
+                if (Directory.Exists(dir))
+                {
+                    foreach (var f in Directory.EnumerateFiles(dir, "ENCAISSEMENTS_*.pdf", SearchOption.TopDirectoryOnly))
+                    {
+                        try
+                        {
+                            File.Delete(f);
+                            journalierDeleted++;
+                        }
+                        catch
+                        {
+                            /* fichier verrouillé */
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            /* workspace inaccessible */
+        }
+
+        return new PurgeNonDemoBillingResult
+        {
+            SeancesDeleted = seancesDeleted,
+            InvoicesDeleted = invoicesDeleted,
+            JournalierPdfsDeleted = journalierDeleted
+        };
+    }
 
     /// <summary>Somme nette des pertes (en centimes) pour une facture. Les annulations (montant négatif) réduisent le total.</summary>
     public int GetLossTotalCents(long invoiceId)
@@ -742,7 +1454,7 @@ VALUES (@invoice_no, 'mutuelle', NULL, @mutuelle, @date_iso, @total_cents, 0, 'm
         // Recalculer paid_cents depuis les paiements
         var total = cn.ExecuteScalar<long?>("SELECT total_cents FROM invoices WHERE id=@id;", new { id = invoiceId }, transaction: tx) ?? 0;
         var paidSum = cn.ExecuteScalar<long?>("SELECT COALESCE(SUM(amount_cents),0) FROM payments WHERE invoice_id=@id;", new { id = invoiceId }, transaction: tx) ?? 0;
-        var paidToStore = (int)Math.Min(paidSum, total);
+        var paidToStore = paidSum > int.MaxValue ? int.MaxValue : (int)paidSum;
 
         var status = paidToStore >= total ? "paid" : (paidToStore > 0 ? "partial" : "unpaid");
         cn.Execute("UPDATE invoices SET paid_cents=@p, status=@s WHERE id=@id;", new { p = paidToStore, s = status, id = invoiceId }, transaction: tx);
@@ -811,7 +1523,12 @@ ORDER BY s.date_iso, s.id;
 SELECT 
    (p.prenom || ' ' || p.nom) AS PatientName,
    COALESCE(p.niss,'') AS Niss,
-   CASE WHEN UPPER(COALESCE(p.statut,''))='BIM' THEN 1 ELSE 0 END AS IsBim,
+   CASE
+    WHEN TRIM(UPPER(COALESCE(p.statut,''))) = 'BIM' THEN 1
+    WHEN INSTR(UPPER(COALESCE(p.statut,'')), 'NON') > 0 AND INSTR(UPPER(COALESCE(p.statut,'')), 'BIM') > 0 THEN 0
+    WHEN INSTR(UPPER(COALESCE(p.statut,'')), 'BIM') > 0 THEN 1
+    ELSE 0
+  END AS IsBim,
    SUM(s.part_mutuelle) AS AoCents,
    SUM(s.part_patient) AS TicketCents
 FROM seances s
@@ -838,6 +1555,48 @@ ORDER BY p.nom, p.prenom;
         if (DateTime.TryParseExact(period + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
             return d.AddMonths(1).ToString("yyyy-MM");
         return period;
+    }
+
+    /// <summary>Période YYYY-MM pour numérotation (priorité <c>period</c>, sinon début de <c>date_iso</c>).</summary>
+    private static string ResolvePeriodYyyyMmForNumbering(Invoice inv)
+    {
+        var p = (inv.Period ?? "").Trim();
+        if (p.Length >= 7 && p[4] == '-')
+            return p[..7];
+        var d = (inv.DateIso ?? "").Trim();
+        if (d.Length >= 7 && d[4] == '-')
+            return d[..7];
+        return DateTime.UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>Prochain suffixe <c>NN</c> pour factures patient <c>MM-YYYY-NN</c> uniquement.</summary>
+    private static int GetNextMonthlyPatientInvoiceSuffix(IDbConnection cn, string mmYyyyPrefix)
+    {
+        mmYyyyPrefix = (mmYyyyPrefix ?? "").Trim();
+        if (mmYyyyPrefix.Length < 7)
+            return 1;
+        var pref = $"{mmYyyyPrefix}-";
+        return cn.ExecuteScalar<int>(@"
+SELECT COALESCE(MAX(CAST(substr(invoice_no, LENGTH(@pref) + 1) AS INTEGER)), 0) + 1
+FROM invoices
+WHERE kind = 'patient'
+  AND invoice_no LIKE (@pref || '%')
+  AND substr(invoice_no, LENGTH(@pref) + 1) GLOB '[0-9]*';", new { pref });
+    }
+
+    /// <summary>Prochain suffixe pour notes de crédit <c>NC-MM-YYYY-NN</c> (série mensuelle indépendante des factures).</summary>
+    private static int GetNextMonthlyCreditNoteSuffix(IDbConnection cn, string mmYyyyPrefix)
+    {
+        mmYyyyPrefix = (mmYyyyPrefix ?? "").Trim();
+        if (mmYyyyPrefix.Length < 7)
+            return 1;
+        var pref = $"NC-{mmYyyyPrefix}-";
+        return cn.ExecuteScalar<int>(@"
+SELECT COALESCE(MAX(CAST(substr(invoice_no, LENGTH(@pref) + 1) AS INTEGER)), 0) + 1
+FROM invoices
+WHERE kind = 'credit_note'
+  AND invoice_no LIKE (@pref || '%')
+  AND substr(invoice_no, LENGTH(@pref) + 1) GLOB '[0-9]*';", new { pref });
     }
 
 public int CountExistingForPeriod(string kind, string periodYYYYMM)
@@ -882,6 +1641,10 @@ WHERE kind = @k
     // Génération mensuelle (Patients / Mutuelles)
     // =====================================================================
 
+    /// <summary>
+    /// Par groupe (référend ou patient), sépare les séances payées en espèces au cabinet des autres : une facture acquittée par bloc cash,
+    /// une facture à payer pour le reste. Ainsi un patient en cash seul dans un journalier obtient bien son acquittée à la mensuelle.
+    /// </summary>
     /// <param name="invoiceDateIso">Date à porter sur les factures (YYYY-MM-DD). Souvent le 1er du mois suivant la période.</param>
     public (int created, string folder, List<string> pdfs) GenerateMonthlyPatientInvoices(string periodYYYYMM, string invoiceDateIso, bool deleteExisting, InvoicePdfService pdf)
     {
@@ -939,84 +1702,87 @@ ORDER BY s.date_iso, s.id;
                 ? referend
                 : $"{first.PatientNom} {first.PatientPrenom}".Trim();
 
-            var anyPatientId = first.PatientId;
-
-            // Number: MM-YYYY-XX
             var mmYYYY = WorkspacePaths.ToMMYYYY(periodYYYYMM);
-            var nextNo = cn.ExecuteScalar<int>(@"
-SELECT COALESCE(MAX(CAST(substr(invoice_no,9,2) AS INT)),0)+1
-FROM invoices
-WHERE kind='patient' AND invoice_no LIKE @pref || '%';", new { pref = $"{mmYYYY}-" });
 
-            var invoiceNo = $"{mmYYYY}-{nextNo:00}";
+            // Espèces au cabinet : une facture acquittée par lot de séances cash (indépendamment du tiers payant du même groupe / mois).
+            // Séances non cash : facture « classique » impayée (tiers payant).
+            foreach (var subset in new[]
+                     {
+                         seances.Where(s => s.IsCash).ToList(),
+                         seances.Where(s => !s.IsCash).ToList()
+                     })
+            {
+                if (subset.Count == 0) continue;
 
-            // Facture "patient" : le montant à payer par le patient = part patient uniquement.
-            // La part mutuelle est conservée dans les lignes (mutuelle_part_cents) mais ne doit pas gonfler le total affiché côté patient.
-            var totalPatientCents = seances.Sum(x => x.PartPatient);
-            var allCash = seances.Count > 0 && seances.All(s => s.IsCash);
-            var status = allCash ? "acquittee" : "unpaid";
-            var paidCents = allCash ? totalPatientCents : 0;
+                var head = subset[0];
+                var anyPatientId = head.PatientId;
+                var isAcquittedCash = subset.All(s => s.IsCash);
 
-            // Insert invoice
-            cn.Execute(@"
+                var nextNo = GetNextMonthlyPatientInvoiceSuffix(cn, mmYYYY);
+                var invoiceNo = $"{mmYYYY}-{nextNo:00}";
+
+                var totalPatientCents = subset.Sum(x => x.PartPatient);
+                var status = isAcquittedCash ? "acquittee" : "unpaid";
+                var paidCents = isAcquittedCash ? totalPatientCents : 0;
+
+                cn.Execute(@"
 INSERT INTO invoices (invoice_no, kind, patient_id, mutuelle, date_iso, total_cents, paid_cents, status, ref_invoice_id, reason, ref_doc, recipient, period)
 VALUES (@no,'patient',@pid,NULL,@date,@total,@paid,@status,NULL,NULL,NULL,@recipient,@period);",
-                new
-                {
-                    no = invoiceNo,
-                    pid = anyPatientId,
-                    date = invoiceDateIso,
-                    total = totalPatientCents,
-                    paid = paidCents,
-                    status,
-                    recipient,
-                    period = periodYYYYMM
-                });
-
-            var invoiceId = cn.ExecuteScalar<long>("SELECT last_insert_rowid();");
-
-            // Insert lines (1 par séance)
-            foreach (var s in seances)
-            {
-                var firstName = (s.PatientPrenom ?? "").Trim();
-                var tarif = (s.TarifLibelle ?? "Séance").Trim();
-                var label = string.IsNullOrEmpty(firstName)
-                    ? tarif
-                    : $"Séance de prise en charge de {firstName} — {tarif}";
-                cn.Execute(@"
-INSERT INTO invoice_lines (invoice_id,label,qty,unit_price_cents,total_cents,patient_part_cents,mutuelle_part_cents,date_iso,created_at)
-VALUES (@iid,@label,1,@unit,@total,@pp,@pm,@date,datetime('now'));",
                     new
                     {
-                        iid = invoiceId,
-                        label,
-                        unit = s.PartPatient + s.PartMutuelle,
-                        total = s.PartPatient + s.PartMutuelle,
-                        pp = s.PartPatient,
-                        pm = s.PartMutuelle,
-                        date = s.DateIso
+                        no = invoiceNo,
+                        pid = anyPatientId,
+                        date = invoiceDateIso,
+                        total = totalPatientCents,
+                        paid = paidCents,
+                        status,
+                        recipient,
+                        period = periodYYYYMM
                     });
+
+                var invoiceId = cn.ExecuteScalar<long>("SELECT last_insert_rowid();");
+
+                foreach (var s in subset)
+                {
+                    var firstName = (s.PatientPrenom ?? "").Trim();
+                    var tarif = (s.TarifLibelle ?? "Séance").Trim();
+                    var label = string.IsNullOrEmpty(firstName)
+                        ? tarif
+                        : $"Séance de prise en charge de {firstName} — {tarif}";
+                    cn.Execute(@"
+INSERT INTO invoice_lines (invoice_id,label,qty,unit_price_cents,total_cents,patient_part_cents,mutuelle_part_cents,date_iso,created_at)
+VALUES (@iid,@label,1,@unit,@total,@pp,@pm,@date,datetime('now'));",
+                        new
+                        {
+                            iid = invoiceId,
+                            label,
+                            unit = s.PartPatient + s.PartMutuelle,
+                            total = s.PartPatient + s.PartMutuelle,
+                            pp = s.PartPatient,
+                            pm = s.PartMutuelle,
+                            date = s.DateIso
+                        });
+                }
+
+                var inv = GetById(invoiceId);
+                if (inv is null) continue;
+                var dbLines = GetLines(invoiceId);
+                var lines = dbLines
+                    .Select(l => new InvoiceLineRow(l.DateIso ?? "", l.Label ?? "", l.PatientPartCents))
+                    .ToList();
+                var totalPatientCentsForPdf = dbLines.Sum(l => l.PatientPartCents);
+
+                var path = pdf.BuildPatientInvoicePdfPath(inv);
+                var recipientAddress = GetPatientAddressLines(inv.PatientId);
+                var patientNames = string.Join(", ",
+                    subset.Select(s => (s.PatientPrenom ?? "").Trim())
+                        .Where(n => n.Length > 0)
+                        .Distinct());
+                pdf.GeneratePatientInvoicePdf(inv, lines, path, recipientAddress, patientNames, isAcquittedCash, DateTime.Today, totalPatientCentsForPdf);
+
+                pdfs.Add(path);
+                created++;
             }
-
-            // Build PDF model : facture patient affiche la part patient (tiers payant), pas le montant mutuelle
-            var inv = GetById(invoiceId);
-            if (inv is null) continue;
-            var dbLines = GetLines(invoiceId);
-            var lines = dbLines
-                .Select(l => new InvoiceLineRow(l.DateIso ?? "", l.Label ?? "", l.PatientPartCents))
-                .ToList();
-            var totalPatientCentsForPdf = dbLines.Sum(l => l.PatientPartCents);
-
-            var path = pdf.BuildPatientInvoicePdfPath(inv);
-            var recipientAddress = GetPatientAddressLines(inv.PatientId);
-            var patientNames = string.Join(", ",
-                seances.Select(s => (s.PatientPrenom ?? "").Trim())
-                       .Where(n => n.Length > 0)
-                       .Distinct());
-            pdf.GeneratePatientInvoicePdf(inv, lines, path, recipientAddress, patientNames, allCash, DateTime.Today, totalPatientCentsForPdf);
-
-            pdfs.Add(path);
-            created++;
         }
 
         // Backup réimportable : met à jour les CSV patients/mutuelles dans Documents\PARAFACTO_Native

@@ -6,7 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Data;
 using PARAFactoNative.Models;
 using PARAFactoNative.Services;
 using PARAFactoNative.Views;
@@ -15,7 +17,6 @@ namespace PARAFactoNative.ViewModels;
 
 public sealed class FacturesViewModel : NotifyBase
 {
-    private const string ReminderSenderDisplayName = "LAURA GRENIER - LOGOPEDE";
     private const string RelinkSecurityCode = "7324";
     private bool _relinkUnlocked;
     private static readonly List<string> TypeKeys = new() { "TOUTES", "PATIENT", "MUTUELLE", "CREDIT_NOTE" };
@@ -32,8 +33,19 @@ public sealed class FacturesViewModel : NotifyBase
         "Année courante",
         "Trimestre courant"
     };
-    public List<string> Types => TypeKeys.Select(UiTextTranslator.Translate).ToList();
-    public List<string> Statuses => StatusKeys.Select(UiTextTranslator.Translate).ToList();
+
+    /// <summary>Instances stables pour les ComboBox (évite une liste neuve à chaque binding → sélection vide).</summary>
+    private List<string> _typesList = new();
+    private List<string> _statusesList = new();
+
+    public List<string> Types => _typesList;
+    public List<string> Statuses => _statusesList;
+
+    private void RebuildTypeAndStatusLists()
+    {
+        _typesList = TypeKeys.Select(UiTextTranslator.Translate).ToList();
+        _statusesList = StatusKeys.Select(UiTextTranslator.Translate).ToList();
+    }
 
     private readonly InvoiceRepo _repo = new();
     private readonly PatientRepo _patientRepo = new();
@@ -177,23 +189,36 @@ public sealed class FacturesViewModel : NotifyBase
             {
                 var refInv = _repo.GetById(Selected.RefInvoiceId);
                 var refNo = refInv?.InvoiceNo ?? Selected.RefInvoiceId.ToString();
+                var montantNc = (Math.Abs(Selected.TotalCents) / 100.0).ToString("0.00") + " €";
                 return "Note de crédit\n"
-                    + "Facture de référence : N° " + refNo + "\n"
-                    + "Montant : " + Selected.NcEuro + "\n\n"
-                    + "Total " + Selected.TotalEuro + " | Payé " + Selected.PaidEuro + " | NC " + Selected.NcEuro + " | Perte " + Selected.LossEuro + " | Solde " + Selected.BalanceEuro;
+                    + "Pièce de référence n° " + refNo + "\n"
+                    + "Montant : " + montantNc + "\n\n"
+                    + "(Les colonnes montants de la liste sont vides pour éviter le double comptage avec la facture liée.)";
             }
             if (string.Equals(Selected.Status?.Trim(), "modified", StringComparison.OrdinalIgnoreCase)
                 && string.Equals(Selected.Kind?.Trim(), "mutuelle", StringComparison.OrdinalIgnoreCase)
                 && Selected.RefInvoiceId > 0)
             {
                 var refInv = _repo.GetById(Selected.RefInvoiceId);
-                var initialEuro = refInv != null ? (refInv.TotalCents / 100.0).ToString("0.00") + " €" : "";
-                var revisionDate = _repo.GetLastRevisionChangedAt(Selected.RefInvoiceId) ?? "";
-                return "ETAT MODIFIE\n"
-                    + "Montant initial : " + initialEuro + "\n"
+                var rev = _repo.GetLastMutualRevisionDetails(Selected.RefInvoiceId);
+                var initialCents = refInv?.TotalCents ?? rev?.OriginalTotalCents ?? 0;
+                var initialEuro = (initialCents / 100.0).ToString("0.00") + " €";
+                var revisionDate = FormatMutualRevisionDisplayDate(rev?.ModifiedAt ?? _repo.GetLastRevisionChangedAt(Selected.RefInvoiceId));
+                var motif = !string.IsNullOrWhiteSpace(Selected.Reason) ? Selected.Reason!.Trim() : (rev?.Reason ?? "").Trim();
+                var docRef = (rev?.ReferenceDoc ?? "").Trim();
+                if (docRef.Length == 0)
+                {
+                    var rd = (Selected.RefDoc ?? "").Trim();
+                    if (rd.Length > 0 && !rd.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                        docRef = rd;
+                }
+
+                return "FACTURE MUTUELLE MODIFIÉE\n"
+                    + "Nouveau montant total AO : " + Selected.TotalEuro + "\n"
+                    + "Montant initial (facture remplacée) : " + initialEuro + "\n"
                     + "Date de la modification : " + revisionDate + "\n"
-                    + "Raison de la modification : " + (Selected.Reason ?? "") + "\n"
-                    + "Référence du document : " + (Selected.RefDoc ?? "") + "\n\n"
+                    + "Motif invoqué par la mutuelle : " + motif + "\n"
+                    + "Document de référence (mutuelle) : " + docRef + "\n\n"
                     + "Total " + Selected.TotalEuro + " | Payé " + Selected.PaidEuro + " | Perte " + Selected.LossEuro + " | Solde " + Selected.BalanceEuro;
             }
             if (string.Equals(Selected.Status?.Trim(), "acquittee", StringComparison.OrdinalIgnoreCase))
@@ -237,7 +262,7 @@ public sealed class FacturesViewModel : NotifyBase
                         sb.Append($"{ord} PAIEMENT PARTIEL — {dateFmt} — {amountEuro} — {methodLabel} — Solde restant : {balanceEuro}\n");
                     }
                 }
-                if (Selected.LossCents > 0)
+                if (Selected.LossMagnitudeCents > 0)
                     sb.Append($"\nPerte déclarée : {Selected.LossEuro}");
                 if (Selected.NcCents > 0)
                     sb.Append($"\nNote(s) de crédit : {Selected.NcEuro}");
@@ -255,7 +280,7 @@ public sealed class FacturesViewModel : NotifyBase
                     sb.Append("Pour enregistrer : cliquer sur « Paiement » ou ajouter une ligne dans le fichier des paiements puis réimporter.");
                 }
             }
-            else if (Selected.LossCents > 0 && Selected.PaidCents == 0)
+            else if (Selected.LossMagnitudeCents > 0 && Selected.PaidCents == 0)
             {
                 sb.Append("Paiement partiel (Total − Perte) non enregistré dans le fichier des paiements — date et type non connus.\n");
                 sb.Append("Pour les renseigner : cliquer sur « Paiement » ou ajouter une ligne dans le fichier des paiements puis réimporter.");
@@ -275,6 +300,21 @@ public sealed class FacturesViewModel : NotifyBase
         return d.ToString("dd/MM/yyyy", CultureInfo.CurrentCulture);
     }
 
+    private static string FormatMutualRevisionDisplayDate(string? changedAt)
+    {
+        if (string.IsNullOrWhiteSpace(changedAt)) return "";
+        var s = changedAt.Trim();
+        if (s.Length >= 10)
+        {
+            var head = s.Substring(0, 10);
+            if (DateTime.TryParse(head, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
+                return d.ToString("dd/MM/yyyy HH:mm", CultureInfo.CurrentCulture);
+        }
+        if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d2))
+            return d2.ToString("dd/MM/yyyy HH:mm", CultureInfo.CurrentCulture);
+        return s;
+    }
+
     public RelayCommand RefreshCommand { get; }
     public RelayCommand OpenPdfCommand { get; }
     public RelayCommand RelinkPatientsCommand { get; }
@@ -283,11 +323,14 @@ public sealed class FacturesViewModel : NotifyBase
     public RelayCommand ClearLossCommand { get; }
     public RelayCommand CreateCreditNoteCommand { get; }
     public RelayCommand CreateMutualRevisionCommand { get; }
+    public RelayCommand DeleteModifiedMutualInvoiceCommand { get; }
     public RelayCommand OpenFolderCommand { get; }
     public RelayCommand DeleteMonthInvoicesCommand { get; }
 
     public FacturesViewModel()
     {
+        RebuildTypeAndStatusLists();
+
         RefreshCommand = new RelayCommand(Refresh);
         OpenPdfCommand = new RelayCommand(OpenSelectedPdf, () => Selected != null);
         RelinkPatientsCommand = new RelayCommand(ExecuteRelinkPatientsWithSecurity);
@@ -295,12 +338,14 @@ public sealed class FacturesViewModel : NotifyBase
         AddPaymentCommand = new RelayCommand(AddPayment, CanPay);
         AddLossCommand = new RelayCommand(AddLoss, CanDeclareLoss);
         ClearLossCommand = new RelayCommand(ClearLoss, CanClearLoss);
-        CreateCreditNoteCommand = new RelayCommand(CreateCreditNote, () => Selected != null);
+        CreateCreditNoteCommand = new RelayCommand(CreateCreditNote, CanCreateCreditNote);
         CreateMutualRevisionCommand = new RelayCommand(CreateMutualRevision, CanMutualRevision);
+        DeleteModifiedMutualInvoiceCommand = new RelayCommand(DeleteModifiedMutualInvoice, CanDeleteModifiedMutualInvoice);
         OpenFolderCommand = new RelayCommand(OpenWorkspaceFolder);
         DeleteMonthInvoicesCommand = new RelayCommand(DeleteMonthInvoices, CanDeleteMonthInvoices);
         UiLanguageService.LanguageChanged += _ =>
         {
+            RebuildTypeAndStatusLists();
             Raise(nameof(Types));
             Raise(nameof(Statuses));
             Raise(nameof(PeriodKinds));
@@ -311,6 +356,16 @@ public sealed class FacturesViewModel : NotifyBase
             Raise(nameof(PeriodLabel));
         };
 
+        Refresh();
+    }
+
+    /// <summary>À l’affichage de l’onglet Factures : filtres Type et Statut sur « TOUTES » et grille à jour.</summary>
+    public void OnFacturesTabActivated()
+    {
+        _selectedType = "TOUTES";
+        _selectedStatus = "TOUTES";
+        Raise(nameof(SelectedType));
+        Raise(nameof(SelectedStatus));
         Refresh();
     }
 
@@ -360,6 +415,7 @@ public sealed class FacturesViewModel : NotifyBase
         ClearLossCommand.RaiseCanExecuteChanged();
         CreateCreditNoteCommand.RaiseCanExecuteChanged();
         CreateMutualRevisionCommand.RaiseCanExecuteChanged();
+        DeleteModifiedMutualInvoiceCommand.RaiseCanExecuteChanged();
         DeleteMonthInvoicesCommand.RaiseCanExecuteChanged();
         Raise(nameof(SelectedPeriodLabel));
         Raise(nameof(SelectedCommentText));
@@ -378,6 +434,9 @@ public sealed class FacturesViewModel : NotifyBase
 
     private void Refresh()
     {
+        _repo.RepairStrandedSupersededMutualInvoices();
+        _repo.RepairStaleLossInvoiceStatus();
+
         var (dateFrom, dateTo) = GetPeriodRange();
         var invoiceNoPrefixes = GetInvoiceNoMonthPrefixes();
 
@@ -411,7 +470,9 @@ public sealed class FacturesViewModel : NotifyBase
                 InvoiceId = i.Id,
                 InvoiceNo = i.InvoiceNo ?? "",
                 IssuedDate = i.DateIso ?? "",
-                PaymentDateDisplay = FormatPaymentDate(i.LastPaymentDateIso),
+                PaymentDateDisplay = string.Equals(i.Kind, "credit_note", StringComparison.OrdinalIgnoreCase)
+                    ? ""
+                    : FormatPaymentDate(i.LastPaymentDateIso),
                 Kind = i.Kind ?? "",
                 PatientId = i.PatientId ?? 0,
                 Recipient = string.IsNullOrWhiteSpace(i.Recipient)
@@ -442,7 +503,9 @@ public sealed class FacturesViewModel : NotifyBase
                 InvoiceId = i.Id,
                 InvoiceNo = i.InvoiceNo ?? "",
                 IssuedDate = i.DateIso ?? "",
-                PaymentDateDisplay = FormatPaymentDate(i.LastPaymentDateIso),
+                PaymentDateDisplay = string.Equals(i.Kind, "credit_note", StringComparison.OrdinalIgnoreCase)
+                    ? ""
+                    : FormatPaymentDate(i.LastPaymentDateIso),
                 Kind = i.Kind ?? "",
                 PatientId = i.PatientId ?? 0,
                 Recipient = i.Recipient ?? "",
@@ -572,25 +635,42 @@ public sealed class FacturesViewModel : NotifyBase
         var enAttente = 0;
         var pertes = 0;
         var nc = 0;
-        var stLower = "";
         foreach (var r in rows)
         {
-            stLower = (r.Status ?? "").Trim().ToLowerInvariant();
-            if (stLower == "paid" || stLower == "acquittee")
-                paye += r.PaidCents;
-            else if (stLower == "partial")
-                partiel += r.PaidCents;
-            impaye += r.BalanceCents;
-            if (stLower == "unpaid" || stLower == "partial")
-                enAttente += r.BalanceCents;
-            pertes += r.LossCents;
+            // Lignes NC : montants vides en grille ; tout est sur la facture liée.
+            if (string.Equals(r.Kind, "credit_note", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var stLower = (r.Status ?? "").Trim().ToLowerInvariant();
+            // Factures remplacées : cellules vides mais ancien solde encore en base → ne pas les additionner aux totaux.
+            if (stLower == "superseded")
+                continue;
+
+            // PAYÉ : somme de la colonne « PAYE » (tout encaissement enregistré sur factures actives).
+            paye += r.PaidDisplayCents;
+
+            // PARTIEL : encaissements « partiels » (facture partielle + perte avec paiement partiel) — déjà inclus dans paye.
+            if (stLower == "partial" || (stLower == "loss" && r.PaidDisplayCents > 0 && r.PaidDisplayCents < r.TotalCents))
+                partiel += r.PaidDisplayCents;
+
+            var bal = r.BalanceCents;
+            // Impayés : somme des soldes + pertes déclarées (ex. solde 2228,86 € + perte 11,94 €).
+            impaye += bal + r.LossMagnitudeCents;
+            // Reste dû affiché (soldes uniquement), sans additionner la colonne perte.
+            enAttente += bal;
+
+            pertes += r.LossMagnitudeCents;
             nc += r.NcCents;
         }
+
+        // Net après notes de crédit (encaissements − montants NC sur factures, hors ligne NC affichée à part).
+        var totalRecu = paye - nc;
+
         return new InvoiceStats
         {
             PayeCents = paye,
             PartielCents = partiel,
-            TotalRecuCents = paye + partiel,
+            TotalRecuCents = totalRecu,
             ImpayeCents = impaye,
             EnAttenteCents = enAttente,
             PertesCents = pertes,
@@ -602,10 +682,9 @@ public sealed class FacturesViewModel : NotifyBase
     {
         var s = Selected;
         if (s is null) return false;
-        // Permettre l'édition des paiements même si déjà encodés (PAYEE, PARTIELLE, PERTE, etc.)
-        // On bloque uniquement les lignes remplacées (superseded) et les NC (notes de crédit).
+        // Permettre l'édition des paiements / remboursements (factures patients, mutuelles, notes de crédit).
+        // On bloque uniquement les lignes remplacées (superseded).
         if (string.Equals((s.Status ?? "").Trim(), "superseded", StringComparison.OrdinalIgnoreCase)) return false;
-        if (string.Equals((s.Kind ?? "").Trim(), "credit_note", StringComparison.OrdinalIgnoreCase)) return false;
         return true;
     }
 
@@ -651,6 +730,33 @@ public sealed class FacturesViewModel : NotifyBase
         return true;
     }
 
+    private bool CanDeleteModifiedMutualInvoice()
+    {
+        var s = Selected;
+        if (s is null) return false;
+        return RowLooksLikeDeletableMutualModified(s);
+    }
+
+    private static bool RowLooksLikeDeletableMutualModified(InvoiceRow s)
+    {
+        if (!string.Equals(s.Kind, "mutuelle", StringComparison.OrdinalIgnoreCase)) return false;
+        if (string.Equals((s.Status ?? "").Trim(), "modified", StringComparison.OrdinalIgnoreCase)) return true;
+        var n = NormalizeInvoiceNoDashes((s.InvoiceNo ?? "").Trim());
+        return n.EndsWith("-MOD", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeInvoiceNoDashes(string invoiceNo)
+    {
+        if (invoiceNo.Length == 0) return "";
+        return invoiceNo
+            .Replace('\u2011', '-')
+            .Replace('\u2012', '-')
+            .Replace('\u2013', '-')
+            .Replace('\u2014', '-')
+            .Replace('\u2010', '-')
+            .Replace('\u2212', '-');
+    }
+
     private void AddPayment()
     {
         var row = Selected;
@@ -659,19 +765,20 @@ public sealed class FacturesViewModel : NotifyBase
         var inv = _repo.GetById(row.InvoiceId);
         if (inv is null) return;
 
-        var defaultCents = Math.Max(0, row.BalanceCents);
+        var defaultCents = row.BalanceCents < 0 ? row.BalanceCents : Math.Max(0, row.BalanceCents);
+        var suggestNegEuro = row.BalanceCents < 0 ? row.BalanceCents / 100m : (decimal?)null;
         var existing = _repo.GetPaymentHistory(inv.Id)
             .Select(p => new Views.PaymentsEditWindow.PaymentEditRow
             {
                 Id = p.Id,
                 PaidDateIso = (p.PaidDateIso ?? "").Trim(),
                 AmountEuroText = (p.AmountCents / 100m).ToString("0.00", CultureInfo.InvariantCulture),
-                Method = (p.Method ?? "Espèces").Trim(),
+                Method = Views.PaymentsEditWindow.PaymentEditRow.NormalizePaymentMethod(p.Method),
                 Reference = (p.Reference ?? "").Trim()
             })
             .ToArray();
 
-        var dlg = new Views.PaymentsEditWindow(inv, defaultCents / 100m, existing)
+        var dlg = new Views.PaymentsEditWindow(inv, defaultCents / 100m, existing, maxPaymentTotalCents: null, suggestNegEuro)
         {
             Owner = Application.Current?.MainWindow
         };
@@ -686,12 +793,94 @@ public sealed class FacturesViewModel : NotifyBase
                 var cents = (int)Math.Round(amt * 100m, MidpointRounding.AwayFromZero);
                 return ((r.PaidDateIso ?? "").Trim(), cents, (r.Method ?? "").Trim(), (r.Reference ?? "").Trim());
             })
-            .Where(x => x.cents > 0)
+            .Where(x => x.cents != 0)
             .ToList();
 
         _repo.ReplacePayments(inv.Id, payments);
 
         Refresh();
+        OfferCreditNoteAfterTropPercu(inv.Id);
+    }
+
+    private void OfferCreditNoteAfterTropPercu(long patientInvoiceId)
+    {
+        var updated = Items.FirstOrDefault(i => i.InvoiceId == patientInvoiceId);
+        if (updated is null) return;
+        if (!string.Equals(updated.Kind, "patient", StringComparison.OrdinalIgnoreCase)) return;
+        if (updated.BalanceCents >= 0) return;
+
+        var tropEuro = Math.Abs(updated.BalanceCents) / 100m;
+        var ask = ChoiceDialog.AskThree(
+            "Trop-perçu",
+            $"Un trop-perçu de {tropEuro:0.00} € est enregistré sur la facture {updated.InvoiceNo}.\n\n" +
+            "Souhaitez-vous créer une note de crédit correspondante et générer le PDF ?",
+            "Créer, PDF et imprimer",
+            "Créer et PDF (sans imprimer)",
+            "Pas maintenant");
+
+        if (ask == ActionChoiceResult.Cancel)
+            return;
+
+        var tropCents = (int)Math.Round(tropEuro * 100m, MidpointRounding.AwayFromZero);
+        if (tropCents <= 0) return;
+
+        var ncId = _repo.CreateCreditNoteFromInvoice(patientInvoiceId, tropCents, DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        if (ncId <= 0)
+        {
+            MessageBox.Show("La note de crédit n'a pas pu être créée.", "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!_repo.TryGenerateCreditNotePdf(ncId))
+        {
+            MessageBox.Show(
+                "La note de crédit est enregistrée, mais le PDF n'a pas pu être généré (vérifiez les dossiers d'export).",
+                "PARAFacto",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            Refresh();
+            return;
+        }
+
+        var credit = _repo.GetById(ncId);
+        var root = WorkspacePaths.TryFindWorkspaceRoot();
+        string? absPath = null;
+        if (!string.IsNullOrWhiteSpace(root) && credit != null && !string.IsNullOrWhiteSpace(credit.RefDoc))
+            absPath = WorkspacePaths.ResolvePath(root, credit.RefDoc);
+
+        Refresh();
+
+        if (ask == ActionChoiceResult.Primary && !string.IsNullOrEmpty(absPath) && File.Exists(absPath))
+            TryPrintPdfCreditNote(absPath);
+        else if (ask == ActionChoiceResult.Primary)
+            MessageBox.Show(
+                "La note de crédit et le PDF sont enregistrés, mais le fichier PDF n'a pas été retrouvé pour lancer l'impression.",
+                "PARAFacto",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+    }
+
+    private static void TryPrintPdfCreditNote(string pdfPath)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = pdfPath,
+                Verb = "print",
+                UseShellExecute = true,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"L'impression n'a pas pu être lancée.\n\n{ex.Message}",
+                "PARAFacto",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
     }
 
     private void AddLoss()
@@ -719,8 +908,18 @@ public sealed class FacturesViewModel : NotifyBase
         Refresh();
     }
 
+    private bool CanCreateCreditNote()
+    {
+        var s = Selected;
+        return s is not null && !s.IsCreditNoteRow;
+    }
+
     private void CreateCreditNote()
     {
+        var row = Selected;
+        if (row is null || row.IsCreditNoteRow)
+            return;
+
         var list = _repo.ListCreditNoteCandidates();
         if (list.Count == 0)
         {
@@ -728,8 +927,9 @@ public sealed class FacturesViewModel : NotifyBase
             return;
         }
 
-        var selectedId = Selected?.InvoiceId ?? 0;
-        var defaultEuro = Selected != null ? Selected.PaidCents / 100m : 0m;
+        var selectedId = row.InvoiceId;
+        var bal = row.BalanceCents;
+        var defaultEuro = bal < 0 ? Math.Abs(bal) / 100m : Math.Max(0, bal / 100m);
         var dlg = new Views.CreditNoteWindow(list, selectedId, defaultEuro)
         {
             Owner = Application.Current?.MainWindow
@@ -744,7 +944,22 @@ public sealed class FacturesViewModel : NotifyBase
             return;
         }
 
-        _repo.CreateCreditNoteFromInvoice(invoiceId, amountCents, DateTime.Today.ToString("yyyy-MM-dd"));
+        var ncId = _repo.CreateCreditNoteFromInvoice(invoiceId, amountCents, DateTime.Today.ToString("yyyy-MM-dd"));
+        if (ncId <= 0)
+        {
+            MessageBox.Show("La note de crédit n'a pas pu être créée.", "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!_repo.TryGenerateCreditNotePdf(ncId))
+        {
+            MessageBox.Show(
+                "La note de crédit est enregistrée, mais le PDF n'a pas pu être généré.",
+                "PARAFacto",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+
         Refresh();
     }
 
@@ -769,7 +984,66 @@ public sealed class FacturesViewModel : NotifyBase
             return;
         }
 
-        _repo.CreateMutualRevision(inv.Id, newCents, dlg.Reason, dlg.ReferenceDoc);
+        var (pdfPath, pdfErr) = _repo.CreateMutualRevision(inv.Id, newCents, dlg.Reason, dlg.ReferenceDoc);
+        Refresh();
+
+        if (!string.IsNullOrEmpty(pdfErr))
+        {
+            MessageBox.Show(
+                "La modification mutuelle est enregistrée, mais le PDF n'a pas pu être généré.\n\n" + pdfErr,
+                "PARAFacto",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+
+        if (!string.IsNullOrEmpty(pdfPath) && File.Exists(pdfPath))
+        {
+            var ask = ChoiceDialog.AskThree(
+                "Modification mutuelle",
+                "Le PDF de l'état modifié a été généré. Que souhaitez-vous faire ?",
+                "Imprimer",
+                "Ouvrir le fichier",
+                "Fermer");
+            if (ask == ActionChoiceResult.Primary)
+                TryPrintPdfCreditNote(pdfPath);
+            else if (ask == ActionChoiceResult.Secondary)
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo { FileName = pdfPath, UseShellExecute = true });
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+        }
+    }
+
+    private void DeleteModifiedMutualInvoice()
+    {
+        var row = Selected;
+        if (row is null) return;
+        if (!RowLooksLikeDeletableMutualModified(row)) return;
+
+        if (!ChoiceDialog.AskYesNo(
+                "Supprimer la facture modifiée",
+                $"Supprimer définitivement la facture mutuelle modifiée ?\n\n{row.InvoiceNo}\n{row.Recipient}\n{row.TotalEuro}\n\n" +
+                "La facture d'origine (remplacée) sera réactivée si aucune autre copie modifiée ne reste liée à celle-ci.",
+                "Supprimer",
+                "Annuler"))
+            return;
+
+        if (!_repo.TryDeleteModifiedMutualInvoice(row.InvoiceId))
+        {
+            MessageBox.Show(
+                "La suppression n'a pas pu être effectuée (facture introuvable ou non modifiable).",
+                "PARAFacto",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
         Refresh();
     }
 
@@ -784,9 +1058,30 @@ public sealed class FacturesViewModel : NotifyBase
             var yy = ParsePeriodInt(PeriodYear, DateTime.Today.Year);
             return $"{yy:0000}-{Math.Clamp(PeriodMonth, 1, 12):00}";
         }
-        if (Selected is not null && !string.IsNullOrWhiteSpace(Selected.IssuedDate) && Selected.IssuedDate.Length >= 7)
-            return Selected.IssuedDate[..7];
+        // Même logique que la suppression en base : mois de facturation = préfixe MM-YYYY du n° (pas date_iso / émission).
+        if (Selected is not null)
+            return TryGetPeriodYyyyMmFromInvoiceNo(Selected.InvoiceNo);
         return null;
+    }
+
+    /// <summary>Extrait <c>YYYY-MM</c> pour <see cref="InvoiceRepo.DeleteInvoicesForPeriod"/> depuis un n° du type <c>04-2026-12</c>, <c>NC-04-2026-01</c>, <c>ETAT-04-2026-…</c>.</summary>
+    private static string? TryGetPeriodYyyyMmFromInvoiceNo(string? invoiceNo)
+    {
+        var s = (invoiceNo ?? "").Trim();
+        if (s.Length == 0) return null;
+        if (s.StartsWith("NC-", StringComparison.OrdinalIgnoreCase))
+            s = s[3..].Trim();
+        if (s.StartsWith("ETAT-", StringComparison.OrdinalIgnoreCase))
+            s = s[5..].Trim();
+        var m = Regex.Match(s, @"^(\d{2})-(\d{4})(?:$|-)");
+        if (!m.Success) return null;
+        if (!int.TryParse(m.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var month)
+            || month is < 1 or > 12)
+            return null;
+        if (!int.TryParse(m.Groups[2].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var year)
+            || year < 1970 || year > 2100)
+            return null;
+        return $"{year:0000}-{month:00}";
     }
 
     private void DeleteMonthInvoices()
@@ -794,7 +1089,12 @@ public sealed class FacturesViewModel : NotifyBase
         var period = ResolveDeletePeriod();
         if (string.IsNullOrWhiteSpace(period))
         {
-            MessageBox.Show("Choisissez « Année / Mois » et sélectionnez un mois pour supprimer les factures de cette période.", "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                "Choisissez « Année / Mois » avec un mois, ou sélectionnez une ligne dont le numéro commence par MM-YYYY (ex. 04-2026-…).\n\n" +
+                "La suppression utilise le mois de facturation du numéro, pas la date d’émission.",
+                "PARAFacto",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
             return;
         }
 
@@ -875,7 +1175,8 @@ public sealed class FacturesViewModel : NotifyBase
         // Le double-clic est réservé au rappel de paiement des impayées et partielles.
         // L'ouverture PDF reste uniquement via le bouton icône "📄" de la ligne.
         if (!string.Equals(row.StatusLower, "unpaid", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(row.StatusLower, "partial", StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(row.StatusLower, "partial", StringComparison.OrdinalIgnoreCase)
+            && !row.IsLossWithPartialPayment)
             return;
 
         if (row.PatientId <= 0)
@@ -932,28 +1233,35 @@ public sealed class FacturesViewModel : NotifyBase
                 $"https://mail.google.com/mail/?view=cm&fs=1&to={Uri.EscapeDataString(email)}" +
                 $"&su={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(body)}";
             var mailto = $"mailto:{Uri.EscapeDataString(email)}?subject={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(body)}";
+            var emailOpened = false;
             try
             {
                 // 1) Priorité Gmail web.
                 Process.Start(new ProcessStartInfo(gmailUrl) { UseShellExecute = true });
+                emailOpened = true;
             }
             catch (Exception ex)
             {
                 // 2) Fallback Outlook (si installé).
                 if (TryOpenOutlookCompose(email, subject, body, out _))
-                    return;
-
-                try
+                    emailOpened = true;
+                else
                 {
-                    // 3) Fallback client mail par défaut du PC (Thunderbird/autre).
-                    Process.Start(new ProcessStartInfo(mailto) { UseShellExecute = true });
-                }
-                catch
-                {
-                    MessageBox.Show($"Impossible d'ouvrir Gmail, Outlook, ni un autre client e-mail.\n\n{ex.Message}", "Factures — rappel", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    try
+                    {
+                        // 3) Fallback client mail par défaut du PC (Thunderbird/autre).
+                        Process.Start(new ProcessStartInfo(mailto) { UseShellExecute = true });
+                        emailOpened = true;
+                    }
+                    catch
+                    {
+                        MessageBox.Show($"Impossible d'ouvrir Gmail, Outlook, ni un autre client e-mail.\n\n{ex.Message}", "Factures — rappel", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
                 }
             }
 
+            if (emailOpened)
+                AppendReminderSentToInvoiceComment(row, "e-mail");
             return;
         }
 
@@ -967,6 +1275,7 @@ public sealed class FacturesViewModel : NotifyBase
         try
         {
             Process.Start(new ProcessStartInfo(waUrl) { UseShellExecute = true });
+            AppendReminderSentToInvoiceComment(row, "WhatsApp");
         }
         catch (Exception ex)
         {
@@ -974,11 +1283,31 @@ public sealed class FacturesViewModel : NotifyBase
         }
     }
 
-    private string ResolveSenderSignatureName()
+    /// <summary>Ajoute une trace d’envoi de rappel dans <c>user_comment</c> (colonne Commentaires + panneau détail).</summary>
+    private void AppendReminderSentToInvoiceComment(InvoiceRow row, string channelLabel)
     {
-        // Signature alignée avec le nom affiché en haut de l'onglet Console.
-        return ReminderSenderDisplayName;
+        if (row.InvoiceId <= 0) return;
+        var todayFr = DateTime.Today.ToString("dd/MM/yyyy", CultureInfo.GetCultureInfo("fr-BE"));
+        var line = $"Rappel envoyé par {channelLabel} le {todayFr}.";
+        var existing = (row.UserComment ?? "").TrimEnd();
+        var combined = string.IsNullOrEmpty(existing) ? line : existing + Environment.NewLine + line;
+        row.UserComment = combined;
+        SaveInvoiceComment(row.InvoiceId, combined);
+        Raise(nameof(SelectedCommentText));
+        Raise(nameof(HasSelectedComment));
+        try
+        {
+            if (Items is not null)
+                CollectionViewSource.GetDefaultView(Items)?.Refresh();
+        }
+        catch
+        {
+            /* hors contexte WPF */
+        }
     }
+
+    private string ResolveSenderSignatureName()
+        => ProfessionalProfileStore.Load().ReminderSenderDisplayName;
 
     private static string BuildReminderMessage(InvoiceRow row, string senderDisplayName)
     {
@@ -1085,10 +1414,17 @@ public sealed class FacturesViewModel : NotifyBase
             dirs.Add(Path.Combine(b, "NC"));
         }
 
+        var ncStem = string.Equals(row.Kind, "credit_note", StringComparison.OrdinalIgnoreCase)
+            ? InvoicePdfService.FormatCreditNoteNoForPdfHeader(row.InvoiceNo)
+            : row.InvoiceNo;
+        if (string.IsNullOrWhiteSpace(ncStem))
+            ncStem = row.InvoiceNo;
+
         var patterns = new[]
         {
             $"Facture_{row.InvoiceNo}_*.pdf",
             $"FACTURE_{row.InvoiceNo}_*.pdf",
+            $"NC_{ncStem}_*.pdf",
             $"NC_{row.InvoiceNo}_*.pdf",
             $"NoteDeCredit_{row.InvoiceNo}_*.pdf"
         };
@@ -1115,7 +1451,12 @@ public sealed class FacturesViewModel : NotifyBase
         {
             if (!Directory.Exists(dr)) continue;
             var hit = Directory.EnumerateFiles(dr, "*.pdf", SearchOption.AllDirectories)
-                .FirstOrDefault(f => Path.GetFileName(f).Contains(row.InvoiceNo, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(f =>
+                {
+                    var fn = Path.GetFileName(f);
+                    return fn.Contains(row.InvoiceNo, StringComparison.OrdinalIgnoreCase)
+                           || (!string.IsNullOrWhiteSpace(ncStem) && fn.Contains(ncStem, StringComparison.OrdinalIgnoreCase));
+                });
             if (!string.IsNullOrWhiteSpace(hit)) return hit;
         }
 
@@ -1193,6 +1534,15 @@ public sealed class FacturesViewModel : NotifyBase
         // - Patients: "MM-YYYY-XX" (e.g., "01-2026-14")
         // - Mutuelles: "ETAT-MM-YYYY-MUTUAL" (e.g., "ETAT-03-2026-SOLIDARIS")
         invoiceNo = (invoiceNo ?? "").Trim();
+
+        // Notes de crédit : "NC-MM-YYYY-NN" → dossier du mois MM-YYYY
+        if (invoiceNo.Length >= 12 && invoiceNo.StartsWith("NC-", StringComparison.OrdinalIgnoreCase))
+        {
+            var inner = invoiceNo.Substring(3);
+            if (inner.Length >= 7 && char.IsDigit(inner[0]) && char.IsDigit(inner[1]) && inner[2] == '-' &&
+                char.IsDigit(inner[3]) && char.IsDigit(inner[4]) && char.IsDigit(inner[5]) && char.IsDigit(inner[6]))
+                return inner[..7];
+        }
 
         // Mutuelles: extract "MM-YYYY" from "ETAT-MM-YYYY-..."
         if (invoiceNo.Length >= 12 && invoiceNo.StartsWith("ETAT-", StringComparison.OrdinalIgnoreCase))
@@ -1495,6 +1845,12 @@ public sealed class InvoiceRow
         get
         {
             var no = (InvoiceNo ?? "").Trim();
+            if (string.Equals(Kind, "credit_note", StringComparison.OrdinalIgnoreCase))
+            {
+                // Liste factures : garder le préfixe NC- (le PDF peut afficher sans préfixe via FormatCreditNoteNoForPdfHeader).
+                if (no.Length == 0) return "";
+                return no.StartsWith("NC-", StringComparison.OrdinalIgnoreCase) ? no : "NC-" + no;
+            }
             if (!no.StartsWith("ETAT-", StringComparison.OrdinalIgnoreCase))
                 return no;
 
@@ -1518,23 +1874,46 @@ public sealed class InvoiceRow
     public string Recipient { get; set; } = "";
     public string Status { get; set; } = "";
 
-    /// <summary>Statut en minuscules pour le style de ligne (couleur de fond).</summary>
+    /// <summary>Statut brut en base (minuscules).</summary>
     public string StatusLower => (Status ?? "").Trim().ToLowerInvariant();
 
-    public string StatusFr => (Status ?? "").Trim().ToLowerInvariant() switch
+    /// <summary>Perte déclarée mais encaissement partiel : affiché comme partiel, pas perte totale.</summary>
+    public bool IsLossWithPartialPayment =>
+        StatusLower == "loss"
+        && !IsCreditNoteRow
+        && LossMagnitudeCents > 0
+        && PaidDisplayCents > 0
+        && PaidDisplayCents < TotalCents;
+
+    /// <summary>Pour la couleur de ligne : perte+partiel → même fond que « partial ».</summary>
+    public string StatusLowerForRowStyle => IsLossWithPartialPayment ? "partial" : StatusLower;
+
+    public string StatusFr
     {
-        "paid" => "PAYEE",
-        "acquittee" => "ACQUITTEE",
-        "unpaid" => "IMPAYEE",
-        "partial" => "PARTIELLE",
-        "loss" => "PERTE",
-        "modified" => "MODIFIEE",
-        "superseded" => "REMPLACEE",
-        _ => (Status ?? "").ToUpperInvariant()
-    };
+        get
+        {
+            if (IsLossWithPartialPayment)
+                return "PARTIELLE";
+            return StatusLower switch
+            {
+                "paid" => "PAYEE",
+                "acquittee" => "ACQUITTEE",
+                "unpaid" => "IMPAYEE",
+                "partial" => "PARTIELLE",
+                "loss" => "PERTE",
+                "modified" => "MODIFIEE",
+                "superseded" => "REMPLACEE",
+                _ => (Status ?? "").ToUpperInvariant()
+            };
+        }
+    }
     public int TotalCents { get; set; }
     public int PaidCents { get; set; }
     public int LossCents { get; set; }
+
+    /// <summary>Montant des pertes en positif (en base, <c>losses.amount_cents</c> est négatif).</summary>
+    public int LossMagnitudeCents => Math.Abs(LossCents);
+
     public int NcCents { get; set; }
     public long RefInvoiceId { get; set; }
     public string Reason { get; set; } = "";
@@ -1547,14 +1926,53 @@ public sealed class InvoiceRow
     /// <summary>Montant réellement encaissé (somme des paiements enregistrés).</summary>
     public int PaidDisplayCents => PaidCents;
 
-    /// <summary>Solde = Total - payé - perte - NC.</summary>
-    public int BalanceCents => Math.Max(0, TotalCents - PaidDisplayCents - LossCents - NcCents);
+    public bool IsCreditNoteRow => string.Equals(Kind, "credit_note", StringComparison.OrdinalIgnoreCase);
 
-    public string TotalEuro => IsReplaced ? "" : (TotalCents / 100.0).ToString("0.00") + " €";
-    public string PaidEuro => IsReplaced ? "" : (PaidDisplayCents / 100.0).ToString("0.00") + " €";
-    public string NcEuro => IsReplaced ? "" : (NcCents > 0 ? (NcCents / 100.0).ToString("0.00") + " €" : "");
-    public string LossEuro => IsReplaced ? "" : (LossCents / 100.0).ToString("0.00") + " €";
-    public string BalanceEuro => IsReplaced ? "" : (BalanceCents / 100.0).ToString("0.00") + " €";
+    /// <summary>
+    /// Facture patient / mutuelle : <c>raw = Total − payé − |perte|</c>.
+    /// Si <c>raw &gt; 0</c> (reste dû), les NC diminuent ce reste : <c>raw − NC</c>.
+    /// Si <c>raw &lt; 0</c> (trop-perçu), la NC enregistrée réduit ce trop : <c>min(0, raw + NC)</c>.
+    /// Si <c>raw == 0</c>, la facture est soldée au net des paiements ; on n’applique pas la NC au solde
+    /// (sinon double comptage quand un ajustement négatif a déjà ramené le net payé au total).
+    /// Note de crédit : montant NC − remboursements enregistrés − |perte|.
+    /// </summary>
+    public int BalanceCents
+    {
+        get
+        {
+            if (IsCreditNoteRow)
+                return Math.Abs(TotalCents) - PaidDisplayCents - LossMagnitudeCents;
+
+            var raw = TotalCents - PaidDisplayCents - LossMagnitudeCents;
+            if (raw < 0)
+                return Math.Min(0, raw + NcCents);
+            if (raw == 0)
+                return 0;
+            return raw - NcCents;
+        }
+    }
+
+    /// <summary>Fond d’alerte sur la colonne Solde (trop-perçu ou trop remboursé sur NC).</summary>
+    public bool BalanceCellHighlight => !IsCreditNoteRow && BalanceCents < 0;
+
+    /// <summary>Fond sur la colonne Perte lorsqu’un montant de perte est présent (y compris avec ligne affichée en PARTIELLE).</summary>
+    public bool LossCellHighlight => !HideMoneyColumnsForGrid && LossMagnitudeCents > 0;
+
+    /// <summary>Ligne NC : montants vides dans la grille (évitent le double comptage visuel avec la facture liée).</summary>
+    private bool HideMoneyColumnsForGrid => IsReplaced || IsCreditNoteRow;
+
+    /// <summary>Grille : pas de « 0,00 € » pour les montants nuls (lisibilité).</summary>
+    private static string EuroCell(int cents)
+    {
+        if (cents == 0) return "";
+        return (cents / 100.0).ToString("0.00") + " €";
+    }
+
+    public string TotalEuro => HideMoneyColumnsForGrid ? "" : EuroCell(TotalCents);
+    public string PaidEuro => HideMoneyColumnsForGrid ? "" : EuroCell(PaidDisplayCents);
+    public string NcEuro => HideMoneyColumnsForGrid ? "" : EuroCell(NcCents);
+    public string LossEuro => HideMoneyColumnsForGrid ? "" : EuroCell(LossMagnitudeCents);
+    public string BalanceEuro => HideMoneyColumnsForGrid ? "" : EuroCell(BalanceCents);
 }
 
 public sealed class InvoiceStats

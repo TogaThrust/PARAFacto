@@ -168,10 +168,6 @@
                     <DatePicker x:Name="AppointmentDatePicker"
                                 SelectedDate="{Binding AppointmentDate}"
                                 Loaded="AppointmentDatePicker_OnLoaded"/>
-                    <Button Margin="0,6,0,0" HorizontalAlignment="Left" Padding="10,5"
-                            Content="Retour au lunch récurrent"
-                            Command="{Binding ResetLunchToRecurringCommand}"
-                            Visibility="{Binding ShowResetLunchForSelectedDay, Converter={StaticResource BoolToVisibility}}"/>
 
                     <TextBlock Margin="0,10,0,2" Text="Heure de début"/>
                     <ComboBox ItemsSource="{Binding TimeSlots}"
@@ -409,7 +405,8 @@
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
-                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                              MouseDoubleClick="DayViewSchedule_OnMouseDoubleClick">
                                     <ItemsControl ItemsSource="{Binding DayLines}"
                                                   ItemTemplate="{StaticResource AgendaLineRowTemplate}"/>
                                 </ScrollViewer>

@@ -145,8 +145,8 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <!-- Logo Laura + titre + logo byTT sur une seule ligne en haut -->
-                            <Grid Grid.Row="0" Margin="0,0,0,0">
+                            <!-- Logo cabinet + titre ; logo ByTT collé en haut à droite, langues juste en dessous -->
+                            <Grid Grid.Row="0" Margin="0,0,0,0" VerticalAlignment="Top">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
@@ -157,7 +157,7 @@
                                        Height="140"
                                        Margin="0,0,12,0"
                                        Stretch="Uniform"
-                                       VerticalAlignment="Center"
+                                       VerticalAlignment="Top"
                                        IsHitTestVisible="False"
                                        Source="{Binding Console.InvoiceLogoSource}"/>
                                 <TextBlock Grid.Column="1"
@@ -165,23 +165,23 @@
                                            Margin="0,0,18,0"
                                            FontSize="22"
                                            FontWeight="Bold"
-                                           Text="LAURA GRENIER - LOGOPEDE"
+                                           Text="{Binding Console.ConsoleHeaderTitle}"
                                            TextTrimming="CharacterEllipsis"
-                                           VerticalAlignment="Center"/>
-                                <Grid Grid.Column="2" VerticalAlignment="Center" Margin="0,0,8,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Image Grid.Column="0"
-                                           Width="620"
+                                           VerticalAlignment="Top"/>
+                                <StackPanel Grid.Column="2"
+                                            Orientation="Vertical"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Top"
+                                            Margin="0,0,0,0">
+                                    <Image Width="620"
                                            Height="210"
-                                           Margin="10,0,14,0"
+                                           Margin="0,0,0,6"
                                            Stretch="Uniform"
-                                           HorizontalAlignment="Left"
+                                           HorizontalAlignment="Right"
                                            IsHitTestVisible="False"
                                            Source="{Binding Console.LogoSource}"/>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal"
+                                                HorizontalAlignment="Right">
                                         <Button x:Name="LangFrButton"
                                                 Width="24"
                                                 Height="18"
@@ -209,7 +209,7 @@
                                             <Image Width="18" Height="12" Stretch="Fill" Source="Assets/dutch.jpg"/>
                                         </Button>
                                     </StackPanel>
-                                </Grid>
+                                </StackPanel>
                             </Grid>
 
                             <!-- Encodage séance (logo byTT déplacé en Row 0) -->
@@ -297,6 +297,14 @@
                                     <Button Style="{StaticResource ConsoleActionButtonStyle}" Content="Générer factures mutuelles" Command="{Binding Console.GenerateMutualRecapsCommand}"/>
                                     <Button Style="{StaticResource ConsoleActionButtonStyle}" Content="Ouvrir dossier factures patients du mois" MinWidth="280" Command="{Binding Console.OpenMonthFolderCommand}"/>
                                     <Button Style="{StaticResource ConsoleActionButtonStyle}" Content="Ouvrir dossier factures mutuelle du mois" MinWidth="280" Command="{Binding Console.OpenLastMutualMonthFolderCommand}"/>
+                                    <Button Style="{StaticResource ConsoleActionButtonStyle}" Content="Réinitialiser la base + démo (SQL + patients / RDV)"
+                                            Command="{Binding Console.FullDemoDatabaseResetCommand}"
+                                            Visibility="{Binding Console.ShowLocalDemoDbTools, Converter={StaticResource BoolToVisibility}}"
+                                            ToolTip="Supprime le fichier SQLite, recrée le schéma, tarifs et patients « -Démo », et l’agenda du mois courant. Effacez aussi vos dossiers PDF sur le disque si besoin. Code 7324."/>
+                                    <Button Style="{StaticResource ConsoleActionButtonStyle}" Content="Purge hors patients démo (DB + journaliers)"
+                                            Command="{Binding Console.PurgeNonDemoBillingCommand}"
+                                            Visibility="{Binding Console.ShowLocalDemoDbTools, Converter={StaticResource BoolToVisibility}}"
+                                            ToolTip="Supprime séances, factures patients/NC liées aux patients sans « -Démo » dans le nom, toutes les factures mutuelles, et les PDF ENCAISSEMENTS_*.pdf des journaliers. Code 7324."/>
                                 </WrapPanel>
                             </Grid>
 
@@ -619,6 +627,9 @@
                     </DockPanel>
                     </StackPanel>
                 </ScrollViewer>
+            </TabItem>
+            <TabItem Header="{DynamicResource Tab.Professional}">
+                <views:ProfessionalDataView />
             </TabItem>
         </TabControl>
 

@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using Microsoft.Data.Sqlite;
 using PARAFactoNative.Models;
@@ -9,6 +10,9 @@ namespace PARAFactoNative.ViewModels;
 public sealed class TarifsViewModel : NotifyBase
 {
     private readonly TarifRepo _repo = new();
+
+    /// <summary>Déclenché après création / modification / suppression pour rafraîchir les combos tarifs ailleurs dans l’app.</summary>
+    public event Action? TariffsChanged;
 
     public List<Tarif> Items { get; private set; } = new();
 
@@ -43,6 +47,7 @@ public sealed class TarifsViewModel : NotifyBase
         if (w.ShowDialog() != true || w.Result is null) return;
         _repo.Upsert(w.Result);
         Reload();
+        TariffsChanged?.Invoke();
     }
 
     private void EditTarif()
@@ -52,6 +57,7 @@ public sealed class TarifsViewModel : NotifyBase
         if (w.ShowDialog() != true || w.Result is null) return;
         _repo.Upsert(w.Result);
         Reload();
+        TariffsChanged?.Invoke();
     }
 
     private void DeleteTarif()
@@ -93,6 +99,7 @@ public sealed class TarifsViewModel : NotifyBase
         }
 
         Reload();
+        TariffsChanged?.Invoke();
     }
 
     public void Reload()

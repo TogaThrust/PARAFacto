@@ -51,6 +51,10 @@ public sealed class ConsoleViewModel : NotifyBase
 
     public event Action<string>? RequestGeneratePatientInvoicesRequested;
     public event Action<string>? RequestGenerateMutualRecapsRequested;
+#if PARAFACTO_LOCAL_DEMO_BUILD
+    public event Action? RequestPurgeNonDemoBillingRequested;
+    public event Action? RequestFullDemoDatabaseResetRequested;
+#endif
     public event Action? RequestOpenWorkspaceFolderRequested;
     public event Action<string>? RequestOpenMonthFolderRequested;
     public event Action? RequestOpenLastMutualMonthFolderRequested;
@@ -70,28 +74,11 @@ public sealed class ConsoleViewModel : NotifyBase
     private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-BE");
     private static string EuroFromCents(long cents) => (cents / 100m).ToString("0.00", Fr) + " €";
 
-    // Logo factures (LOGO.jpg) — chargé en C# pour éviter XamlParseException (format pixel non supporté)
-    public ImageSource? InvoiceLogoSource => LoadImageSourceSafe(InvoiceLogoPathInternal);
-    private static string? InvoiceLogoPathInternal
-    {
-        get
-        {
-            try
-            {
-                var root = Services.WorkspacePaths.GetRootOrNull();
-                if (!string.IsNullOrWhiteSpace(root))
-                {
-                    var p = Path.Combine(root, "assets", "LOGO.jpg");
-                    if (File.Exists(p)) return p;
-                }
-                var fallback = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                    "PARAFACTO_Native", "assets", "LOGO.jpg");
-                return File.Exists(fallback) ? fallback : null;
-            }
-            catch { return null; }
-        }
-    }
+    // Logo praticien (onglet Données professionnelles, ou assets/LOGO.jpg workspace / Documents)
+    public ImageSource? InvoiceLogoSource => LoadImageSourceSafe(ProfessionalProfileStore.ResolveLogoPath());
+
+    /// <summary>Titre à côté du logo (réglage « Données professionnelles »).</summary>
+    public string ConsoleHeaderTitle => ProfessionalProfileStore.Load().ConsoleHeaderTitle;
 
     // Logo "By TogaThrust" — chargé en C# pour éviter XamlParseException
     public ImageSource? LogoSource => LoadImageSourceSafe(LogoPathInternal);
@@ -424,6 +411,11 @@ public sealed class ConsoleViewModel : NotifyBase
 
     public RelayCommand GeneratePatientInvoicesCommand { get; }
     public RelayCommand GenerateMutualRecapsCommand { get; }
+    public RelayCommand PurgeNonDemoBillingCommand { get; }
+    public RelayCommand FullDemoDatabaseResetCommand { get; }
+
+    /// <summary>Outils base de données réservés au build démo locale (boutons console).</summary>
+    public bool ShowLocalDemoDbTools => BuildFeatures.LocalDemoDbTools;
     public RelayCommand OpenWorkspaceFolderCommand { get; }
     public RelayCommand OpenMonthFolderCommand { get; }
     public RelayCommand OpenLastMutualMonthFolderCommand { get; }
@@ -454,6 +446,13 @@ public sealed class ConsoleViewModel : NotifyBase
 
 GeneratePatientInvoicesCommand = new RelayCommand(() => RequestGeneratePatientInvoicesRequested?.Invoke(CurrentPeriod), () => !IsBusy);
 GenerateMutualRecapsCommand = new RelayCommand(() => RequestGenerateMutualRecapsRequested?.Invoke(CurrentPeriod), () => !IsBusy);
+#if PARAFACTO_LOCAL_DEMO_BUILD
+        PurgeNonDemoBillingCommand = new RelayCommand(() => RequestPurgeNonDemoBillingRequested?.Invoke(), () => !IsBusy);
+        FullDemoDatabaseResetCommand = new RelayCommand(() => RequestFullDemoDatabaseResetRequested?.Invoke(), () => !IsBusy);
+#else
+        PurgeNonDemoBillingCommand = new RelayCommand(() => { }, () => false);
+        FullDemoDatabaseResetCommand = new RelayCommand(() => { }, () => false);
+#endif
 OpenWorkspaceFolderCommand = new RelayCommand(() => RequestOpenWorkspaceFolderRequested?.Invoke(), () => !IsBusy);
 OpenMonthFolderCommand = new RelayCommand(() => RequestOpenMonthFolderRequested?.Invoke(CurrentPeriod), () => !IsBusy);
 OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualMonthFolderRequested?.Invoke(), () => !IsBusy);
@@ -475,13 +474,6 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
 
         _isInitializing = false;
 
-        // Valeur par défaut (modifiable) si aucun email n'est encore configuré
-        if (string.IsNullOrWhiteSpace(RecipientEmail))
-        {
-            RecipientEmail = "grenier.family.7324@gmail.com";
-            PersistMailSettings();
-        }
-
         OnPropertyChanged(nameof(UseSmtp));
         OnPropertyChanged(nameof(SmtpHost));
         OnPropertyChanged(nameof(SmtpPort));
@@ -492,6 +484,8 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
 
         BuildSeanceTimeSlots();
         SeanceStartTime = RoundToQuarter(DateTime.Now.Hour * 60 + DateTime.Now.Minute);
+
+        ProfessionalProfileStore.ProfileChanged += OnProfessionalProfileChanged;
 
         ReloadRefs();
         _ = CheckForUpdateAsync();
@@ -605,6 +599,7 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
             RefreshTodaySeances();
 
             OnPropertyChanged(nameof(InvoiceLogoSource));
+            OnPropertyChanged(nameof(ConsoleHeaderTitle));
             OnPropertyChanged(nameof(LogoSource));
         }
         catch (Exception ex)
@@ -615,6 +610,62 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>Recharge la liste des tarifs depuis la base sans tout réinitialiser (patients, filtres).</summary>
+    public void RefreshTariffsAfterDbChange()
+    {
+        try
+        {
+            var prevId = SelectedTarif?.Id ?? 0;
+            var prevLabel = SelectedTarif?.Label;
+            LoadTarifs();
+            if (prevId > 0)
+            {
+                var byId = Tarifs.FirstOrDefault(t => t.Id == prevId);
+                if (byId is not null)
+                {
+                    SelectedTarif = byId;
+                    return;
+                }
+            }
+            if (!string.IsNullOrWhiteSpace(prevLabel))
+            {
+                var byLabel = Tarifs.FirstOrDefault(t => string.Equals(t.Label, prevLabel, StringComparison.OrdinalIgnoreCase));
+                if (byLabel is not null)
+                {
+                    SelectedTarif = byLabel;
+                    return;
+                }
+            }
+            if (SelectedPatient is not null && TryApplyTarifFromPatientStatut(SelectedPatient))
+                return;
+            SelectedTarif = Tarifs.FirstOrDefault(t => string.Equals(t.Label, "BIM CABINET 30 MIN", StringComparison.OrdinalIgnoreCase))
+                            ?? Tarifs.FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void OnProfessionalProfileChanged()
+    {
+        try
+        {
+            if (Application.Current?.Dispatcher is { } d && !d.CheckAccess())
+            {
+                d.BeginInvoke(new Action(OnProfessionalProfileChanged));
+                return;
+            }
+        }
+        catch
+        {
+            /* ignore */
+        }
+
+        OnPropertyChanged(nameof(InvoiceLogoSource));
+        OnPropertyChanged(nameof(ConsoleHeaderTitle));
     }
 
     private void LoadPatients()
@@ -1106,7 +1157,7 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
             if (!string.IsNullOrWhiteSpace(RecipientEmail))
             {
                 var fr = CultureInfo.GetCultureInfo("fr-BE");
-                var subject = $"Journalier séances laura {SeanceDate.ToString("d MMMM yyyy", fr)}";
+                var subject = $"PARAFacto — journalier séances {SeanceDate.ToString("d MMMM yyyy", fr)}";
                 var body = $"Veuillez trouver ci-joint le journalier des séances du {SeanceDate.ToString("d MMMM yyyy", fr)}.";
                 var settings = _settings.LoadMailSettings();
                 settings.RecipientEmail = RecipientEmail;

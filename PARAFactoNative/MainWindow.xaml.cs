@@ -146,7 +146,7 @@ public partial class MainWindow
                 vm.Seances.Refresh();
 
                 var tabs = FindChild<TabControl>(this);
-                if (tabs != null) tabs.SelectedIndex = 3; // 0 Console,1 Factures,2 Tarifs,3 Séances,4 Patients
+                if (tabs != null) tabs.SelectedIndex = 3; // 0 Console, 1 Patients, 2 Tarifs, 3 Séances
             }
             catch (Exception ex)
             {
@@ -167,6 +167,98 @@ public partial class MainWindow
             try { OpenFolder(WorkspacePaths.PatientMonthFolder(period)); }
             catch (Exception ex) { MessageBox.Show(ex.ToString(), "Ouvrir dossier factures du mois - erreur", MessageBoxButton.OK, MessageBoxImage.Error); }
         };
+
+#if PARAFACTO_LOCAL_DEMO_BUILD
+        vm.Console.RequestPurgeNonDemoBillingRequested += () =>
+        {
+            try
+            {
+                if (!ChoiceDialog.AskYesNo(
+                        "Purge hors patients démo",
+                        "Cette opération est irréversible.\n\n" +
+                        "• Suppression de toutes les séances des patients dont le nom / prénom / référend ne contient pas « -Démo » ou « -Demo ».\n" +
+                        "• Suppression des factures patients et notes de crédit liées à ces patients.\n" +
+                        "• Suppression de toutes les factures mutuelles en base.\n" +
+                        "• Suppression des fichiers PDF « ENCAISSEMENTS_*.pdf » du dossier JOURNALIERS PDF.\n\n" +
+                        "Continuer ?",
+                        "Oui, continuer",
+                        "Annuler",
+                        this))
+                    return;
+
+                var ask = new SecurityCodeWindow { Owner = this };
+                if (ask.ShowDialog() != true)
+                    return;
+                if (!string.Equals((ask.EnteredCode ?? "").Trim(), "7324", StringComparison.Ordinal))
+                {
+                    MessageBox.Show("Code de sécurité invalide.", "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var repo = new InvoiceRepo();
+                var r = repo.PurgeNonDemoSessionsInvoicesMutualsAndJournalierPdfs();
+                MessageBox.Show(
+                    $"Purge terminée.\n\n" +
+                    $"Séances supprimées : {r.SeancesDeleted}\n" +
+                    $"Factures / NC / mutuelles supprimées : {r.InvoicesDeleted}\n" +
+                    $"PDF journaliers supprimés : {r.JournalierPdfsDeleted}",
+                    "PARAFacto",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                vm.Factures.Reload();
+                vm.Console.ReloadRefs();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Purge hors démo - erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        };
+
+        vm.Console.RequestFullDemoDatabaseResetRequested += () =>
+        {
+            try
+            {
+                var today = DateTime.Today;
+                if (!ChoiceDialog.AskYesNo(
+                        "Réinitialisation complète de la base",
+                        "Cette opération est irréversible.\n\n" +
+                        "• Suppression du fichier SQLite (toutes les données : patients, séances, factures, tarifs, agenda, etc.).\n" +
+                        "• Recréation du schéma puis insertion des tarifs démo, 8 patients « -Démo » et des rendez-vous agenda pour le mois :\n" +
+                        $"   {today:MMMM yyyy}\n\n" +
+                        "Les PDF sur le disque (journaliers, factures) ne sont pas effacés par cette action — supprimez-les manuellement si besoin.\n\n" +
+                        "Continuer ?",
+                        "Oui, réinitialiser",
+                        "Annuler",
+                        this))
+                    return;
+
+                var ask = new SecurityCodeWindow { Owner = this };
+                if (ask.ShowDialog() != true)
+                    return;
+                if (!string.Equals((ask.EnteredCode ?? "").Trim(), "7324", StringComparison.Ordinal))
+                {
+                    MessageBox.Show("Code de sécurité invalide.", "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var r = DemoWorkspaceResetService.DeleteRebootstrapAndSeed(today.Year, today.Month);
+                vm.ReloadAll();
+                MessageBox.Show(
+                    $"Base réinitialisée.\n\n" +
+                    $"Tarifs : {r.Tarifs}\n" +
+                    $"Patients démo : {r.Patients}\n" +
+                    $"Rendez-vous agenda ({today:MMMM yyyy}) : {r.Appointments}",
+                    "PARAFacto",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Réinitialisation base démo - erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        };
+#endif
 
         vm.Console.RequestOpenLastMutualMonthFolderRequested += () =>
         {
@@ -237,7 +329,7 @@ public partial class MainWindow
                 if (!string.IsNullOrWhiteSpace(vm.Console.RecipientEmail))
                 {
                     var label = BuildMonthYearLabelFr(period);
-                    var subject = $"factures patients laura {label}";
+                    var subject = $"PARAFacto — factures patients {label}";
                     var body = $"Veuillez trouver ci-joint les factures patients — {label}.";
                     var mailer = new EmailDispatchService();
                     var settings = new AppSettingsStore().LoadMailSettings();
@@ -300,7 +392,7 @@ public partial class MainWindow
                 if (!string.IsNullOrWhiteSpace(vm.Console.RecipientEmail))
                 {
                     var label = BuildMonthYearLabelFr(period);
-                    var subject = $"factures mutuelles laura {label}";
+                    var subject = $"PARAFacto — factures mutuelles {label}";
                     var body = $"Veuillez trouver ci-joint les factures mutuelles — {label}.";
                     var mailer = new EmailDispatchService();
                     var settings = new AppSettingsStore().LoadMailSettings();
@@ -338,7 +430,7 @@ public partial class MainWindow
     {
         var baseTitle = Application.Current?.TryFindResource("App.WindowTitle") as string;
         if (string.IsNullOrWhiteSpace(baseTitle))
-            baseTitle = "PARAFACTO Native";
+            baseTitle = "PARAFacto";
         var v = Assembly.GetExecutingAssembly().GetName().Version;
         Title = v is null ? baseTitle : $"{baseTitle} v{v.Major}.{v.Minor}.{v.Build}";
     }
@@ -692,13 +784,29 @@ public partial class MainWindow
         return d.ToString("MMMM yyyy", CultureInfo.GetCultureInfo("fr-BE"));
     }
 
+    private const int FacturesTabIndex = 4;
+
+    /// <summary>Dernier onglet principal sélectionné (évite de traiter les SelectionChanged qui remontent depuis les ComboBox).</summary>
+    private int _previousMainTabIndex = -1;
+
     private void MainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!ReferenceEquals(sender, MainTabControl))
             return;
+        // SelectionChanged est en bulle : les ComboBox / ListBox à l’intérieur des onglets remontent jusqu’au TabControl.
+        // Traiter seulement le vrai changement d’onglet (source = ce TabControl), sinon les listes restent « bloquées ».
+        if (!ReferenceEquals(e.Source, MainTabControl))
+            return;
         if (DataContext is not MainViewModel vm)
             return;
-        vm.Legal.NotifyMainTabSelectionChanged(MainTabControl.SelectedIndex);
+        var idx = MainTabControl.SelectedIndex;
+        vm.Legal.NotifyMainTabSelectionChanged(idx);
+
+        // Sans ce garde-fou, chaque entrée sur l’onglet Factures réappelait OnFacturesTabActivated() (voir aussi e.Source ci-dessus).
+        if (idx == FacturesTabIndex && _previousMainTabIndex != FacturesTabIndex)
+            vm.Factures.OnFacturesTabActivated();
+
+        _previousMainTabIndex = idx;
     }
 
     private const string StripeCustomerPortalUrl =
@@ -718,7 +826,7 @@ public partial class MainWindow
         {
             MessageBox.Show(
                 $"Impossible d'ouvrir le portail clients : {ex.Message}",
-                "PARAFacto Native",
+                "PARAFacto",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }

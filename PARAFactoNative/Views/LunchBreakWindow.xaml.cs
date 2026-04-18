@@ -22,8 +22,8 @@ public partial class LunchBreakWindow : Window
 
         var defStart = string.IsNullOrWhiteSpace(initialStartHhMm) ? "12:00" : initialStartHhMm.Trim();
         var defEnd = string.IsNullOrWhiteSpace(initialEndHhMm) ? "13:00" : initialEndHhMm.Trim();
-        StartCombo.SelectedItem = times.Contains(defStart) ? defStart : "12:00";
-        EndCombo.SelectedItem = times.Contains(defEnd) ? defEnd : "13:00";
+        StartCombo.SelectedItem = times.FirstOrDefault(t => t == defStart) ?? times.First(t => t == "12:00");
+        EndCombo.SelectedItem = times.FirstOrDefault(t => t == defEnd) ?? times.First(t => t == "13:00");
     }
 
     private void Ok_Click(object sender, RoutedEventArgs e)

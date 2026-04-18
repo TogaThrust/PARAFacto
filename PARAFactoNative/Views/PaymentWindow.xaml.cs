@@ -13,14 +13,14 @@ public partial class PaymentWindow : Window
         public string InvoiceLabel { get; init; } = "";
         public string AmountEuroText { get; set; } = "";
         public List<string> Methods { get; } = new() { "Espèces", "Virement", "Carte", "Autre" };
-        public string SelectedMethod { get; set; } = "Espèces";
+        public string SelectedMethod { get; set; } = "Virement";
         public string Reference { get; set; } = "";
     }
 
     private readonly VM _vm;
 
     public decimal AmountEuro { get; private set; }
-    public string Method { get; private set; } = "Espèces";
+    public string Method { get; private set; } = "Virement";
     public string Reference { get; private set; } = "";
 
     public PaymentWindow(Invoice invoice, decimal defaultEuro)
@@ -30,7 +30,7 @@ public partial class PaymentWindow : Window
         {
             InvoiceLabel = $"{invoice.InvoiceNo} — {invoice.Recipient}",
             AmountEuroText = defaultEuro.ToString("0.00", CultureInfo.InvariantCulture),
-            SelectedMethod = "Espèces",
+            SelectedMethod = "Virement",
             Reference = ""
         };
         DataContext = _vm;
@@ -51,7 +51,7 @@ public partial class PaymentWindow : Window
         }
 
         AmountEuro = v;
-        Method = (_vm.SelectedMethod ?? "Espèces").Trim();
+        Method = (_vm.SelectedMethod ?? "Virement").Trim();
         Reference = (_vm.Reference ?? "").Trim();
         DialogResult = true;
     }

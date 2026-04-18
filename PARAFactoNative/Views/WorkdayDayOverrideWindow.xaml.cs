@@ -31,8 +31,8 @@ public partial class WorkdayDayOverrideWindow : Window
 
         var startStr = SnapToQuarter(initialStartMin);
         var endStr = SnapToQuarter(initialEndMin);
-        StartCombo.SelectedItem = _quarterHours.Contains(startStr) ? startStr : _quarterHours[36];
-        EndCombo.SelectedItem = _quarterHours.Contains(endStr) ? endStr : _quarterHours[84];
+        StartCombo.SelectedItem = _quarterHours.FirstOrDefault(h => h == startStr) ?? _quarterHours[36];
+        EndCombo.SelectedItem = _quarterHours.FirstOrDefault(h => h == endStr) ?? _quarterHours[84];
         StartCombo.SelectionChanged += (_, _) => CoerceEndAfterStart();
         StartCombo.LostFocus += (_, _) => CoerceEndAfterStart();
         EndCombo.LostFocus += (_, _) => CoerceEndAfterStart();

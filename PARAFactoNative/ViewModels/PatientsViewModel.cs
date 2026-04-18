@@ -217,6 +217,9 @@ public sealed class PatientsViewModel : NotifyBase
         Reload();
     }
 
+    /// <summary>Recharge uniquement les libellés de tarif (ex. après un changement dans l’onglet Tarifs).</summary>
+    public void RefreshTariffChoices() => ReloadTarifChoices();
+
     private void ReloadTarifChoices()
     {
         StatutChoices.Clear();

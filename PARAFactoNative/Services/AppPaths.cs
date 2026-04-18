@@ -5,6 +5,7 @@ namespace PARAFactoNative.Services;
 
 public static class AppPaths
 {
+    /// <summary>Racine stable sous LocalAppData (même chemin après mise à jour de l’installateur) : profil pro, DB, exports.</summary>
     public static string AppDataRoot
     {
         get

@@ -1,14 +1,45 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <sys:String x:Key="App.WindowTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">PARAFACTO Native</sys:String>
+    <sys:String x:Key="App.WindowTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">PARAFacto</sys:String>
     <sys:String x:Key="Tab.Console" xmlns:sys="clr-namespace:System;assembly=mscorlib">Dashboard</sys:String>
     <sys:String x:Key="Tab.Patients" xmlns:sys="clr-namespace:System;assembly=mscorlib">Patients</sys:String>
     <sys:String x:Key="Tab.Tarifs" xmlns:sys="clr-namespace:System;assembly=mscorlib">Rates</sys:String>
+    <sys:String x:Key="Tab.Professional" xmlns:sys="clr-namespace:System;assembly=mscorlib">Practice details</sys:String>
     <sys:String x:Key="Tab.Seances" xmlns:sys="clr-namespace:System;assembly=mscorlib">Sessions</sys:String>
     <sys:String x:Key="Tab.Factures" xmlns:sys="clr-namespace:System;assembly=mscorlib">Invoices</sys:String>
     <sys:String x:Key="Tab.Agenda" xmlns:sys="clr-namespace:System;assembly=mscorlib">Appointments</sys:String>
     <sys:String x:Key="Tab.Technical" xmlns:sys="clr-namespace:System;assembly=mscorlib">Technical Data</sys:String>
     <sys:String x:Key="Tab.Support" xmlns:sys="clr-namespace:System;assembly=mscorlib">Help</sys:String>
+    <sys:String x:Key="Professional.Intro" xmlns:sys="clr-namespace:System;assembly=mscorlib">These details appear on patient invoices, credit notes, settled invoices, and mutual insurance summary statements. The logo and title are also shown on the dashboard.</sys:String>
+    <sys:String x:Key="Professional.Reload" xmlns:sys="clr-namespace:System;assembly=mscorlib">Reload from disk</sys:String>
+    <sys:String x:Key="Professional.Save" xmlns:sys="clr-namespace:System;assembly=mscorlib">Save</sys:String>
+    <sys:String x:Key="Professional.LogoPreview" xmlns:sys="clr-namespace:System;assembly=mscorlib">Logo (preview)</sys:String>
+    <sys:String x:Key="Professional.PickImage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose image…</sys:String>
+    <sys:String x:Key="Professional.RemoveLogo" xmlns:sys="clr-namespace:System;assembly=mscorlib">Remove logo</sys:String>
+    <sys:String x:Key="Professional.Label.ConsoleTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Dashboard — title next to the logo</sys:String>
+    <sys:String x:Key="Professional.Label.InvoiceName" xmlns:sys="clr-namespace:System;assembly=mscorlib">Invoices / credit notes — practitioner name or title (main line)</sys:String>
+    <sys:String x:Key="Professional.Label.ReminderSignature" xmlns:sys="clr-namespace:System;assembly=mscorlib">Invoice reminders (WhatsApp / email signature)</sys:String>
+    <sys:String x:Key="Professional.Section.Address" xmlns:sys="clr-namespace:System;assembly=mscorlib">Address and contact (patient invoice block)</sys:String>
+    <sys:String x:Key="Professional.Label.AddressLine1" xmlns:sys="clr-namespace:System;assembly=mscorlib">Address line 1</sys:String>
+    <sys:String x:Key="Professional.Label.AddressLine2" xmlns:sys="clr-namespace:System;assembly=mscorlib">Address line 2 (e.g. postcode, city)</sys:String>
+    <sys:String x:Key="Professional.Label.Inami" xmlns:sys="clr-namespace:System;assembly=mscorlib">INAMI number</sys:String>
+    <sys:String x:Key="Professional.Label.Vat" xmlns:sys="clr-namespace:System;assembly=mscorlib">VAT number</sys:String>
+    <sys:String x:Key="Professional.Label.Phone" xmlns:sys="clr-namespace:System;assembly=mscorlib">Phone</sys:String>
+    <sys:String x:Key="Professional.Label.Email" xmlns:sys="clr-namespace:System;assembly=mscorlib">Email</sys:String>
+    <sys:String x:Key="Professional.Section.Payments" xmlns:sys="clr-namespace:System;assembly=mscorlib">Payments (IBAN / BIC)</sys:String>
+    <sys:String x:Key="Professional.Label.IbanPatient" xmlns:sys="clr-namespace:System;assembly=mscorlib">IBAN (patient invoices / credit notes)</sys:String>
+    <sys:String x:Key="Professional.Label.IbanMutuelle" xmlns:sys="clr-namespace:System;assembly=mscorlib">IBAN (mutual insurance statement)</sys:String>
+    <sys:String x:Key="Professional.Label.IbanCreditNote" xmlns:sys="clr-namespace:System;assembly=mscorlib">IBAN (credit notes — optional)</sys:String>
+    <sys:String x:Key="Professional.Label.Bic" xmlns:sys="clr-namespace:System;assembly=mscorlib">BIC</sys:String>
+    <sys:String x:Key="Professional.Section.MutualRecap" xmlns:sys="clr-namespace:System;assembly=mscorlib">Mutual insurance summary statement</sys:String>
+    <sys:String x:Key="Professional.MutualRecap.Help" xmlns:sys="clr-namespace:System;assembly=mscorlib">“Care provider name” line and full address on a single line. If the dedicated address is empty, lines 1 and 2 above are combined.</sys:String>
+    <sys:String x:Key="Professional.Label.MutualName" xmlns:sys="clr-namespace:System;assembly=mscorlib">Name (e.g. DOE Jane)</sys:String>
+    <sys:String x:Key="Professional.Label.MutualAddress" xmlns:sys="clr-namespace:System;assembly=mscorlib">Address (one line, optional)</sys:String>
+    <sys:String x:Key="Professional.PickLogo.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose practice logo</sys:String>
+    <sys:String x:Key="Professional.PickLogo.Filter" xmlns:sys="clr-namespace:System;assembly=mscorlib">Images|*.jpg;*.jpeg;*.png;*.bmp;*.gif|All files|*.*</sys:String>
+    <sys:String x:Key="Professional.Validation.RequiredFields" xmlns:sys="clr-namespace:System;assembly=mscorlib">Dashboard title and invoice name are required.</sys:String>
+    <sys:String x:Key="Professional.Save.Success" xmlns:sys="clr-namespace:System;assembly=mscorlib">Practice details saved. New PDFs will use this information.</sys:String>
+    <sys:String x:Key="Professional.Save.ErrorTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Save — error</sys:String>
     <sys:String x:Key="Language.TooltipFr" xmlns:sys="clr-namespace:System;assembly=mscorlib">French</sys:String>
     <sys:String x:Key="Language.TooltipEn" xmlns:sys="clr-namespace:System;assembly=mscorlib">English</sys:String>
     <sys:String x:Key="Language.TooltipNl" xmlns:sys="clr-namespace:System;assembly=mscorlib">Dutch</sys:String>
@@ -29,6 +60,8 @@
     <sys:String x:Key="Factures.Button.CancelLoss" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cancel loss</sys:String>
     <sys:String x:Key="Factures.Button.CreditNote" xmlns:sys="clr-namespace:System;assembly=mscorlib">Credit note</sys:String>
     <sys:String x:Key="Factures.Button.MutualEdit" xmlns:sys="clr-namespace:System;assembly=mscorlib">Health fund edit</sys:String>
+    <sys:String x:Key="Factures.Button.DeleteMutualMod" xmlns:sys="clr-namespace:System;assembly=mscorlib">Delete mod.</sys:String>
+    <sys:String x:Key="Factures.Tooltip.DeleteMutualMod" xmlns:sys="clr-namespace:System;assembly=mscorlib">Delete the modified mutual invoice (-MOD) and reactivate the original when applicable</sys:String>
     <sys:String x:Key="Factures.Button.OpenFolder" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open folder</sys:String>
     <sys:String x:Key="Factures.MonthDeletion" xmlns:sys="clr-namespace:System;assembly=mscorlib">Month deletion</sys:String>
     <sys:String x:Key="Factures.DeleteAllMonth" xmlns:sys="clr-namespace:System;assembly=mscorlib">Delete all invoices for this month</sys:String>
@@ -40,8 +73,8 @@
     <sys:String x:Key="Factures.TotalRecorded" xmlns:sys="clr-namespace:System;assembly=mscorlib">TOTAL RECORDED</sys:String>
     <sys:String x:Key="Factures.LossesLabel" xmlns:sys="clr-namespace:System;assembly=mscorlib">LOSSES: </sys:String>
     <sys:String x:Key="Agenda.RatePrefillHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Rate is prefilled according to patient status (file). You can change it.</sys:String>
-    <sys:String x:Key="Agenda.DayWorkdayOverrideHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Double-click the date to change the start and end times for this specific day (month/week view only).</sys:String>
-    <sys:String x:Key="Agenda.DayLunchOverrideHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Double-click the break time to change the lunch break slot for this specific date.</sys:String>
+    <sys:String x:Key="Agenda.DayWorkdayOverrideHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Shift + double-click the date: start/end of workday for that day (month/week). Day view: Shift + double-click the schedule list.</sys:String>
+    <sys:String x:Key="Agenda.DayLunchOverrideHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Double-click the date (month/week) or the day list: lunch break for that date, even when no yellow bar is shown. Double-click the yellow lunch line: same.</sys:String>
     <sys:String x:Key="Agenda.UpdateButton.Text" xmlns:sys="clr-namespace:System;assembly=mscorlib">New version available - Download installer</sys:String>
     <sys:String x:Key="Agenda.UpdateButton.Tooltip" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open the installer download page</sys:String>
     <sys:String x:Key="Unavailability.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Unavailability</sys:String>
@@ -66,7 +99,7 @@
     <sys:String x:Key="Help.Chat.Body" xmlns:sys="clr-namespace:System;assembly=mscorlib">Live chat with our team will be offered in a future release. Until then, email to the helpdesk is the recommended channel for clear, traceable follow-up.</sys:String>
     <sys:String x:Key="Help.Faq.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Frequently asked questions</sys:String>
     <sys:String x:Key="Help.Faq.Intro" xmlns:sys="clr-namespace:System;assembly=mscorlib">Expand a question to read the answer.</sys:String>
-    <sys:String x:Key="Help.Faq1.Q" xmlns:sys="clr-namespace:System;assembly=mscorlib">How do I update PARAFacto Native?</sys:String>
+    <sys:String x:Key="Help.Faq1.Q" xmlns:sys="clr-namespace:System;assembly=mscorlib">How do I update PARAFacto?</sys:String>
     <sys:String x:Key="Help.Faq1.A" xmlns:sys="clr-namespace:System;assembly=mscorlib">When a new version is available, a notice appears on the dashboard. Follow the link to open the download page, fully close the application, then run the installer.</sys:String>
     <sys:String x:Key="Help.Faq2.Q" xmlns:sys="clr-namespace:System;assembly=mscorlib">Where can I manage my subscription or invoices?</sys:String>
     <sys:String x:Key="Help.Faq2.A" xmlns:sys="clr-namespace:System;assembly=mscorlib">Under Technical data, the customer portal (Stripe) lets you access invoices, payment method, and subscription options where enabled.</sys:String>

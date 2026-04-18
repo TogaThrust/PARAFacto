@@ -41,6 +41,14 @@ public partial class App : Application
 
         base.OnStartup(e);
 
+#if PARAFACTO_LOCAL_DEMO_BUILD
+        if (TryHandleDemoResetCli(e.Args))
+        {
+            Shutdown(0);
+            return;
+        }
+#endif
+
         EventManager.RegisterClassHandler(
             typeof(Window),
             FrameworkElement.LoadedEvent,
@@ -62,8 +70,8 @@ public partial class App : Application
             if (!HasPdfPrintAssociation())
             {
                 var result = ChoiceDialog.AskYesNo(
-                    "PARAFacto Native - Pré-requis impression PDF",
-                    "Pour que l'impression automatique des documents (factures, journaux, etc.) fonctionne, PARAFacto Native a besoin d'un lecteur PDF capable d'imprimer les fichiers (par exemple Adobe Acrobat Reader) et configuré comme application par défaut pour les fichiers PDF.\n\n" +
+                    "PARAFacto - Pré-requis impression PDF",
+                    "Pour que l'impression automatique des documents (factures, journaux, etc.) fonctionne, PARAFacto a besoin d'un lecteur PDF capable d'imprimer les fichiers (par exemple Adobe Acrobat Reader) et configuré comme application par défaut pour les fichiers PDF.\n\n" +
                     "Souhaitez-vous ouvrir maintenant la page de téléchargement d'Adobe Acrobat Reader ?",
                     "Ouvrir la page",
                     "Fermer");
@@ -97,6 +105,15 @@ public partial class App : Application
         {
             LogAndShow("Initialisation base de données", ex);
             Shutdown(-1);
+        }
+
+        try
+        {
+            ProfessionalProfileStore.EnsureFirstRunDefaults();
+        }
+        catch
+        {
+            // Optionnel : ne pas empêcher l’ouverture si l’amorçage du profil échoue.
         }
 
         try
@@ -141,6 +158,72 @@ public partial class App : Application
     /// Vérifie si Windows a une application associée pour l'action "print" sur les fichiers PDF
     /// (ex. Adobe Acrobat Reader). Si oui, l'impression automatique depuis l'app fonctionnera.
     /// </summary>
+#if PARAFACTO_LOCAL_DEMO_BUILD
+    /// <summary>
+    /// Ligne de commande : <c>--reset-demo-db</c> ou <c>--reset-demo-db 2026 4</c> (année + mois pour l’agenda démo).
+    /// Réinitialise la base sans ouvrir la fenêtre principale.
+    /// </summary>
+    private static bool TryHandleDemoResetCli(string[]? args)
+    {
+        if (!TryParseDemoResetArgs(args, out var year, out var month))
+            return false;
+
+        var logPath = Path.Combine(Services.AppPaths.AppDataRoot, "demo_reset_last.txt");
+        try
+        {
+            Services.AppPaths.EnsureDataDir();
+            Services.BelgianHolidayHelper.Initialize();
+            var r = Services.DemoWorkspaceResetService.DeleteRebootstrapAndSeed(year, month);
+            File.WriteAllText(
+                logPath,
+                $"{DateTime.Now:O} OK — tarifs {r.Tarifs}, patients {r.Patients}, RDV {r.Appointments} (mois {year}-{month:00})\n");
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                Services.AppPaths.EnsureDataDir();
+                File.WriteAllText(logPath, $"{DateTime.Now:O} ERREUR\n{ex}");
+            }
+            catch { /* ignore */ }
+
+            MessageBox.Show(
+                $"{ex.Message}\n\nDétails enregistrés dans :\n{logPath}",
+                "PARAFacto — reset démo",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+
+        return true;
+    }
+
+    private static bool TryParseDemoResetArgs(string[]? args, out int year, out int month)
+    {
+        year = DateTime.Today.Year;
+        month = DateTime.Today.Month;
+        if (args is null) return false;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            if (!string.Equals(args[i], "--reset-demo-db", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (i + 2 < args.Length
+                && int.TryParse(args[i + 1], out var y)
+                && int.TryParse(args[i + 2], out var m)
+                && m is >= 1 and <= 12)
+            {
+                year = y;
+                month = m;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+#endif
+
     private static bool HasPdfPrintAssociation()
     {
         string tempPdf = Path.Combine(Path.GetTempPath(), "PARAFactoNative_test_print_" + Guid.NewGuid().ToString("N") + ".pdf");
@@ -213,7 +296,7 @@ public partial class App : Application
         catch { /* ignore */ }
         MessageBox.Show(
             $"{context} :\n\n{ex?.Message}\n\nDétails enregistrés dans :\n{LogPath}",
-            "PARAFacto Native — Erreur",
+            "PARAFacto — Erreur",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
     }

@@ -16,17 +16,45 @@ public partial class AgendaView
     private void CalendarDayHeaderButton_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (DataContext is not AgendaViewModel vm) return;
-        switch (sender)
+        if (Keyboard.Modifiers == ModifierKeys.Shift)
         {
-            case Button { DataContext: AgendaMonthCellVm mo }:
-                vm.OnCalendarDateHeaderDoubleClick(mo.CellDate);
-                e.Handled = true;
-                break;
-            case Button { DataContext: AgendaWeekColumnVm we }:
-                vm.OnCalendarDateHeaderDoubleClick(we.Day);
-                e.Handled = true;
-                break;
+            switch (sender)
+            {
+                case Button { DataContext: AgendaMonthCellVm mo }:
+                    vm.OnCalendarWorkdayDayOverrideDoubleClick(mo.CellDate);
+                    e.Handled = true;
+                    break;
+                case Button { DataContext: AgendaWeekColumnVm we }:
+                    vm.OnCalendarWorkdayDayOverrideDoubleClick(we.Day);
+                    e.Handled = true;
+                    break;
+            }
         }
+        else
+        {
+            switch (sender)
+            {
+                case Button { DataContext: AgendaMonthCellVm mo }:
+                    vm.OnCalendarDayLunchDoubleClick(mo.CellDate);
+                    e.Handled = true;
+                    break;
+                case Button { DataContext: AgendaWeekColumnVm we }:
+                    vm.OnCalendarDayLunchDoubleClick(we.Day);
+                    e.Handled = true;
+                    break;
+            }
+        }
+    }
+
+    private void DayViewSchedule_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not AgendaViewModel vm) return;
+        if (vm.AnchorDate.Date < DateTime.Today) return;
+        if (Keyboard.Modifiers == ModifierKeys.Shift)
+            vm.OnCalendarWorkdayDayOverrideDoubleClick(vm.AnchorDate.Date);
+        else
+            vm.OnCalendarDayLunchDoubleClick(vm.AnchorDate.Date);
+        e.Handled = true;
     }
 
     private void AgendaLineRow_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

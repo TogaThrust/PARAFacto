@@ -12,6 +12,7 @@ public sealed class MainViewModel : NotifyBase
     public SeancesViewModel Seances { get; } = new();
     public FacturesViewModel Factures { get; } = new();
     public AgendaViewModel Agenda { get; } = new();
+    public ProfessionalDataViewModel Professional { get; } = new();
     public HelpViewModel Help { get; } = new();
 
     private string _statusText = "Ready";
@@ -71,6 +72,13 @@ public sealed class MainViewModel : NotifyBase
         Console.LinkedAgendaDataChanged += () => Agenda.RefreshAppointmentsCalendar();
 
         Patients.ImportCompleted += ReloadAll;
+
+        Tarifs.TariffsChanged += () =>
+        {
+            Console.RefreshTariffsAfterDbChange();
+            Agenda.RefreshTariffChoicesAfterDbChange();
+            Patients.RefreshTariffChoices();
+        };
     }
 
     public void ReloadAll()

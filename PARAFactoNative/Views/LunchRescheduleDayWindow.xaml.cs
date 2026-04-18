@@ -14,6 +14,11 @@ public partial class LunchRescheduleDayWindow : Window
     public string StartHhMm { get; private set; } = "";
     public string EndHhMm { get; private set; } = "";
 
+    /// <summary>Dernière heure / durée choisies (évite une sélection perdue par la ListBox si un seul panneau est manipulé).</summary>
+    private string _lastStartSelection = "";
+
+    private string _lastDurSelection = "";
+
     public LunchRescheduleDayWindow(DateTime day, int defaultStartMin, int defaultEndMin, CultureInfo culture)
     {
         InitializeComponent();
@@ -22,23 +27,54 @@ public partial class LunchRescheduleDayWindow : Window
         var times = Enumerable.Range(0, 96)
             .Select(i => AppointmentScheduling.FormatMinutesAsHhMm(i * 15))
             .ToList();
-        StartCombo.ItemsSource = times;
-        DurationCombo.ItemsSource = DurationChoices.Select(d => d.ToString()).ToList();
+        StartList.ItemsSource = times;
+
+        var durationStrs = DurationChoices.Select(d => d.ToString(CultureInfo.InvariantCulture)).ToList();
+        DurationList.ItemsSource = durationStrs;
 
         var startStr = AppointmentScheduling.FormatMinutesAsHhMm(
             Math.Clamp((defaultStartMin / 15) * 15, 0, 23 * 60 + 45));
-        StartCombo.SelectedItem = times.Contains(startStr) ? startStr : "12:00";
+        StartList.SelectedItem = times.FirstOrDefault(t => t == startStr) ?? times.First(t => t == "12:00");
 
         var dur = Math.Max(15, defaultEndMin - defaultStartMin);
         var durPick = DurationChoices.OrderBy(x => Math.Abs(x - dur)).First();
-        DurationCombo.SelectedItem = durPick.ToString();
+        var durIdx = Array.IndexOf(DurationChoices, durPick);
+        DurationList.SelectedItem = durationStrs[durIdx >= 0 ? durIdx : 0];
+
+        _lastStartSelection = (string)StartList.SelectedItem!;
+        _lastDurSelection = (string)DurationList.SelectedItem!;
+
+        StartList.SelectionChanged += (_, _) =>
+        {
+            if (StartList.SelectedItem is string s)
+                _lastStartSelection = s;
+        };
+        DurationList.SelectionChanged += (_, _) =>
+        {
+            if (DurationList.SelectedItem is string s)
+                _lastDurSelection = s;
+        };
+
+        Loaded += (_, _) =>
+        {
+            if (StartList.SelectedItem != null)
+                StartList.ScrollIntoView(StartList.SelectedItem);
+            if (DurationList.SelectedItem != null)
+                DurationList.ScrollIntoView(DurationList.SelectedItem);
+        };
     }
 
     private void Ok_Click(object sender, RoutedEventArgs e)
     {
-        if (StartCombo.SelectedItem is not string sa || DurationCombo.SelectedItem is not string sdStr)
+        var sa = (StartList.SelectedItem as string) ?? _lastStartSelection;
+        var sdStr = (DurationList.SelectedItem as string) ?? _lastDurSelection;
+        if (string.IsNullOrWhiteSpace(sa) || string.IsNullOrWhiteSpace(sdStr))
         {
-            MessageBox.Show("Choisissez l’heure de début et la durée.", "Lunch", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                "Choisissez l’heure de début et la durée (une ligne dans chaque liste), puis Enregistrer.",
+                "Lunch",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
             return;
         }
 
@@ -48,18 +84,18 @@ public partial class LunchRescheduleDayWindow : Window
             return;
         }
 
-        if (!TimeSpan.TryParse(sa.Trim(), CultureInfo.InvariantCulture, out var tsA))
+        if (!AppointmentScheduling.TryParseTimeToMinutes(sa.Trim(), out var startM))
         {
             MessageBox.Show("Heure de début invalide.", "Lunch", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var startM = (int)tsA.TotalMinutes;
         var endM = startM + durationMin;
         if (endM > 24 * 60)
         {
             MessageBox.Show("Cette plage dépasse minuit : raccourcissez la durée ou choisissez une heure plus tôt.", "Lunch",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
             return;
         }
 
