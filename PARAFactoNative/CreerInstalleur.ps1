@@ -544,7 +544,7 @@ begin
   PrereqMemo.Left := 0;
   PrereqMemo.Top := 0;
   PrereqMemo.Width := PrereqPage.SurfaceWidth;
-  PrereqMemo.Height := ScaleY(132);
+  PrereqMemo.Height := ScaleY(168);
   PrereqMemo.ReadOnly := True;
   PrereqMemo.ScrollBars := ssVertical;
   PrereqMemo.TabStop := False;
@@ -558,7 +558,10 @@ begin
     T := T + '- Outlook (executable + automation COM) : detecte.' + #13#10
   else
     T := T + '- Outlook classique / automation : absent ou incomplet (voir page Microsoft si vous utilisez le Nouvel Outlook).' + #13#10;
-  T := T + #13#10 + 'Les boutons ouvrent le navigateur sur les telechargements officiels. Vous pouvez continuer l''installation et installer ces logiciels plus tard.';
+  T := T + #13#10 +
+    'Les boutons ouvrent le navigateur (ou les installateurs) : PARAFacto ne les attend pas automatiquement. ' +
+    'Quand vous avez termine avec Outlook et/ou Adobe, revenez sur cette fenetre d''installation PARAFacto et cliquez « Suivant » pour copier les fichiers de l''application. ' +
+    'Vous pouvez aussi cliquer « Suivant » tout de suite et installer Reader/Outlook plus tard.';
 
   PrereqMemo.Text := T;
 
