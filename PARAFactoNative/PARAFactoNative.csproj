@@ -14,7 +14,7 @@
     <RootNamespace>PARAFactoNative</RootNamespace>
     <!-- Nom d'exe distinct du dossier projet : sinon Windows peut ignorer AssemblyTitle et afficher « PARAFactoNative » (coupé en deux lignes). -->
     <AssemblyName>PARAFacto</AssemblyName>
-    <Version>1.1.27</Version>
+    <Version>1.1.28</Version>
     <Product>PARAFacto</Product>
     <AssemblyTitle>PARAFacto</AssemblyTitle>
   </PropertyGroup>
