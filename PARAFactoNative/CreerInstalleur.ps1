@@ -534,9 +534,10 @@ begin
   R := AcroReaderFound;
   O := OutlookExeFound and OutlookProgIdFound;
 
-  PrereqPage := CreateCustomPage(wpWelcome,
-    'Logiciels recommandes',
-    'PARAFacto s''appuie sur Acrobat Reader pour les PDF et sur Outlook classique (COM) pour l''envoi de mails automatiques. Verifiez ci-dessous ou installez via les pages officielles.');
+  { Page inseree apres wpReady (ecran Pret a installer), avant la copie des fichiers. }
+  PrereqPage := CreateCustomPage(wpReady,
+    'Logiciels recommandes (avant copie des fichiers)',
+    'PARAFacto s''appuie sur Acrobat Reader pour les PDF et sur Outlook classique (COM) pour l''envoi de mails automatiques. Verifiez ci-dessous ou installez via les pages officielles avant la fin de l''installation.');
 
   PrereqMemo := TNewMemo.Create(PrereqPage);
   PrereqMemo.Parent := PrereqPage.Surface;
