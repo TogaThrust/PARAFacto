@@ -327,26 +327,31 @@
                                             Command="{Binding Console.ImportAgendaCommand}"/>
                                     <TextBlock FontSize="14" FontWeight="Bold" Text="Séances du jour" VerticalAlignment="Center"/>
                                 </DockPanel>
-                                <ScrollViewer Grid.Row="1" Margin="0,8,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" MaxHeight="320">
-                                    <DataGrid ItemsSource="{Binding Console.TodaySeances}"
-                                              SelectedItem="{Binding Console.SelectedTodaySeance}"
-                                              AutoGenerateColumns="False"
-                                              CanUserAddRows="False"
-                                              EnableColumnVirtualization="False"
-                                              HeadersVisibility="Column"
-                                              MinWidth="280"
-                                              VerticalScrollBarVisibility="Auto"
-                                              ScrollViewer.CanContentScroll="True">
-                                        <DataGrid.Columns>
-                                            <DataGridTextColumn Header="Code" Binding="{Binding Code3}" Width="Auto"/>
-                                            <DataGridTextColumn Header="Com." Binding="{Binding HasComment, Converter={StaticResource BoolToCheckmark}}" Width="36" ElementStyle="{StaticResource CheckmarkCellStyle}"/>
-                                            <DataGridTextColumn Header="Tarif" Binding="{Binding TarifLabel}" Width="*"/>
-                                            <DataGridTextColumn Header="Cash" Binding="{Binding IsCash, Converter={StaticResource BoolToCheckmark}}" Width="36" ElementStyle="{StaticResource CheckmarkCellStyle}"/>
-                                            <DataGridTextColumn Header="Part patient" Binding="{Binding PartPatientEuro}" Width="Auto"/>
-                                            <DataGridTextColumn Header="Part mutuelle" Binding="{Binding PartMutuelleEuro}" Width="Auto"/>
-                                        </DataGrid.Columns>
-                                    </DataGrid>
-                                </ScrollViewer>
+                                <!-- Pas de ScrollViewer autour du DataGrid : avec HorizontalScroll=Auto il mesure une largeur infinie,
+                                     ce qui écrase les colonnes Auto et casse la colonne * (bande vide à droite). -->
+                                <DataGrid Grid.Row="1"
+                                          Margin="0,8,0,0"
+                                          MaxHeight="320"
+                                          HorizontalAlignment="Stretch"
+                                          ItemsSource="{Binding Console.TodaySeances}"
+                                          SelectedItem="{Binding Console.SelectedTodaySeance}"
+                                          AutoGenerateColumns="False"
+                                          CanUserAddRows="False"
+                                          EnableColumnVirtualization="False"
+                                          HeadersVisibility="Column"
+                                          MinWidth="280"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          ScrollViewer.CanContentScroll="True">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Code" Binding="{Binding Code3}" MinWidth="52" Width="Auto"/>
+                                        <DataGridTextColumn Header="Com." Binding="{Binding HasComment, Converter={StaticResource BoolToCheckmark}}" MinWidth="44" Width="48" ElementStyle="{StaticResource CheckmarkCellStyle}"/>
+                                        <DataGridTextColumn Header="Tarif" Binding="{Binding TarifLabel}" MinWidth="120" Width="*"/>
+                                        <DataGridTextColumn Header="Cash" Binding="{Binding IsCash, Converter={StaticResource BoolToCheckmark}}" MinWidth="44" Width="48" ElementStyle="{StaticResource CheckmarkCellStyle}"/>
+                                        <DataGridTextColumn Header="Part patient" Binding="{Binding PartPatientEuro}" MinWidth="96" Width="Auto"/>
+                                        <DataGridTextColumn Header="Part mutuelle" Binding="{Binding PartMutuelleEuro}" MinWidth="108" Width="Auto"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
                             </Grid>
 
                             <Border Grid.Row="11" Margin="0,8,0,0" Padding="8" BorderBrush="#DDD" BorderThickness="1" CornerRadius="4">

@@ -98,6 +98,7 @@ public static class WorkspacePaths
     }
 
     // --- Root discovery / path helpers (used by ViewModels) ---
+    /// <summary>Racine workspace seulement si le dossier existe déjà (pas de création). Pour une écriture PDF, préférer <see cref="TryFindWorkspaceRoot"/>.</summary>
     public static string? GetRootOrNull()
     {
         var root = WORKSPACE_ROOT();

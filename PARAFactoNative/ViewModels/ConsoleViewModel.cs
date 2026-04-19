@@ -1184,12 +1184,9 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
 
             var rows = _seances.GetSeancesForDay(SeanceDate);
 
-            var root = WorkspacePaths.GetRootOrNull();
-            if (string.IsNullOrWhiteSpace(root))
-            {
-                MessageBox.Show("Workspace introuvable.", "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
+            // Même logique que Factures / ouvrir dossiers : créer le workspace s'il n'existe pas encore
+            // (GetRootOrNull renvoie null sur poste vierge → « Workspace introuvable » à tort).
+            var root = WorkspacePaths.TryFindWorkspaceRoot();
 
             // Export directement dans le dossier workspace existant "JOURNALIERS PDF" (pas de sous-dossier par période)
             var outDir = System.IO.Path.Combine(root, "JOURNALIERS PDF");
