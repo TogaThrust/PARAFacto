@@ -87,6 +87,8 @@
     <sys:String x:Key="Technical.Subscription.Subtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Stripe-klantenportaal</sys:String>
     <sys:String x:Key="Technical.Subscription.OpenPortal" xmlns:sys="clr-namespace:System;assembly=mscorlib">Toegang klantenportaal</sys:String>
     <sys:String x:Key="Technical.Smtp.AppPassword" xmlns:sys="clr-namespace:System;assembly=mscorlib">App-wachtwoord:</sys:String>
+    <sys:String x:Key="Technical.Smtp.UseSmtpCheck" xmlns:sys="clr-namespace:System;assembly=mscorlib">Voorkeur voor SMTP (Gmail of ander) boven Outlook</sys:String>
+    <sys:String x:Key="Technical.Smtp.Hint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Vul host (bijv. smtp.gmail.com), gebruikersnaam en app-wachtwoord in. Uitgeschakeld: eerst Outlook; als Outlook faalt of ontbreekt, automatisch SMTP wanneer deze velden compleet zijn.</sys:String>
 
     <sys:String x:Key="Help.Hero.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Help &amp; ondersteuning</sys:String>
     <sys:String x:Key="Help.Hero.Subtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ondersteuningskanalen, veelgestelde vragen en leermiddelen — overzichtelijk op één plek.</sys:String>

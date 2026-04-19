@@ -554,21 +554,16 @@
                                              TextAlignment="Left"/>
                                 </Grid>
 
-                                <CheckBox Content="Utiliser SMTP (Gmail/Autre) si Outlook absent"
+                                <CheckBox Content="{DynamicResource Technical.Smtp.UseSmtpCheck}"
                                           IsChecked="{Binding Console.UseSmtp}"
                                           Margin="0,12,0,0"/>
+                                <TextBlock Text="{DynamicResource Technical.Smtp.Hint}"
+                                           TextWrapping="Wrap"
+                                           Foreground="#64748B"
+                                           FontSize="12"
+                                           Margin="0,6,0,0"/>
 
                                 <StackPanel Margin="0,10,0,0">
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Console.UseSmtp}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </StackPanel.Style>
 
                                     <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
