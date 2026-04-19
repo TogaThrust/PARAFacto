@@ -1341,7 +1341,7 @@ public sealed class FacturesViewModel : NotifyBase
             outlookType = Type.GetTypeFromProgID("Outlook.Application");
             if (outlookType is null)
             {
-                error = "Outlook non installé.";
+                error = OutlookEmailService.OutlookComProgIdMissingHint;
                 return false;
             }
 

@@ -318,6 +318,22 @@ public sealed class ConsoleViewModel : NotifyBase
         }
     }
 
+    private string? _databaseBackupRecipientEmail;
+    /// <summary>Destinataire du mail avec copie de la base SQLite ; vide = défaut serveur (parafacto@parafacto.be).</summary>
+    public string? DatabaseBackupRecipientEmail
+    {
+        get => _databaseBackupRecipientEmail;
+        set
+        {
+            var v = (value ?? "").Trim();
+            if (v.Length == 0) v = null;
+            if (_databaseBackupRecipientEmail == v) return;
+            _databaseBackupRecipientEmail = v;
+            OnPropertyChanged();
+            if (!_isInitializing) PersistMailSettings();
+        }
+    }
+
     private bool _useSmtp;
     public bool UseSmtp
     {
@@ -479,6 +495,7 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
 
         var ms = _settings.LoadMailSettings();
         _recipientEmail = ms.RecipientEmail;
+        _databaseBackupRecipientEmail = ms.DatabaseBackupRecipientEmail;
         _useSmtp = ms.UseSmtp;
         _smtpHost = string.IsNullOrWhiteSpace(ms.SmtpHost) ? _smtpHost : ms.SmtpHost;
         _smtpPort = ms.SmtpPort;
@@ -488,6 +505,7 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
         _smtpPassword = ms.SmtpPassword;
 
         OnPropertyChanged(nameof(RecipientEmail));
+        OnPropertyChanged(nameof(DatabaseBackupRecipientEmail));
 
         _isInitializing = false;
 
@@ -587,6 +605,7 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
         _settings.SaveMailSettings(new AppMailSettings
         {
             RecipientEmail = RecipientEmail,
+            DatabaseBackupRecipientEmail = DatabaseBackupRecipientEmail,
             UseSmtp = UseSmtp,
             SmtpHost = SmtpHost,
             SmtpPort = SmtpPort,

@@ -6,7 +6,9 @@ namespace PARAFactoNative.Services;
 
 public sealed class DatabaseBackupEmailService
 {
-    public const string BackupRecipientEmail = "parafactomail@gmail.com";
+    /// <summary>Destinataire par défaut si aucun e-mail dédié n’est renseigné dans les paramètres.</summary>
+    public const string DefaultBackupRecipientEmail = "parafacto@parafacto.be";
+
     private const string DbFileName = "parafacto.sqlite";
 
     public bool TrySendDatabaseBackupEmail(
@@ -50,9 +52,13 @@ public sealed class DatabaseBackupEmailService
         {
             var attachments = new[] { tempPath };
 
+            var backupTo = string.IsNullOrWhiteSpace(mailSettings.DatabaseBackupRecipientEmail)
+                ? DefaultBackupRecipientEmail
+                : mailSettings.DatabaseBackupRecipientEmail.Trim();
+
             var backupSettings = new AppMailSettings
             {
-                RecipientEmail = BackupRecipientEmail,
+                RecipientEmail = backupTo,
                 UseSmtp = mailSettings.UseSmtp,
                 SmtpHost = mailSettings.SmtpHost,
                 SmtpPort = mailSettings.SmtpPort,

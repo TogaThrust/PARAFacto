@@ -89,6 +89,8 @@
     <sys:String x:Key="Technical.Smtp.AppPassword" xmlns:sys="clr-namespace:System;assembly=mscorlib">Mot de passe app :</sys:String>
     <sys:String x:Key="Technical.Smtp.UseSmtpCheck" xmlns:sys="clr-namespace:System;assembly=mscorlib">Priorité à SMTP (Gmail ou autre) plutôt qu’à Outlook</sys:String>
     <sys:String x:Key="Technical.Smtp.Hint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Renseignez serveur (ex. smtp.gmail.com), identifiant et mot de passe d’application. Case décochée : Outlook d’abord ; si Outlook échoue ou est absent, envoi automatique par SMTP lorsque ces champs sont complets.</sys:String>
+    <sys:String x:Key="Technical.Smtp.DbBackupRecipientLabel" xmlns:sys="clr-namespace:System;assembly=mscorlib">E-mail sauvegarde base :</sys:String>
+    <sys:String x:Key="Technical.Smtp.DbBackupRecipientHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Destinataire du second e-mail (copie parafacto.sqlite après chaque envoi de journalier). Laisser vide pour utiliser par défaut parafacto@parafacto.be.</sys:String>
 
     <sys:String x:Key="Help.Hero.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Aide &amp; support</sys:String>
     <sys:String x:Key="Help.Hero.Subtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Canal d’assistance, réponses aux questions fréquentes et ressources pédagogiques — tout au même endroit.</sys:String>

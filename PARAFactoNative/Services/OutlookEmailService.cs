@@ -8,6 +8,14 @@ namespace PARAFactoNative.Services;
 
 public sealed class OutlookEmailService
 {
+    /// <summary>Message affiché quand Outlook.Application n’est pas enregistré pour ce processus (nouvel Outlook, 32/64 bits, etc.).</summary>
+    public const string OutlookComProgIdMissingHint =
+        "Automation COM introuvable (ProgID Outlook.Application). L’application Outlook peut pourtant s’ouvrir à la main.\n\n" +
+        "Vérifications courantes :\n" +
+        "• Si vous utilisez le « Nouvel Outlook » (bascule en haut à droite), repassez sur l’Outlook classique : le nouvel Outlook n’expose pas la même automation COM.\n" +
+        "• Office 32 bits + application 64 bits (ou l’inverse) : installez Office en 64 bits, ou contactez le support pour une version PARAFacto adaptée.\n" +
+        "• Réparation rapide : Applications Windows → Microsoft 365 → Modifier → Réparation rapide.";
+
     public bool TrySendMailWithAttachments(
         string? to,
         string subject,
@@ -44,7 +52,7 @@ public sealed class OutlookEmailService
             outlookType = Type.GetTypeFromProgID("Outlook.Application");
             if (outlookType is null)
             {
-                error = "Outlook n'est pas installé (ProgID Outlook.Application introuvable).";
+                error = OutlookComProgIdMissingHint;
                 return false;
             }
 

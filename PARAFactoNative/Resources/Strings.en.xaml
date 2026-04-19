@@ -89,6 +89,8 @@
     <sys:String x:Key="Technical.Smtp.AppPassword" xmlns:sys="clr-namespace:System;assembly=mscorlib">App password:</sys:String>
     <sys:String x:Key="Technical.Smtp.UseSmtpCheck" xmlns:sys="clr-namespace:System;assembly=mscorlib">Prefer SMTP (Gmail or other) over Outlook</sys:String>
     <sys:String x:Key="Technical.Smtp.Hint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Fill in host (e.g. smtp.gmail.com), username and app password. If unchecked: Outlook first; if Outlook fails or is missing, SMTP is used automatically when these fields are complete.</sys:String>
+    <sys:String x:Key="Technical.Smtp.DbBackupRecipientLabel" xmlns:sys="clr-namespace:System;assembly=mscorlib">Database backup email:</sys:String>
+    <sys:String x:Key="Technical.Smtp.DbBackupRecipientHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Recipient of the second message (parafacto.sqlite copy after each daily PDF send). Leave blank to use the default parafacto@parafacto.be.</sys:String>
 
     <sys:String x:Key="Help.Hero.Title" xmlns:sys="clr-namespace:System;assembly=mscorlib">Help &amp; support</sys:String>
     <sys:String x:Key="Help.Hero.Subtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Assistance channels, frequently asked questions, and learning resources — in one place.</sys:String>

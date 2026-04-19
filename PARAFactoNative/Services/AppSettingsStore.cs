@@ -17,6 +17,8 @@ public sealed class AppSettingsStore
     private sealed class AppSettings
     {
         public string? RecipientEmail { get; set; }
+        /// <summary>Destinataire du mail de sauvegarde SQLite (vide = défaut parafacto@parafacto.be).</summary>
+        public string? DatabaseBackupRecipientEmail { get; set; }
         public bool UseSmtp { get; set; }
         public string? SmtpHost { get; set; }
         public int SmtpPort { get; set; } = 587;
@@ -98,6 +100,9 @@ public sealed class AppSettingsStore
             return new AppMailSettings
             {
                 RecipientEmail = string.IsNullOrWhiteSpace(s.RecipientEmail) ? null : s.RecipientEmail!.Trim(),
+                DatabaseBackupRecipientEmail = string.IsNullOrWhiteSpace(s.DatabaseBackupRecipientEmail)
+                    ? null
+                    : s.DatabaseBackupRecipientEmail!.Trim(),
                 UseSmtp = s.UseSmtp,
                 SmtpHost = string.IsNullOrWhiteSpace(s.SmtpHost) ? null : s.SmtpHost!.Trim(),
                 SmtpPort = s.SmtpPort <= 0 ? 587 : s.SmtpPort,
@@ -118,6 +123,9 @@ public sealed class AppSettingsStore
                 Directory.CreateDirectory(SettingsFolder);
                 var s = LoadAllInternal() ?? new AppSettings();
                 s.RecipientEmail = string.IsNullOrWhiteSpace(mail.RecipientEmail) ? null : mail.RecipientEmail!.Trim();
+                s.DatabaseBackupRecipientEmail = string.IsNullOrWhiteSpace(mail.DatabaseBackupRecipientEmail)
+                    ? null
+                    : mail.DatabaseBackupRecipientEmail!.Trim();
                 s.UseSmtp = mail.UseSmtp;
                 s.SmtpHost = string.IsNullOrWhiteSpace(mail.SmtpHost) ? null : mail.SmtpHost!.Trim();
                 s.SmtpPort = mail.SmtpPort <= 0 ? 587 : mail.SmtpPort;
@@ -421,6 +429,8 @@ public sealed class AppSettingsStore
 public sealed class AppMailSettings
 {
     public string? RecipientEmail { get; set; }
+    /// <summary>Si vide, <see cref="DatabaseBackupEmailService.DefaultBackupRecipientEmail"/> est utilisé.</summary>
+    public string? DatabaseBackupRecipientEmail { get; set; }
     public bool UseSmtp { get; set; }
     public string? SmtpHost { get; set; }
     public int SmtpPort { get; set; } = 587;

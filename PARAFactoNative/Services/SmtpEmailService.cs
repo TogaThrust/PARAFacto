@@ -33,7 +33,8 @@ public sealed class SmtpEmailService
         }
 
         var user = (settings?.SmtpUsername ?? "").Trim();
-        var pass = (settings?.SmtpPassword ?? "").Trim();
+        // Gmail affiche le mot de passe d’application avec des espaces ; le serveur attend 16 caractères sans espaces.
+        var pass = (settings?.SmtpPassword ?? "").Trim().Replace(" ", "");
         if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(pass))
         {
             error = "SMTP: identifiant ou mot de passe manquant.";

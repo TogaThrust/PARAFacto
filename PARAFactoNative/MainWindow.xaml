@@ -554,6 +554,27 @@
                                              TextAlignment="Left"/>
                                 </Grid>
 
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               Text="{DynamicResource Technical.Smtp.DbBackupRecipientLabel}"
+                                               Margin="0,0,10,0"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding Console.DatabaseBackupRecipientEmail, UpdateSourceTrigger=PropertyChanged}"
+                                             HorizontalContentAlignment="Left"
+                                             TextAlignment="Left"/>
+                                </Grid>
+                                <TextBlock Text="{DynamicResource Technical.Smtp.DbBackupRecipientHint}"
+                                           TextWrapping="Wrap"
+                                           Foreground="#64748B"
+                                           FontSize="12"
+                                           Margin="0,0,0,8"/>
+
                                 <CheckBox Content="{DynamicResource Technical.Smtp.UseSmtpCheck}"
                                           IsChecked="{Binding Console.UseSmtp}"
                                           Margin="0,12,0,0"/>
