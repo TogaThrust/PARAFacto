@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
 using PARAFactoNative.Services;
 
 namespace PARAFactoNative.Views;
@@ -10,12 +12,31 @@ public partial class SubscriptionGateWindow : Window
 
     private readonly string? _paymentPageUrl;
 
-    private SubscriptionGateWindow(string title, string body, string? paymentPageUrl, string? existingCustomerId)
+    private static void SetDefaultBodyInlines(TextBlock tb)
+    {
+        tb.Inlines.Clear();
+        tb.Text = null;
+        tb.Inlines.Add(new Run("Après souscription sur le site, vous recevrez un identifiant client (cus_…) "));
+        var parEmail = new Run("PAR E-MAIL ");
+        parEmail.FontWeight = FontWeights.Bold;
+        tb.Inlines.Add(parEmail);
+        tb.Inlines.Add(new Run("(consultez votre boîte de réception et vos spams). "));
+        var restart = new Run("Fermez entièrement l'application puis rouvrez-la");
+        restart.FontWeight = FontWeights.Bold;
+        tb.Inlines.Add(restart);
+        tb.Inlines.Add(new Run(
+            ", puis collez l'identifiant dans le champ masqué ci-dessous. Chaque abonnement n'est utilisable que sur un seul ordinateur ; le lien avec cet appareil est enregistré côté serveur PARAFacto / Stripe."));
+    }
+
+    private SubscriptionGateWindow(string title, string? body, string? paymentPageUrl, string? existingCustomerId)
     {
         InitializeComponent();
         _paymentPageUrl = paymentPageUrl;
         TitleText.Text = title;
-        BodyText.Text = body;
+        if (!string.IsNullOrWhiteSpace(body))
+            BodyText.Text = body.Trim();
+        else
+            SetDefaultBodyInlines(BodyText);
         if (!string.IsNullOrWhiteSpace(existingCustomerId))
             CustomerIdPasswordBox.Password = existingCustomerId.Trim();
 
@@ -35,9 +56,7 @@ public partial class SubscriptionGateWindow : Window
     {
         var w = new SubscriptionGateWindow(
             titleOverride ?? "Configurer l'abonnement",
-            bodyOverride ?? (
-                "Après souscription sur le site, vous recevez un identifiant (cus_…). Collez-le dans le champ masqué ci-dessous. " +
-                "Chaque abonnement n'est utilisable que sur un seul ordinateur ; le lien avec cet appareil est enregistré côté serveur PARAFacto / Stripe."),
+            bodyOverride,
             paymentPageUrl,
             prefilledCustomerId);
         if (owner != null)

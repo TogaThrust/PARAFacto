@@ -35,7 +35,9 @@
             <TextBlock TextWrapping="Wrap" Margin="0,0,0,4" Opacity="0.85">
                 <Run Text="Identifiant d'activation (cus_…) : saisie masquée. Vous pouvez "/>
                 <Run FontWeight="SemiBold" Text="coller"/>
-                <Run Text=" depuis l'e-mail ; l'identifiant n'apparaît pas à l'écran et n'est pas lisible par copie depuis ce champ."/>
+                <Run Text=" depuis l'e-mail "/>
+                <Run FontWeight="SemiBold" Text="(vérifiez aussi les spams)"/>
+                <Run Text=" ; l'identifiant n'apparaît pas à l'écran et n'est pas lisible par copie depuis ce champ."/>
             </TextBlock>
             <PasswordBox x:Name="CustomerIdPasswordBox"
                          FontFamily="Consolas"

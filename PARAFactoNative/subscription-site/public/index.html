@@ -16,6 +16,9 @@
     .flag-btn.active { border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb inset; }
     .flag-btn img { display: block; width: 18px; height: 12px; object-fit: cover; }
     .install-notice { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 0.65rem 0.85rem; margin: 0 0 1rem 0; font-size: 0.95rem; }
+    .after-instructions { font-size: 0.95rem; color: #334155; line-height: 1.55; margin: 0.5rem 0 0 0; }
+    .after-instructions p { margin: 0.4rem 0; }
+    .after-instructions strong { font-weight: 700; }
   </style>
 </head>
 <body>
@@ -38,7 +41,7 @@
   <p>
     <a id="downloadBtn" class="btn" href="https://github.com/TogaThrust/PARAFacto/releases/latest/download/PARAFactoNative_Installer.exe" download>Télécharger l'installateur (.exe)</a>
   </p>
-  <p><small id="afterText"></small></p>
+  <div id="afterText" class="after-instructions" aria-live="polite"></div>
   <script>
     (function () {
       var texts = {
@@ -46,21 +49,21 @@
           title: "PARAFacto Native",
           installNotice: "Mise à jour : fermez entièrement PARAFacto Native avant de lancer l'installateur, sinon l'installation peut échouer ou bloquer des fichiers.",
           lead: "Téléchargez l'installateur, lancez l'exe téléchargé. Quand l'app est installée, lancez l'app depuis le bureau. Rendez vous sur la page de paiements et souscrivez l'abonnement.",
-          after: "Après avoir souscrit l'abonnement, vous recevez un code d'utilisateur. Copiez/collez ce code dans la fenêtre de demande de l'app. Lisez et approuvez les politiques de confidentialité et les conditions générales d'utilisation. Vous voilà prêt !",
+          after: "<p>Après avoir souscrit l'abonnement, vous recevrez un <strong>code d'installation unique PAR E-MAIL</strong> (vérifiez votre boîte de réception <strong>et le dossier spam / courrier indésirable</strong>).</p><p><strong>Fermez entièrement puis rouvrez l'application</strong>, puis saisissez ce code dans la fenêtre affichée au démarrage. Ensuite, lisez et acceptez la politique de confidentialité et les conditions générales d'utilisation.</p>",
           btn: "Télécharger l’installateur (.exe)"
         },
         en: {
           title: "PARAFacto Native",
           installNotice: "Update: fully close PARAFacto Native before running the installer, otherwise setup may fail or lock files.",
           lead: "Download the installer and run the downloaded exe. Once the app is installed, launch it from the desktop. Go to the payment page and subscribe to the plan.",
-          after: "After subscribing, you receive a user code. Copy/paste this code into the app request window. Read and approve the privacy policy and terms of use. You are ready!",
+          after: "<p>After subscribing, you will receive a <strong>unique installation code BY EMAIL</strong> (check your inbox <strong>and spam / junk</strong>).</p><p><strong>Fully close and restart the application</strong>, then enter the code in the window shown at startup. Then read and accept the privacy policy and terms of use.</p>",
           btn: "Download installer (.exe)"
         },
         nl: {
           title: "PARAFacto Native",
           installNotice: "Update: sluit PARAFacto Native volledig voordat u het installatieprogramma start, anders kan de installatie mislukken of bestanden vergrendelen.",
           lead: "Download het installatiebestand en start de gedownloade exe. Zodra de app is geïnstalleerd, start je de app vanaf het bureaublad. Ga naar de betaalpagina en neem een abonnement.",
-          after: "Na het afsluiten van het abonnement ontvang je een gebruikerscode. Kopieer/plak deze code in het aanvraagvenster van de app. Lees en keur het privacybeleid en de gebruiksvoorwaarden goed. Je bent klaar!",
+          after: "<p>Na je inschrijving ontvang je een <strong>unieke installatiecode PER E-MAIL</strong> (controleer je inbox <strong>en de map ongewenst / spam</strong>).</p><p><strong>Sluit de toepassing volledig en start ze opnieuw op</strong>, plak daarna de code in het venster bij het opstarten. Lees en keur daarna het privacybeleid en de gebruiksvoorwaarden goed.</p>",
           btn: "Installatieprogramma downloaden (.exe)"
         }
       };
@@ -79,7 +82,7 @@
         titleEl.textContent = t.title;
         installNoticeEl.textContent = t.installNotice || "";
         leadEl.textContent = t.lead;
-        afterEl.textContent = t.after;
+        afterEl.innerHTML = t.after;
         downloadBtn.textContent = t.btn;
         buttons.forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-lang") === key); });
         try { localStorage.setItem("parafacto_site_lang", key); } catch (_) { }
