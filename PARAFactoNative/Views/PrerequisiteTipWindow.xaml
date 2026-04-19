@@ -1,0 +1,59 @@
+<Window x:Class="PARAFactoNative.Views.PrerequisiteTipWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PARAFacto — Logiciels recommandés"
+        Width="520"
+        MinWidth="440"
+        SizeToContent="Height"
+        MinHeight="200"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="White"
+        ShowInTaskbar="False">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0"
+                      Style="{StaticResource DialogFormScrollViewer}"
+                      MaxHeight="280">
+            <TextBlock x:Name="BodyText"
+                       Style="{StaticResource DialogMessageTextBlock}"/>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="1"
+                    Orientation="Vertical"
+                    Margin="0,14,0,0">
+            <TextBlock Style="{StaticResource DialogMutedLabelTextBlock}"
+                       Text="Ouvrir dans le navigateur :"
+                       Margin="0,0,0,6"/>
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Acrobat Reader (Adobe)"
+                        Style="{StaticResource DialogChoiceButton}"
+                        MinWidth="200"
+                        Padding="14,8"
+                        Click="AdobeButton_OnClick"/>
+                <Button Content="Outlook classique (Microsoft)"
+                        Style="{StaticResource DialogChoiceButton}"
+                        MinWidth="220"
+                        Margin="10,0,0,0"
+                        Padding="14,8"
+                        Click="OutlookButton_OnClick"/>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,18,0,0">
+            <Button Content="OK"
+                    Style="{StaticResource DialogPrimaryChoiceButton}"
+                    Width="120"
+                    IsDefault="True"
+                    Click="OkButton_OnClick"/>
+        </StackPanel>
+    </Grid>
+</Window>

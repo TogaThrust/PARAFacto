@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Threading;
 using PARAFactoNative.Services;
+using PARAFactoNative.Views;
 
 namespace PARAFactoNative;
 
@@ -165,12 +166,7 @@ public partial class App : Application
                         var reader = DesktopPrerequisiteAdvisor.IsAcrobatReaderInstalled();
                         var outlook = DesktopPrerequisiteAdvisor.IsOutlookAutomationAvailable();
                         var body = DesktopPrerequisiteAdvisor.BuildPrerequisiteMessage(reader, outlook);
-                        MessageBox.Show(
-                            main,
-                            body,
-                            "PARAFacto — Logiciels recommandés",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Information);
+                        new PrerequisiteTipWindow(main, body) { Owner = main }.ShowDialog();
                         settingsForPrereqTip.SavePrereqDesktopTipAcknowledgedFor(ver);
 #endif
                     }
