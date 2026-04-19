@@ -416,11 +416,17 @@ function Escape-InnoSetupPath {
 $publishDirInno = Escape-InnoSetupPath $publishDir
 $installerDirInno = Escape-InnoSetupPath $installerDir
 
+# Liens officiels (pages de telechargement / instructions — pas d'installateur tiers embarque).
+$prereqOutlookUrl = 'https://support.microsoft.com/fr-fr/office/installer-ou-r%C3%A9installer-outlook-classique-sur-un-pc-windows-5c94902b-31a5-4274-abb0-b07f4661edf5'
+$prereqAdobeUrl = 'https://www.adobe.com/be_fr/acrobat/pdf-reader.html'
+
 $innoScript = @"
 #define MyAppName "PARAFacto"
 #define MyAppVersion "$AppVersion"
 #define MyAppPublisher "$Publisher"
 #define MyAppExeName "PARAFacto.exe"
+#define PrereqOutlookUrl "$prereqOutlookUrl"
+#define PrereqAdobeReaderUrl "$prereqAdobeUrl"
 
 [Setup]
 AppId=$AppId
@@ -464,9 +470,119 @@ Name: "{autodesktop}\PARAFacto"; Filename: "{app}\{#MyAppExeName}"; Tasks: deskt
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Lancer PARAFacto"; Flags: nowait postinstall skipifsilent
+
+[Code]
+var
+  PrereqPage: TWizardPage;
+  PrereqMemo: TNewMemo;
+  BtnAdobe: TNewButton;
+  BtnOutlook: TNewButton;
+
+function AcroReaderFound: Boolean;
+var
+  P: String;
+begin
+  Result := False;
+  if RegQueryStringValue(HKLM64, 'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\AcroRd32.exe', '', P) then
+    if (Length(P) > 0) and FileExists(P) then Result := True;
+  if Result then Exit;
+  if RegQueryStringValue(HKLM64, 'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\AcroRd64.exe', '', P) then
+    if (Length(P) > 0) and FileExists(P) then Result := True;
+  if Result then Exit;
+  if RegQueryStringValue(HKLM, 'SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths\AcroRd32.exe', '', P) then
+    if (Length(P) > 0) and FileExists(P) then Result := True;
+end;
+
+function OutlookExeFound: Boolean;
+var
+  P: String;
+begin
+  Result := False;
+  if RegQueryStringValue(HKLM64, 'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\OUTLOOK.EXE', '', P) then
+    if (Length(P) > 0) and FileExists(P) then Result := True;
+  if Result then Exit;
+  if RegQueryStringValue(HKLM, 'SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths\OUTLOOK.EXE', '', P) then
+    if (Length(P) > 0) and FileExists(P) then Result := True;
+end;
+
+function OutlookProgIdFound: Boolean;
+begin
+  Result := RegKeyExists(HKCR, 'Outlook.Application\CLSID');
+  if not Result then
+    Result := RegKeyExists(HKCR64, 'Outlook.Application\CLSID');
+end;
+
+procedure PrereqAdobeClick(Sender: TObject);
+var
+  EC: Integer;
+begin
+  ShellExec('open', '{#PrereqAdobeReaderUrl}', '', '', SW_SHOWNORMAL, ewNoWait, EC);
+end;
+
+procedure PrereqOutlookClick(Sender: TObject);
+var
+  EC: Integer;
+begin
+  ShellExec('open', '{#PrereqOutlookUrl}', '', '', SW_SHOWNORMAL, ewNoWait, EC);
+end;
+
+procedure InitializeWizard;
+var
+  T: String;
+  R, O: Boolean;
+begin
+  R := AcroReaderFound;
+  O := OutlookExeFound and OutlookProgIdFound;
+
+  PrereqPage := CreateCustomPage(wpWelcome,
+    'Logiciels recommandes',
+    'PARAFacto s''appuie sur Acrobat Reader pour les PDF et sur Outlook classique (COM) pour l''envoi de mails automatiques. Verifiez ci-dessous ou installez via les pages officielles.');
+
+  PrereqMemo := TNewMemo.Create(PrereqPage);
+  PrereqMemo.Parent := PrereqPage.Surface;
+  PrereqMemo.Left := 0;
+  PrereqMemo.Top := 0;
+  PrereqMemo.Width := PrereqPage.SurfaceWidth;
+  PrereqMemo.Height := ScaleY(132);
+  PrereqMemo.ReadOnly := True;
+  PrereqMemo.ScrollBars := ssVertical;
+  PrereqMemo.TabStop := False;
+
+  T := '';
+  if R then
+    T := T + '- Adobe Acrobat Reader : detecte.' + #13#10
+  else
+    T := T + '- Adobe Acrobat Reader : non detecte (recommande pour les PDF).' + #13#10;
+  if O then
+    T := T + '- Outlook (executable + automation COM) : detecte.' + #13#10
+  else
+    T := T + '- Outlook classique / automation : absent ou incomplet (voir page Microsoft si vous utilisez le Nouvel Outlook).' + #13#10;
+  T := T + #13#10 + 'Les boutons ouvrent le navigateur sur les telechargements officiels. Vous pouvez continuer l''installation et installer ces logiciels plus tard.';
+
+  PrereqMemo.Text := T;
+
+  BtnAdobe := TNewButton.Create(PrereqPage);
+  BtnAdobe.Parent := PrereqPage.Surface;
+  BtnAdobe.Caption := 'Telecharger Acrobat Reader (Adobe)';
+  BtnAdobe.Left := 0;
+  BtnAdobe.Top := PrereqMemo.Top + PrereqMemo.Height + ScaleY(10);
+  BtnAdobe.Width := ScaleX(300);
+  BtnAdobe.Height := ScaleY(23);
+  BtnAdobe.OnClick := @PrereqAdobeClick;
+
+  BtnOutlook := TNewButton.Create(PrereqPage);
+  BtnOutlook.Parent := PrereqPage.Surface;
+  BtnOutlook.Caption := 'Installer / reinstaller Outlook classique (Microsoft)';
+  BtnOutlook.Left := 0;
+  BtnOutlook.Top := BtnAdobe.Top + BtnAdobe.Height + ScaleY(8);
+  BtnOutlook.Width := ScaleX(420);
+  BtnOutlook.Height := ScaleY(23);
+  BtnOutlook.OnClick := @PrereqOutlookClick;
+end;
 "@
 
-Set-Content -Path $issPath -Value $innoScript -Encoding ASCII
+$utf8Bom = New-Object System.Text.UTF8Encoding $true
+[System.IO.File]::WriteAllText($issPath, $innoScript, $utf8Bom)
 
 try {
     & $iscc $issPath | Out-Host
