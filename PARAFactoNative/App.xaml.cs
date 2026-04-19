@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Threading;
 using PARAFactoNative.Services;
@@ -146,6 +147,38 @@ public partial class App : Application
             MainWindow = main;
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             main.Show();
+
+            // Rappel Reader / Outlook : l’installateur Inno ne s’exécute pas au lancement de l’exe ni lors d’une MAJ silencieuse.
+            // Une fois par version d’assembly, après le premier rendu idle (fenêtre principale déjà affichée).
+            var settingsForPrereqTip = appSettings;
+            main.Dispatcher.BeginInvoke(
+                DispatcherPriority.ApplicationIdle,
+                new Action(() =>
+                {
+                    try
+                    {
+#if !PARAFACTO_LOCAL_DEMO_BUILD
+                        var ver = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
+                        if (settingsForPrereqTip.IsPrereqDesktopTipAcknowledgedFor(ver))
+                            return;
+
+                        var reader = DesktopPrerequisiteAdvisor.IsAcrobatReaderInstalled();
+                        var outlook = DesktopPrerequisiteAdvisor.IsOutlookAutomationAvailable();
+                        var body = DesktopPrerequisiteAdvisor.BuildPrerequisiteMessage(reader, outlook);
+                        MessageBox.Show(
+                            main,
+                            body,
+                            "PARAFacto — Logiciels recommandés",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                        settingsForPrereqTip.SavePrereqDesktopTipAcknowledgedFor(ver);
+#endif
+                    }
+                    catch
+                    {
+                        /* ne pas bloquer le démarrage */
+                    }
+                }));
         }
         catch (Exception ex)
         {

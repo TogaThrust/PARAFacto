@@ -42,6 +42,8 @@ public sealed class AppSettingsStore
         public string? PrivacyContentSha256Accepted { get; set; }
         public string? TermsContentSha256Accepted { get; set; }
         public string? UiLanguage { get; set; }
+        /// <summary>Version d’assembly pour laquelle le rappel Reader/Outlook a déjà été affiché au lancement.</summary>
+        public string? PrereqDesktopTipAcknowledgedForVersion { get; set; }
     }
 
     private static string SettingsFolder
@@ -140,6 +142,39 @@ public sealed class AppSettingsStore
             catch
             {
                 // ignore
+            }
+        }
+    }
+
+    /// <summary>Indique si le rappel logiciels a déjà été vu pour cette version d’assembly (ex. 1.1.29.0).</summary>
+    public bool IsPrereqDesktopTipAcknowledgedFor(string assemblyVersion)
+    {
+        lock (Gate)
+        {
+            var s = LoadAllInternal();
+            var v = (assemblyVersion ?? "").Trim();
+            if (v.Length == 0) return false;
+            return string.Equals((s?.PrereqDesktopTipAcknowledgedForVersion ?? "").Trim(), v, StringComparison.Ordinal);
+        }
+    }
+
+    public void SavePrereqDesktopTipAcknowledgedFor(string assemblyVersion)
+    {
+        lock (Gate)
+        {
+            try
+            {
+                Directory.CreateDirectory(SettingsFolder);
+                var s = LoadAllInternal() ?? new AppSettings();
+                s.PrereqDesktopTipAcknowledgedForVersion = string.IsNullOrWhiteSpace(assemblyVersion)
+                    ? null
+                    : assemblyVersion.Trim();
+                var json = JsonSerializer.Serialize(s, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(SettingsPath, json);
+            }
+            catch
+            {
+                /* ignore */
             }
         }
     }
