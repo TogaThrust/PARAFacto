@@ -12,31 +12,74 @@
         ShowInTaskbar="False">
     <Grid Margin="16">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <ScrollViewer Grid.Row="0"
+        <DockPanel Grid.Row="0"
+                   LastChildFill="False"
+                   Margin="0,0,0,8">
+            <TextBlock x:Name="LanguageLabel"
+                       Style="{StaticResource DialogMutedLabelTextBlock}"
+                       VerticalAlignment="Center"
+                       Text="Langue :"/>
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        DockPanel.Dock="Right">
+                <Button x:Name="LangFrButton"
+                        Width="24"
+                        Height="18"
+                        Margin="0,0,4,0"
+                        Padding="0"
+                        ToolTip="Français"
+                        Click="LangFrButton_OnClick">
+                    <Image Width="18" Height="12" Stretch="Fill" Source="Assets/french.jpg"/>
+                </Button>
+                <Button x:Name="LangEnButton"
+                        Width="24"
+                        Height="18"
+                        Margin="0,0,4,0"
+                        Padding="0"
+                        ToolTip="English"
+                        Click="LangEnButton_OnClick">
+                    <Image Width="18" Height="12" Stretch="Fill" Source="Assets/english.jpg"/>
+                </Button>
+                <Button x:Name="LangNlButton"
+                        Width="24"
+                        Height="18"
+                        Padding="0"
+                        ToolTip="Nederlands"
+                        Click="LangNlButton_OnClick">
+                    <Image Width="18" Height="12" Stretch="Fill" Source="Assets/dutch.jpg"/>
+                </Button>
+            </StackPanel>
+        </DockPanel>
+
+        <ScrollViewer Grid.Row="1"
                       Style="{StaticResource DialogFormScrollViewer}"
                       MaxHeight="280">
             <TextBlock x:Name="BodyText"
                        Style="{StaticResource DialogMessageTextBlock}"/>
         </ScrollViewer>
 
-        <StackPanel Grid.Row="1"
+        <StackPanel Grid.Row="2"
                     Orientation="Vertical"
                     Margin="0,14,0,0">
-            <TextBlock Style="{StaticResource DialogMutedLabelTextBlock}"
+            <TextBlock x:Name="OpenInBrowserLabel"
+                       Style="{StaticResource DialogMutedLabelTextBlock}"
                        Text="Ouvrir dans le navigateur :"
                        Margin="0,0,0,6"/>
             <StackPanel Orientation="Horizontal">
-                <Button Content="Acrobat Reader (Adobe)"
+                <Button x:Name="AdobeButton"
+                        Content="Acrobat Reader (Adobe)"
                         Style="{StaticResource DialogChoiceButton}"
                         MinWidth="200"
                         Padding="14,8"
                         Click="AdobeButton_OnClick"/>
-                <Button Content="Outlook classique (Microsoft)"
+                <Button x:Name="OutlookButton"
+                        Content="Outlook classique (Microsoft)"
                         Style="{StaticResource DialogChoiceButton}"
                         MinWidth="220"
                         Margin="10,0,0,0"
@@ -45,7 +88,7 @@
             </StackPanel>
         </StackPanel>
 
-        <StackPanel Grid.Row="2"
+        <StackPanel Grid.Row="3"
                     Orientation="Vertical"
                     HorizontalAlignment="Stretch"
                     Margin="0,18,0,0">

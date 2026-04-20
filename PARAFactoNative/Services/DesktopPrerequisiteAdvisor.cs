@@ -34,19 +34,51 @@ public static class DesktopPrerequisiteAdvisor
 
     public static string BuildPrerequisiteMessage(bool readerOk, bool outlookOk)
     {
+        static string T(string fr, string en, string nl)
+            => UiLanguageService.Current switch
+            {
+                UiLanguageService.En => en,
+                UiLanguageService.Nl => nl,
+                _ => fr
+            };
+
         var readerLine = readerOk
-            ? "• Adobe Acrobat / Reader : détecté."
-            : "• Adobe Acrobat / Reader : non détecté (recommandé pour les PDF).";
+            ? T(
+                "• Adobe Acrobat / Reader : détecté.",
+                "• Adobe Acrobat / Reader: detected.",
+                "• Adobe Acrobat / Reader: gedetecteerd.")
+            : T(
+                "• Adobe Acrobat / Reader : non détecté (recommandé pour les PDF).",
+                "• Adobe Acrobat / Reader: not detected (recommended for PDFs).",
+                "• Adobe Acrobat / Reader: niet gedetecteerd (aanbevolen voor pdf's).");
         var outlookLine = outlookOk
-            ? "• Microsoft Outlook (automation classique) : détecté."
-            : "• Microsoft Outlook classique : absent ou automation COM indisponible. Le « Nouvel Outlook » ne suffit pas pour l’envoi automatique de mails depuis PARAFacto.";
+            ? T(
+                "• Microsoft Outlook (automation classique) : détecté.",
+                "• Microsoft Outlook (classic automation): detected.",
+                "• Microsoft Outlook (klassieke automatisering): gedetecteerd.")
+            : T(
+                "• Microsoft Outlook classique : absent ou automation COM indisponible. Le « Nouvel Outlook » ne suffit pas pour l’envoi automatique de mails depuis PARAFacto.",
+                "• Microsoft Outlook classic: missing or COM automation unavailable. The New Outlook is not enough for automatic email sending from PARAFacto.",
+                "• Microsoft Outlook klassiek: afwezig of COM-automatisering niet beschikbaar. De Nieuwe Outlook volstaat niet voor automatische e-mailverzending vanuit PARAFacto.");
 
         return
-            "PARAFacto s’appuie sur ces logiciels pour les PDF et l’envoi de mails.\n\n" +
+            T(
+                "PARAFacto s’appuie sur ces logiciels pour les PDF et l’envoi de mails.",
+                "PARAFacto relies on these applications for PDFs and email sending.",
+                "PARAFacto gebruikt deze software voor pdf's en e-mailverzending.")
+            + "\n\n" +
             readerLine + "\n" +
             outlookLine +
-            "\n\nUtilisez les boutons ci-dessous pour ouvrir les pages de téléchargement ou d’aide officielles.\n\n" +
-            "Ce rappel s’affiche une fois après chaque mise à jour de PARAFacto (ou première ouverture de cette version).";
+            "\n\n" +
+            T(
+                "Utilisez les boutons ci-dessous pour ouvrir les pages de téléchargement ou d’aide officielles.",
+                "Use the buttons below to open the official download/help pages.",
+                "Gebruik de knoppen hieronder om de officiele download-/hulppagina's te openen.")
+            + "\n\n" +
+            T(
+                "Ce rappel s’affiche une fois après chaque mise à jour de PARAFacto (ou première ouverture de cette version).",
+                "This reminder appears once after each PARAFacto update (or first launch of this version).",
+                "Deze herinnering verschijnt een keer na elke PARAFacto-update (of bij de eerste start van deze versie).");
     }
 
     private static bool AppPathExeExists(string exeFileName)

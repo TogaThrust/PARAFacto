@@ -176,8 +176,7 @@ public partial class App : Application
 
                         var reader = DesktopPrerequisiteAdvisor.IsAcrobatReaderInstalled();
                         var outlook = DesktopPrerequisiteAdvisor.IsOutlookAutomationAvailable();
-                        var body = DesktopPrerequisiteAdvisor.BuildPrerequisiteMessage(reader, outlook);
-                        var tip = new PrerequisiteTipWindow(main, body) { Owner = main };
+                        var tip = new PrerequisiteTipWindow(main, reader, outlook) { Owner = main };
                         tip.ShowDialog();
                         if (tip.DontShowOnNextUpdates)
                             settingsForPrereqTip.SaveSuppressPrereqDesktopTipOnUpdates(true);
