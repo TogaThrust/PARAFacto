@@ -35,7 +35,7 @@
                         Padding="0"
                         ToolTip="Français"
                         Click="LangFrButton_OnClick">
-                    <Image Width="18" Height="12" Stretch="Fill" Source="Assets/french.jpg"/>
+                    <Image Width="18" Height="12" Stretch="Fill" Source="../Assets/french.jpg"/>
                 </Button>
                 <Button x:Name="LangEnButton"
                         Width="24"
@@ -44,7 +44,7 @@
                         Padding="0"
                         ToolTip="English"
                         Click="LangEnButton_OnClick">
-                    <Image Width="18" Height="12" Stretch="Fill" Source="Assets/english.jpg"/>
+                    <Image Width="18" Height="12" Stretch="Fill" Source="../Assets/english.jpg"/>
                 </Button>
                 <Button x:Name="LangNlButton"
                         Width="24"
@@ -52,7 +52,7 @@
                         Padding="0"
                         ToolTip="Nederlands"
                         Click="LangNlButton_OnClick">
-                    <Image Width="18" Height="12" Stretch="Fill" Source="Assets/dutch.jpg"/>
+                    <Image Width="18" Height="12" Stretch="Fill" Source="../Assets/dutch.jpg"/>
                 </Button>
             </StackPanel>
         </DockPanel>
