@@ -319,14 +319,29 @@ else {
 $issPath = Join-Path $env:TEMP ("PARAFactoNative_Setup_{0}.iss" -f [Guid]::NewGuid().ToString("N"))
 $installerExe = Join-Path $installerDir "$innoOutputBase.exe"
 
-$AppVersion = Resolve-AppVersionText -FromParam $AppVersion -CsprojPath $csproj
+$hasExplicitAppVersion = -not [string]::IsNullOrWhiteSpace($AppVersion)
+$shouldUpdateVersionFiles = $true
+if ($Vendeur -and -not $SiteSeulement -and -not $hasExplicitAppVersion) {
+    $current = Get-ProjectVersion -CsprojPath $csproj
+    $AppVersion = Format-Version3 -VersionValue $current
+    $shouldUpdateVersionFiles = $false
+    Write-Host "Mode vendeur sans -AppVersion : conservation de la version courante ($AppVersion), sans reecriture csproj/app-version."
+}
+else {
+    $AppVersion = Resolve-AppVersionText -FromParam $AppVersion -CsprojPath $csproj
+}
 
 $appVersionJsonRepoRoot = Join-Path $repoRoot "subscription-site\public\app-version.json"
 $appVersionJsonNativeCopy = Join-Path $projectDir "subscription-site\public\app-version.json"
 
-Set-ProjectVersion -CsprojPath $csproj -VersionText $AppVersion
-Set-AppVersionJson -JsonPath $appVersionJsonRepoRoot -VersionText $AppVersion
-Set-AppVersionJson -JsonPath $appVersionJsonNativeCopy -VersionText $AppVersion
+if ($shouldUpdateVersionFiles) {
+    Set-ProjectVersion -CsprojPath $csproj -VersionText $AppVersion
+    Set-AppVersionJson -JsonPath $appVersionJsonRepoRoot -VersionText $AppVersion
+    Set-AppVersionJson -JsonPath $appVersionJsonNativeCopy -VersionText $AppVersion
+}
+else {
+    Write-Host "Version files: aucune ecriture (build vendeur locale)."
+}
 
 $repoRootFull = [System.IO.Path]::GetFullPath($repoRoot)
 $gitRelVersionFiles = @(
@@ -335,7 +350,12 @@ $gitRelVersionFiles = @(
     (Get-PathRelativeToRepoRoot -RepoRootFull $repoRootFull -FullPath $appVersionJsonNativeCopy)
 )
 
-Invoke-DotnetBuildAndGitCommitPushVersionFiles -RepoRoot $repoRoot -CsprojPath $csproj -GitRelativePaths $gitRelVersionFiles -VersionText $AppVersion -SkipGit:$SkipGitCommitPush -ParafactoLocalDemoBuild:$Vendeur
+if ($shouldUpdateVersionFiles) {
+    Invoke-DotnetBuildAndGitCommitPushVersionFiles -RepoRoot $repoRoot -CsprojPath $csproj -GitRelativePaths $gitRelVersionFiles -VersionText $AppVersion -SkipGit:$SkipGitCommitPush -ParafactoLocalDemoBuild:$Vendeur
+}
+else {
+    Write-Host "Etape git version: ignoree (aucun fichier version modifie)."
+}
 
 Write-Host "Projet  : $csproj"
 Write-Host "Version : $AppVersion"

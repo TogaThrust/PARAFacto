@@ -5,8 +5,14 @@ node_modules/
 *.user
 PARAFactoNative/publish_output/
 PARAFactoNative/installer_output/
+PARAFactoNative/installer_output_vendeur/
+PARAFactoNative/PARAFactoNative_*_wpftmp.csproj
+
+# Outil local DbQuery (artefacts de publication locaux)
+PARAFactoNative/tools/DbQuery/_out/
 # Local Netlify folder
 .netlify
 
 # Remplissage SQLite démo (local / PC vendeurs uniquement — ne pas pousser sur le dépôt)
+PARAFactoNative/tools/
 PARAFactoNative/tools/DemoDbSeed/
