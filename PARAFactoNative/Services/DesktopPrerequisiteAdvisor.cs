@@ -14,7 +14,10 @@ public static class DesktopPrerequisiteAdvisor
 
     public static bool IsAcrobatReaderInstalled()
     {
-        return AppPathExeExists("AcroRd32.exe") || AppPathExeExists("AcroRd64.exe");
+        return AppPathExeExists("AcroRd32.exe")
+               || AppPathExeExists("AcroRd64.exe")
+               || AppPathExeExists("Acrobat.exe")
+               || KnownAdobeExeExists();
     }
 
     public static bool IsOutlookAutomationAvailable()
@@ -32,8 +35,8 @@ public static class DesktopPrerequisiteAdvisor
     public static string BuildPrerequisiteMessage(bool readerOk, bool outlookOk)
     {
         var readerLine = readerOk
-            ? "• Adobe Acrobat Reader : détecté."
-            : "• Adobe Acrobat Reader : non détecté (recommandé pour les PDF).";
+            ? "• Adobe Acrobat / Reader : détecté."
+            : "• Adobe Acrobat / Reader : non détecté (recommandé pour les PDF).";
         var outlookLine = outlookOk
             ? "• Microsoft Outlook (automation classique) : détecté."
             : "• Microsoft Outlook classique : absent ou automation COM indisponible. Le « Nouvel Outlook » ne suffit pas pour l’envoi automatique de mails depuis PARAFacto.";
@@ -48,22 +51,50 @@ public static class DesktopPrerequisiteAdvisor
 
     private static bool AppPathExeExists(string exeFileName)
     {
-        foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
+        foreach (var hive in new[] { RegistryHive.LocalMachine, RegistryHive.CurrentUser })
         {
-            try
+            foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
             {
-                using var k = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view)
-                    .OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\" + exeFileName);
-                var p = (k?.GetValue("") as string)?.Trim().Trim('"');
-                if (!string.IsNullOrWhiteSpace(p) && File.Exists(p))
-                    return true;
-            }
-            catch
-            {
-                // ignore
+                try
+                {
+                    using var k = RegistryKey.OpenBaseKey(hive, view)
+                        .OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\" + exeFileName);
+                    var p = (k?.GetValue("") as string)?.Trim().Trim('"');
+                    if (!string.IsNullOrWhiteSpace(p) && File.Exists(p))
+                        return true;
+                }
+                catch
+                {
+                    // ignore
+                }
             }
         }
 
         return false;
+    }
+
+    private static bool KnownAdobeExeExists()
+    {
+        try
+        {
+            var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            var pfx86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            return ProbeKnownAdobeRoot(pf) || ProbeKnownAdobeRoot(pfx86);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool ProbeKnownAdobeRoot(string root)
+    {
+        if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
+            return false;
+
+        var readerDc = Path.Combine(root, "Adobe", "Acrobat DC", "Acrobat", "Acrobat.exe");
+        var reader = Path.Combine(root, "Adobe", "Acrobat Reader", "Reader", "AcroRd32.exe");
+        var readerDcLegacy = Path.Combine(root, "Adobe", "Acrobat Reader DC", "Reader", "AcroRd32.exe");
+        return File.Exists(readerDc) || File.Exists(reader) || File.Exists(readerDcLegacy);
     }
 }

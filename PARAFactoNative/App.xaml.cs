@@ -163,10 +163,24 @@ public partial class App : Application
                         if (settingsForPrereqTip.IsPrereqDesktopTipAcknowledgedFor(ver))
                             return;
 
+                        var suppressOnUpdates = settingsForPrereqTip.LoadSuppressPrereqDesktopTipOnUpdates();
+                        // On infère "update" si une version précédente a déjà été acquittée.
+                        // Le flag "ne plus afficher" ne s'applique qu'aux futures mises à jour.
+                        var priorVersion = settingsForPrereqTip.LoadPrereqDesktopTipAcknowledgedVersion();
+                        var isUpdateRun = !string.IsNullOrWhiteSpace(priorVersion) && !string.Equals(priorVersion, ver, StringComparison.Ordinal);
+                        if (suppressOnUpdates && isUpdateRun)
+                        {
+                            settingsForPrereqTip.SavePrereqDesktopTipAcknowledgedFor(ver);
+                            return;
+                        }
+
                         var reader = DesktopPrerequisiteAdvisor.IsAcrobatReaderInstalled();
                         var outlook = DesktopPrerequisiteAdvisor.IsOutlookAutomationAvailable();
                         var body = DesktopPrerequisiteAdvisor.BuildPrerequisiteMessage(reader, outlook);
-                        new PrerequisiteTipWindow(main, body) { Owner = main }.ShowDialog();
+                        var tip = new PrerequisiteTipWindow(main, body) { Owner = main };
+                        tip.ShowDialog();
+                        if (tip.DontShowOnNextUpdates)
+                            settingsForPrereqTip.SaveSuppressPrereqDesktopTipOnUpdates(true);
                         settingsForPrereqTip.SavePrereqDesktopTipAcknowledgedFor(ver);
 #endif
                     }
@@ -329,4 +343,5 @@ public partial class App : Application
             MessageBoxButton.OK,
             MessageBoxImage.Error);
     }
+
 }

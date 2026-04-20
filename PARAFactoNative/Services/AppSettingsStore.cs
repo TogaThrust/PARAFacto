@@ -44,6 +44,8 @@ public sealed class AppSettingsStore
         public string? UiLanguage { get; set; }
         /// <summary>Version d’assembly pour laquelle le rappel Reader/Outlook a déjà été affiché au lancement.</summary>
         public string? PrereqDesktopTipAcknowledgedForVersion { get; set; }
+        /// <summary>Si vrai, ne plus afficher le rappel Reader/Outlook lors des futures mises à jour.</summary>
+        public bool SuppressPrereqDesktopTipOnUpdates { get; set; }
     }
 
     private static string SettingsFolder
@@ -158,6 +160,15 @@ public sealed class AppSettingsStore
         }
     }
 
+    public string LoadPrereqDesktopTipAcknowledgedVersion()
+    {
+        lock (Gate)
+        {
+            var s = LoadAllInternal();
+            return (s?.PrereqDesktopTipAcknowledgedForVersion ?? "").Trim();
+        }
+    }
+
     public void SavePrereqDesktopTipAcknowledgedFor(string assemblyVersion)
     {
         lock (Gate)
@@ -169,6 +180,35 @@ public sealed class AppSettingsStore
                 s.PrereqDesktopTipAcknowledgedForVersion = string.IsNullOrWhiteSpace(assemblyVersion)
                     ? null
                     : assemblyVersion.Trim();
+                var json = JsonSerializer.Serialize(s, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(SettingsPath, json);
+            }
+            catch
+            {
+                /* ignore */
+            }
+        }
+    }
+
+    /// <summary>Si vrai, ne plus afficher le rappel Reader/Outlook pour les versions futures.</summary>
+    public bool LoadSuppressPrereqDesktopTipOnUpdates()
+    {
+        lock (Gate)
+        {
+            var s = LoadAllInternal();
+            return s?.SuppressPrereqDesktopTipOnUpdates == true;
+        }
+    }
+
+    public void SaveSuppressPrereqDesktopTipOnUpdates(bool suppress)
+    {
+        lock (Gate)
+        {
+            try
+            {
+                Directory.CreateDirectory(SettingsFolder);
+                var s = LoadAllInternal() ?? new AppSettings();
+                s.SuppressPrereqDesktopTipOnUpdates = suppress;
                 var json = JsonSerializer.Serialize(s, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(SettingsPath, json);
             }

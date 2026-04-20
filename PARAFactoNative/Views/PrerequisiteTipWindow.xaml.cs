@@ -6,6 +6,8 @@ namespace PARAFactoNative.Views;
 
 public partial class PrerequisiteTipWindow : Window
 {
+    public bool DontShowOnNextUpdates { get; private set; }
+
     public PrerequisiteTipWindow(Window owner, string bodyText)
     {
         InitializeComponent();
@@ -37,6 +39,7 @@ public partial class PrerequisiteTipWindow : Window
 
     private void OkButton_OnClick(object sender, RoutedEventArgs e)
     {
+        DontShowOnNextUpdates = DontShowAgainCheckBox.IsChecked == true;
         DialogResult = true;
         Close();
     }
