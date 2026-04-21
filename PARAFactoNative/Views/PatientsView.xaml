@@ -101,21 +101,24 @@
                                        TextWrapping="Wrap" />
 
                             <DockPanel>
-                                <TextBlock Width="110" VerticalAlignment="Center" Text="Code 3:" />
-                                <TextBox Text="{Binding Code3, UpdateSourceTrigger=PropertyChanged}"
-                                         IsReadOnly="{Binding IsCode3ReadOnly}" />
-                            </DockPanel>
-
-                            <DockPanel>
                                 <TextBlock Width="110" VerticalAlignment="Center" Text="Nom:" />
                                 <TextBox Text="{Binding Nom, UpdateSourceTrigger=PropertyChanged}"
-                                         IsReadOnly="{Binding IsReadOnly}" />
+                                         IsReadOnly="{Binding IsReadOnly}"
+                                         TabIndex="0" />
                             </DockPanel>
 
                             <DockPanel>
                                 <TextBlock Width="110" VerticalAlignment="Center" Text="Prénom:" />
                                 <TextBox Text="{Binding Prenom, UpdateSourceTrigger=PropertyChanged}"
-                                         IsReadOnly="{Binding IsReadOnly}" />
+                                         IsReadOnly="{Binding IsReadOnly}"
+                                         TabIndex="1" />
+                            </DockPanel>
+
+                            <DockPanel>
+                                <TextBlock Width="110" VerticalAlignment="Center" Text="Code 3:" />
+                                <TextBox Text="{Binding Code3, UpdateSourceTrigger=PropertyChanged}"
+                                         IsReadOnly="{Binding IsCode3ReadOnly}"
+                                         TabIndex="2" />
                             </DockPanel>
 
                             <DockPanel>

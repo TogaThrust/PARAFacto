@@ -25,6 +25,7 @@ namespace PARAFactoNative.ViewModels;
 public sealed class PatientsViewModel : NotifyBase
 {
     private readonly PatientRepo _repo = new();
+    private readonly AppointmentRepo _appointments = new();
     private readonly TarifRepo _tarifRepo = new();
     private readonly ImportService _import = new();
 
@@ -115,16 +116,44 @@ public sealed class PatientsViewModel : NotifyBase
 
     // Code d'origine (pour interdire la modification du Code3 après création)
     private string _originalCode3 = "";
+    private bool _isAutoUpdatingCode3;
+    private bool _code3EditedManually;
 
     // ===== Champs (personnel)
     private string _code3 = "";
-    public string Code3 { get => _code3; set => Set(ref _code3, value); }
+    public string Code3
+    {
+        get => _code3;
+        set
+        {
+            var normalized = NormalizeCode3Letters(value);
+            if (!Set(ref _code3, normalized)) return;
+            if (IsNew && !_isAutoUpdatingCode3)
+                _code3EditedManually = normalized.Length > 0;
+        }
+    }
 
     private string _nom = "";
-    public string Nom { get => _nom; set => Set(ref _nom, value); }
+    public string Nom
+    {
+        get => _nom;
+        set
+        {
+            if (!Set(ref _nom, value)) return;
+            TryAutoFillCode3ForNew();
+        }
+    }
 
     private string _prenom = "";
-    public string Prenom { get => _prenom; set => Set(ref _prenom, value); }
+    public string Prenom
+    {
+        get => _prenom;
+        set
+        {
+            if (!Set(ref _prenom, value)) return;
+            TryAutoFillCode3ForNew();
+        }
+    }
 
     private string _statut = "";
     public string Statut { get => _statut; set => Set(ref _statut, value); }
@@ -291,7 +320,7 @@ public sealed class PatientsViewModel : NotifyBase
         if (Selected is null) return false;
         var id = GetId(Selected);
         if (id <= 0) return false;
-        return _repo.CountSeancesForPatient(id) == 0;
+        return true;
     }
 
     private void DeleteSelectedPatient()
@@ -300,6 +329,33 @@ public sealed class PatientsViewModel : NotifyBase
 
         var id = GetId(Selected);
         var label = $"{(Selected.Code3 ?? "").Trim()} — {(Selected.LastName ?? "").Trim()} {(Selected.FirstName ?? "").Trim()}".Trim();
+        var seancesCount = _repo.CountSeancesForPatient(id);
+
+        if (seancesCount > 0)
+        {
+            var askDeleteFutureAppointments = MessageBox.Show(
+                $"Ce patient a {seancesCount} séance(s) enregistrée(s).\n\n" +
+                "Le patient sera conservé pour garantir la cohérence de l'historique du cabinet.\n" +
+                "Voulez-vous supprimer ses prochains rendez-vous agenda ?",
+                "Patient conservé - suppression des RDV",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+
+            if (askDeleteFutureAppointments != MessageBoxResult.Yes)
+                return;
+
+            var deletedAppointments = _appointments.DeleteForPatientFromDateInclusive(id, DateTime.Today);
+            MessageBox.Show(
+                deletedAppointments > 0
+                    ? $"{deletedAppointments} rendez-vous agenda futur(s) supprimé(s). Le patient est conservé."
+                    : "Aucun rendez-vous agenda futur à supprimer. Le patient est conservé.",
+                "PARAFacto",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            ImportCompleted?.Invoke();
+            return;
+        }
+
         if (System.Windows.MessageBox.Show(
                 $"Supprimer définitivement ce patient ?\n\n{label}\n\nLes rendez-vous agenda sans séance seront aussi retirés.",
                 "Confirmation",
@@ -322,7 +378,14 @@ public sealed class PatientsViewModel : NotifyBase
     private void ApplySelectionToEditor()
     {
         if (Selected is null) return;
-        if (IsNew) return; // ne pas écraser une création en cours
+
+        // Un clic dans la grille doit toujours charger la fiche sélectionnée,
+        // y compris si une création était en cours.
+        if (IsNew)
+        {
+            IsNew = false;
+            _code3EditedManually = false;
+        }
 
         LoadFieldsFromPatient(Selected);
         IsEditing = true;
@@ -372,6 +435,8 @@ public sealed class PatientsViewModel : NotifyBase
         EditingId = 0;
         ClearFields();
         _originalCode3 = "";
+        _code3EditedManually = false;
+        TryAutoFillCode3ForNew();
     }
 
     public void BeginEdit(long? patientId)
@@ -413,6 +478,7 @@ public sealed class PatientsViewModel : NotifyBase
         else
             ClearFields();
         _originalCode3 = "";
+        _code3EditedManually = false;
     }
 
     private void ClearFields()
@@ -504,12 +570,7 @@ public sealed class PatientsViewModel : NotifyBase
     private void Save()
     {
         // validations minimales
-        var code = (Code3 ?? "").Trim().ToUpperInvariant();
-        if (code.Length != 3)
-        {
-            MessageBox.Show("Le code patient doit contenir exactement 3 lettres.", "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
+        var code = NormalizeCode3Letters(Code3);
 
         // Interdiction de modifier le code 3 lettres après création
         if (!IsNew && !string.IsNullOrWhiteSpace(_originalCode3) &&
@@ -528,18 +589,36 @@ public sealed class PatientsViewModel : NotifyBase
             return;
         }
 
-        try
+        if (IsNew)
         {
-            if (IsNew)
+            var before = code;
+            var shouldKeepCurrentCode = _code3EditedManually && code.Length == 3 && _repo.IsCode3Available(code);
+            if (!shouldKeepCurrentCode)
             {
-                var exists = _repo.Search(code).Any(p => string.Equals((p.Code3 ?? "").Trim(), code, StringComparison.OrdinalIgnoreCase));
-                if (exists)
+                code = _repo.GenerateSuggestedCode3(
+                    nom,
+                    prenom,
+                    preferredCode3: _code3EditedManually ? code : null);
+                SetCode3FromSystem(code);
+                if (before.Length == 3 && !string.Equals(before, code, StringComparison.OrdinalIgnoreCase))
                 {
-                    MessageBox.Show($"Le code '{code}' est déjà utilisé. Choisis un autre code 3 lettres.", "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
+                    MessageBox.Show(
+                        $"Le code '{before}' est déjà utilisé. Proposition automatique: '{code}'.",
+                        "PARAFacto",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
                 }
             }
+        }
 
+        if (code.Length != 3)
+        {
+            MessageBox.Show("Le code patient doit contenir exactement 3 lettres.", "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
             var p = new Patient
             {
                 Id = IsNew ? 0 : EditingId,
@@ -607,11 +686,36 @@ public sealed class PatientsViewModel : NotifyBase
             IsEditing = false;
             IsNew = false;
             EditingId = 0;
+            _code3EditedManually = false;
         }
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private void TryAutoFillCode3ForNew()
+    {
+        if (!IsNew || _code3EditedManually)
+            return;
+
+        var suggestion = _repo.GenerateSuggestedCode3(Nom, Prenom, preferredCode3: null);
+        SetCode3FromSystem(suggestion);
+    }
+
+    private void SetCode3FromSystem(string code3)
+    {
+        _isAutoUpdatingCode3 = true;
+        Code3 = code3;
+        _isAutoUpdatingCode3 = false;
+    }
+
+    private static string NormalizeCode3Letters(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return "";
+        var letters = new string(input.Where(char.IsLetter).ToArray()).ToUpperInvariant();
+        return letters.Length <= 3 ? letters : letters[..3];
     }
 
     private static object? GetProp(object o, string name)

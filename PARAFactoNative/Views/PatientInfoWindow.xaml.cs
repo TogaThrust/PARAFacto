@@ -10,6 +10,10 @@ public partial class PatientInfoWindow : Window
 {
     public Patient Patient { get; }
     private readonly string _originalCode3;
+    private readonly PatientRepo _repo = new();
+    private bool _isAutoUpdatingCode;
+    private bool _codeEditedByUser;
+    private bool _isLoaded;
 
     public PatientInfoWindow(Patient patient)
     {
@@ -21,6 +25,8 @@ public partial class PatientInfoWindow : Window
         // Code3 non modifiable une fois créé
         if (patient.Id > 0)
             TbCode3.IsReadOnly = true;
+        else
+            RefreshSuggestedCode3(keepUserCodeIfAvailable: true, showWarningIfReplaced: false);
 
         // L'app historique affiche l'adresse dans un champ unique (Adresse/Address1).
         // Ici on a 2 champs (Rue + Numéro). Donc on synchronise dans les 2 sens :
@@ -29,6 +35,64 @@ public partial class PatientInfoWindow : Window
         TrySplitAddressIntoStreetAndNumber(Patient);
 
         DataContext = Patient;
+        Loaded += (_, _) => _isLoaded = true;
+    }
+
+    private void Code3_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (_isAutoUpdatingCode || Patient.Id > 0 || !_isLoaded)
+            return;
+        if (TbCode3.IsKeyboardFocusWithin)
+            _codeEditedByUser = true;
+    }
+
+    private void NameFields_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (Patient.Id > 0 || _codeEditedByUser)
+            return;
+        RefreshSuggestedCode3(keepUserCodeIfAvailable: true, showWarningIfReplaced: false);
+    }
+
+    private static string NormalizeCode3Letters(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return "";
+        var letters = new string(input.Where(char.IsLetter).ToArray()).ToUpperInvariant();
+        return letters.Length <= 3 ? letters : letters[..3];
+    }
+
+    private void RefreshSuggestedCode3(bool keepUserCodeIfAvailable, bool showWarningIfReplaced)
+    {
+        if (Patient.Id > 0) return;
+        var current = NormalizeCode3Letters(Patient.Code3);
+        if (keepUserCodeIfAvailable && _codeEditedByUser && current.Length == 3 && _repo.IsCode3Available(current))
+        {
+            SetCode3Value(current);
+            return;
+        }
+
+        var suggested = _repo.GenerateSuggestedCode3(Patient.LastName, Patient.FirstName, preferredCode3: null);
+        var replacedUnavailableUserCode = current.Length == 3 && !string.Equals(current, suggested, StringComparison.OrdinalIgnoreCase);
+        SetCode3Value(suggested);
+
+        if (showWarningIfReplaced && replacedUnavailableUserCode)
+        {
+            MessageBox.Show(
+                $"Le code '{current}' est déjà utilisé. Proposition automatique: '{suggested}'.",
+                "PARAFacto",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+    }
+
+    private void SetCode3Value(string? value)
+    {
+        var normalized = NormalizeCode3Letters(value);
+        _isAutoUpdatingCode = true;
+        Patient.Code3 = normalized;
+        if (TbCode3.Text != normalized)
+            TbCode3.Text = normalized;
+        _isAutoUpdatingCode = false;
     }
 
     private static void TrySplitAddressIntoStreetAndNumber(Patient p)
@@ -70,7 +134,7 @@ public partial class PatientInfoWindow : Window
         {
             // Normalise code3
             if (!string.IsNullOrWhiteSpace(Patient.Code3))
-                Patient.Code3 = Patient.Code3.Trim().ToUpperInvariant();
+                SetCode3Value(Patient.Code3);
 
             // Interdit modification du Code3 après création
             if (Patient.Id > 0 && !string.Equals(Patient.Code3 ?? "", _originalCode3, StringComparison.OrdinalIgnoreCase))
@@ -84,21 +148,15 @@ public partial class PatientInfoWindow : Window
             // Vérifie unicité du Code3 à la création
             if (Patient.Id <= 0)
             {
-                var code = (Patient.Code3 ?? "").Trim().ToUpperInvariant();
+                RefreshSuggestedCode3(keepUserCodeIfAvailable: true, showWarningIfReplaced: true);
+                var code = NormalizeCode3Letters(Patient.Code3);
                 if (code.Length != 3)
                 {
                     MessageBox.Show("Le code doit contenir exactement 3 lettres.", "PARAFacto",
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-
-                var exists = new PatientRepo().Search(code).Any(p => string.Equals(p.Code3, code, StringComparison.OrdinalIgnoreCase));
-                if (exists)
-                {
-                    MessageBox.Show($"Le code '{code}' est déjà utilisé. Choisis un autre code.", "PARAFacto",
-                        MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
+                SetCode3Value(code);
             }
 
             // Construit le champ adresse unique attendu par la DB / l'affichage "Patients"
@@ -108,7 +166,7 @@ public partial class PatientInfoWindow : Window
             var addr = (rue + " " + num).Trim();
             Patient.Address1 = string.IsNullOrWhiteSpace(addr) ? null : addr;
 
-            new PatientRepo().Upsert(Patient);
+            _repo.Upsert(Patient);
             DialogResult = true;
         }
         catch (Exception ex)

@@ -619,14 +619,41 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
     private bool CanDeleteSelectedPatient()
         => !IsBusy
            && SelectedPatient is not null
-           && SelectedPatient.Id > 0
-           && _patientRepo.CountSeancesForPatient(SelectedPatient.Id) == 0;
+           && SelectedPatient.Id > 0;
 
     private void DeleteSelectedPatient()
     {
         if (!CanDeleteSelectedPatient() || SelectedPatient is null) return;
 
         var p = SelectedPatient;
+        var seancesCount = _patientRepo.CountSeancesForPatient(p.Id);
+
+        if (seancesCount > 0)
+        {
+            var askDeleteFutureAppointments = MessageBox.Show(
+                $"Ce patient a {seancesCount} séance(s) enregistrée(s).\n\n" +
+                "Le patient sera conservé pour garantir la cohérence de l'historique du cabinet.\n" +
+                "Voulez-vous supprimer ses prochains rendez-vous agenda ?",
+                "Patient conservé - suppression des RDV",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+
+            if (askDeleteFutureAppointments != MessageBoxResult.Yes)
+                return;
+
+            var deletedAppointments = _appointments.DeleteForPatientFromDateInclusive(p.Id, DateTime.Today);
+            MessageBox.Show(
+                deletedAppointments > 0
+                    ? $"{deletedAppointments} rendez-vous agenda futur(s) supprimé(s). Le patient est conservé."
+                    : "Aucun rendez-vous agenda futur à supprimer. Le patient est conservé.",
+                "PARAFacto",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+
+            LinkedAgendaDataChanged?.Invoke();
+            return;
+        }
+
         if (System.Windows.MessageBox.Show(
                 $"Supprimer définitivement ce patient ?\n\n{p.Display}\n\nLes rendez-vous agenda sans séance seront aussi retirés.",
                 "Confirmation",

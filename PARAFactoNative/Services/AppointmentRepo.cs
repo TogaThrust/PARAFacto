@@ -99,6 +99,21 @@ WHERE id=@id;
         cn.Execute("DELETE FROM appointments WHERE id=@id;", new { id });
     }
 
+    /// <summary>
+    /// Supprime les rendez-vous du patient à partir d'une date (incluse).
+    /// Retourne le nombre de lignes supprimées.
+    /// </summary>
+    public int DeleteForPatientFromDateInclusive(long patientId, DateTime fromDate)
+    {
+        if (patientId <= 0) return 0;
+        var fromIso = fromDate.ToString("yyyy-MM-dd");
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+        return cn.Execute(
+            "DELETE FROM appointments WHERE patient_id=@patientId AND date_iso >= @fromIso;",
+            new { patientId, fromIso });
+    }
+
     /// <summary>Identifiants des RDV de la série à partir d’une date (inclusive), triés par date puis heure.</summary>
     public IReadOnlyList<long> ListIdsInRecurrenceSeriesFromDate(string? seriesId, string fromIsoInclusive)
     {

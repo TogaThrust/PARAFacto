@@ -32,17 +32,17 @@
 
                 <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
                     <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Text="NOM"/>
-                    <TextBox Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBox x:Name="TbLastName" Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged}" TextChanged="NameFields_TextChanged"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,10,10">
                     <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Text="PRÉNOM"/>
-                    <TextBox Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBox x:Name="TbFirstName" Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged}" TextChanged="NameFields_TextChanged"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,10" Width="90">
                     <TextBlock Style="{StaticResource DialogFieldLabelTextBlock}" Text="CODE"/>
-                    <TextBox x:Name="TbCode3" Text="{Binding Code3, UpdateSourceTrigger=PropertyChanged}" MaxLength="3"/>
+                    <TextBox x:Name="TbCode3" Text="{Binding Code3, UpdateSourceTrigger=PropertyChanged}" MaxLength="3" TextChanged="Code3_TextChanged"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
