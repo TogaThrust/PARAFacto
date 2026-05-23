@@ -1265,6 +1265,7 @@ public sealed class FacturesViewModel : NotifyBase
 
             if (composeOpened)
             {
+                AppendReminderSentToInvoiceComment(row, "e-mail");
                 MessageBox.Show(
                     $"Message préparé.\n\n" +
                     $"Destinataire : {email}\n" +
@@ -1303,10 +1304,20 @@ public sealed class FacturesViewModel : NotifyBase
         if (row.InvoiceId <= 0) return;
         var todayFr = DateTime.Today.ToString("dd/MM/yyyy", CultureInfo.GetCultureInfo("fr-BE"));
         var line = $"Rappel envoyé par {channelLabel} le {todayFr}.";
-        var existing = (row.UserComment ?? "").TrimEnd();
+        var existing = (_repo.GetById(row.InvoiceId)?.UserComment ?? row.UserComment ?? "").TrimEnd();
         var combined = string.IsNullOrEmpty(existing) ? line : existing + Environment.NewLine + line;
-        row.UserComment = combined;
         SaveInvoiceComment(row.InvoiceId, combined);
+        UpdateInvoiceCommentInMemory(row.InvoiceId, combined);
+    }
+
+    private void UpdateInvoiceCommentInMemory(long invoiceId, string comment)
+    {
+        foreach (var item in Items.Where(x => x.InvoiceId == invoiceId))
+            item.UserComment = comment;
+
+        foreach (var item in _allPeriodRows.Where(x => x.InvoiceId == invoiceId))
+            item.UserComment = comment;
+
         Raise(nameof(SelectedCommentText));
         Raise(nameof(HasSelectedComment));
         try
