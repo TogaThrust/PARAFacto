@@ -149,7 +149,7 @@ public partial class App : Application
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             main.Show();
 
-            // Rappel Reader / Outlook : l’installateur Inno ne s’exécute pas au lancement de l’exe ni lors d’une MAJ silencieuse.
+            // Rappel Reader / Gmail web : l’installateur Inno ne s’exécute pas au lancement de l’exe ni lors d’une MAJ silencieuse.
             // Une fois par version d’assembly, après le premier rendu idle (fenêtre principale déjà affichée).
             var settingsForPrereqTip = appSettings;
             main.Dispatcher.BeginInvoke(
@@ -175,8 +175,8 @@ public partial class App : Application
                         }
 
                         var reader = DesktopPrerequisiteAdvisor.IsAcrobatReaderInstalled();
-                        var outlook = DesktopPrerequisiteAdvisor.IsOutlookAutomationAvailable();
-                        var tip = new PrerequisiteTipWindow(main, reader, outlook) { Owner = main };
+                        var gmailBrowser = DesktopPrerequisiteAdvisor.IsGmailBrowserAvailable();
+                        var tip = new PrerequisiteTipWindow(main, reader, gmailBrowser) { Owner = main };
                         tip.ShowDialog();
                         if (tip.DontShowOnNextUpdates)
                             settingsForPrereqTip.SaveSuppressPrereqDesktopTipOnUpdates(true);

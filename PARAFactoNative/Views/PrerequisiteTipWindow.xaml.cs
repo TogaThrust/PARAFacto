@@ -10,16 +10,16 @@ public partial class PrerequisiteTipWindow : Window
 {
     private readonly AppSettingsStore _appSettings = new();
     private readonly bool _readerOk;
-    private readonly bool _outlookOk;
+    private readonly bool _gmailBrowserOk;
 
     public bool DontShowOnNextUpdates { get; private set; }
 
-    public PrerequisiteTipWindow(Window owner, bool readerOk, bool outlookOk)
+    public PrerequisiteTipWindow(Window owner, bool readerOk, bool gmailBrowserOk)
     {
         InitializeComponent();
         Owner = owner;
         _readerOk = readerOk;
-        _outlookOk = outlookOk;
+        _gmailBrowserOk = gmailBrowserOk;
         ApplyLanguage();
         UiLanguageService.LanguageChanged += OnUiLanguageChanged;
         Closed += (_, _) => UiLanguageService.LanguageChanged -= OnUiLanguageChanged;
@@ -44,8 +44,10 @@ public partial class PrerequisiteTipWindow : Window
     private void AdobeButton_OnClick(object sender, RoutedEventArgs e)
         => OpenUrl(DesktopPrerequisiteAdvisor.AdobeReaderDownloadUrl);
 
-    private void OutlookButton_OnClick(object sender, RoutedEventArgs e)
-        => OpenUrl(DesktopPrerequisiteAdvisor.OutlookClassicHelpUrl);
+    private void GmailButton_OnClick(object sender, RoutedEventArgs e)
+        => OpenUrl(_gmailBrowserOk
+            ? DesktopPrerequisiteAdvisor.GmailHelpUrl
+            : DesktopPrerequisiteAdvisor.ChromeDownloadUrl);
 
     private void OkButton_OnClick(object sender, RoutedEventArgs e)
     {
@@ -86,12 +88,14 @@ public partial class PrerequisiteTipWindow : Window
         LanguageLabel.Text = T("Langue :", "Language:", "Taal:");
         OpenInBrowserLabel.Text = T("Ouvrir dans le navigateur :", "Open in browser:", "Openen in browser:");
         AdobeButton.Content = "Acrobat Reader (Adobe)";
-        OutlookButton.Content = T("Outlook classique (Microsoft)", "Outlook classic (Microsoft)", "Outlook klassiek (Microsoft)");
+        GmailButton.Content = _gmailBrowserOk
+            ? "Gmail web"
+            : T("Installer Google Chrome", "Install Google Chrome", "Google Chrome installeren");
         DontShowAgainCheckBox.Content = T(
             "Ne plus afficher pour les prochaines mises à jour",
             "Do not show again for future updates",
             "Niet meer tonen bij volgende updates");
-        BodyText.Text = DesktopPrerequisiteAdvisor.BuildPrerequisiteMessage(_readerOk, _outlookOk);
+        BodyText.Text = DesktopPrerequisiteAdvisor.BuildPrerequisiteMessage(_readerOk, _gmailBrowserOk);
 
         UpdateLanguageButtonsVisual();
     }

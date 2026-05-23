@@ -9,6 +9,75 @@ namespace PARAFactoNative.Services;
 
 public sealed class SmtpEmailService
 {
+    public bool TrySendMail(
+        AppMailSettings settings,
+        string to,
+        string from,
+        string subject,
+        string body,
+        out string error)
+    {
+        error = "";
+
+        to = (to ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(to))
+        {
+            error = "Aucune adresse e-mail destinataire n'est renseignée.";
+            return false;
+        }
+
+        from = (from ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(from))
+        {
+            error = "Aucune adresse e-mail expéditeur n'est renseignée.";
+            return false;
+        }
+
+        var host = (settings?.SmtpHost ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            error = "SMTP: serveur (host) manquant.";
+            return false;
+        }
+
+        var user = (settings?.SmtpUsername ?? "").Trim();
+        // Gmail affiche le mot de passe d’application avec des espaces ; le serveur attend 16 caractères sans espaces.
+        var pass = (settings?.SmtpPassword ?? "").Trim().Replace(" ", "");
+        if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(pass))
+        {
+            error = "SMTP: identifiant ou mot de passe manquant.";
+            return false;
+        }
+
+        try
+        {
+            using var msg = new MailMessage();
+            msg.From = new MailAddress(from);
+            msg.To.Add(new MailAddress(to));
+            msg.Subject = subject ?? "";
+            msg.Body = body ?? "";
+
+            var port = settings?.SmtpPort ?? 587;
+            if (port <= 0) port = 587;
+
+            using var client = new SmtpClient(host, port)
+            {
+                EnableSsl = settings?.SmtpEnableSsl ?? true,
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false,
+                Credentials = new NetworkCredential(user, pass)
+            };
+
+            client.Send(msg);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
     public bool TrySendMailWithAttachments(
         AppMailSettings settings,
         string subject,

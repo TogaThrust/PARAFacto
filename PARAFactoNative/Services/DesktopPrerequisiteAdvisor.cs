@@ -4,11 +4,11 @@ using Microsoft.Win32;
 
 namespace PARAFactoNative.Services;
 
-/// <summary>Détection locale Acrobat Reader et automation Outlook (alignée sur l’installateur Inno).</summary>
+/// <summary>Détection locale Acrobat Reader et navigateur compatible Gmail.</summary>
 public static class DesktopPrerequisiteAdvisor
 {
-    public const string OutlookClassicHelpUrl =
-        "https://support.microsoft.com/fr-fr/office/installer-ou-r%C3%A9installer-outlook-classique-sur-un-pc-windows-5c94902b-31a5-4274-abb0-b07f4661edf5";
+    public const string GmailHelpUrl = "https://mail.google.com/";
+    public const string ChromeDownloadUrl = "https://www.google.com/intl/fr/chrome/";
 
     public const string AdobeReaderDownloadUrl = "https://www.adobe.com/be_fr/acrobat/pdf-reader.html";
 
@@ -20,11 +20,14 @@ public static class DesktopPrerequisiteAdvisor
                || KnownAdobeExeExists();
     }
 
-    public static bool IsOutlookAutomationAvailable()
+    public static bool IsGmailBrowserAvailable()
     {
         try
         {
-            return Type.GetTypeFromProgID("Outlook.Application") is not null;
+            return AppPathExeExists("chrome.exe")
+                   || AppPathExeExists("msedge.exe")
+                   || AppPathExeExists("firefox.exe")
+                   || AppPathExeExists("brave.exe");
         }
         catch
         {
@@ -32,7 +35,7 @@ public static class DesktopPrerequisiteAdvisor
         }
     }
 
-    public static string BuildPrerequisiteMessage(bool readerOk, bool outlookOk)
+    public static string BuildPrerequisiteMessage(bool readerOk, bool gmailBrowserOk)
     {
         static string T(string fr, string en, string nl)
             => UiLanguageService.Current switch
@@ -51,24 +54,24 @@ public static class DesktopPrerequisiteAdvisor
                 "• Adobe Acrobat / Reader : non détecté (recommandé pour les PDF).",
                 "• Adobe Acrobat / Reader: not detected (recommended for PDFs).",
                 "• Adobe Acrobat / Reader: niet gedetecteerd (aanbevolen voor pdf's).");
-        var outlookLine = outlookOk
+        var gmailLine = gmailBrowserOk
             ? T(
-                "• Microsoft Outlook (automation classique) : détecté.",
-                "• Microsoft Outlook (classic automation): detected.",
-                "• Microsoft Outlook (klassieke automatisering): gedetecteerd.")
+                "• Gmail web / navigateur : navigateur détecté.",
+                "• Gmail web / browser: browser detected.",
+                "• Gmail web / browser: browser gedetecteerd.")
             : T(
-                "• Microsoft Outlook classique : absent ou automation COM indisponible. Le « Nouvel Outlook » ne suffit pas pour l’envoi automatique de mails depuis PARAFacto.",
-                "• Microsoft Outlook classic: missing or COM automation unavailable. The New Outlook is not enough for automatic email sending from PARAFacto.",
-                "• Microsoft Outlook klassiek: afwezig of COM-automatisering niet beschikbaar. De Nieuwe Outlook volstaat niet voor automatische e-mailverzending vanuit PARAFacto.");
+                "• Gmail web / navigateur : aucun navigateur compatible détecté. Installez Google Chrome ou connectez-vous à Gmail dans votre navigateur.",
+                "• Gmail web / browser: no compatible browser detected. Install Google Chrome or sign in to Gmail in your browser.",
+                "• Gmail web / browser: geen compatibele browser gedetecteerd. Installeer Google Chrome of meld u aan bij Gmail in uw browser.");
 
         return
             T(
-                "PARAFacto s’appuie sur ces logiciels pour les PDF et l’envoi de mails.",
-                "PARAFacto relies on these applications for PDFs and email sending.",
-                "PARAFacto gebruikt deze software voor pdf's en e-mailverzending.")
+                "PARAFacto s’appuie sur ces logiciels pour les PDF et prépare les rappels e-mail dans Gmail web.",
+                "PARAFacto relies on these applications for PDFs and prepares email reminders in Gmail web.",
+                "PARAFacto gebruikt deze software voor pdf's en bereidt e-mailherinneringen voor in Gmail web.")
             + "\n\n" +
             readerLine + "\n" +
-            outlookLine +
+            gmailLine +
             "\n\n" +
             T(
                 "Utilisez les boutons ci-dessous pour ouvrir les pages de téléchargement ou d’aide officielles.",

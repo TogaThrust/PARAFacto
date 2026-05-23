@@ -78,13 +78,13 @@
                         MinWidth="200"
                         Padding="14,8"
                         Click="AdobeButton_OnClick"/>
-                <Button x:Name="OutlookButton"
-                        Content="Outlook classique (Microsoft)"
+                <Button x:Name="GmailButton"
+                        Content="Gmail / Chrome"
                         Style="{StaticResource DialogChoiceButton}"
                         MinWidth="220"
                         Margin="10,0,0,0"
                         Padding="14,8"
-                        Click="OutlookButton_OnClick"/>
+                        Click="GmailButton_OnClick"/>
             </StackPanel>
         </StackPanel>
 

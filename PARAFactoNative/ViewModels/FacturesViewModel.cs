@@ -17,6 +17,12 @@ namespace PARAFactoNative.ViewModels;
 
 public sealed class FacturesViewModel : NotifyBase
 {
+    private const int SwRestore = 9;
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
     private const string RelinkSecurityCode = "7324";
     private bool _relinkUnlocked;
     private static readonly List<string> TypeKeys = new() { "TOUTES", "PATIENT", "MUTUELLE", "CREDIT_NOTE" };
@@ -1200,7 +1206,7 @@ public sealed class FacturesViewModel : NotifyBase
             return;
         }
 
-        var email = (patient.Email ?? "").Trim();
+        var email = NormalizeEmailAddress(patient.Email);
         var phoneRaw = (patient.Phone ?? "").Trim();
         var phoneWa = InternationalPhoneFormatter.TryFormatForWhatsApp(phoneRaw);
         var patientLabel = string.IsNullOrWhiteSpace(patient.Display) ? (row.Recipient ?? "patient") : patient.Display;
@@ -1229,39 +1235,47 @@ public sealed class FacturesViewModel : NotifyBase
             }
 
             var subject = $"Rappel de paiement — facture N° {row.InvoiceNo}";
-            var gmailUrl =
-                $"https://mail.google.com/mail/?view=cm&fs=1&to={Uri.EscapeDataString(email)}" +
-                $"&su={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(body)}";
-            var mailto = $"mailto:{Uri.EscapeDataString(email)}?subject={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(body)}";
-            var emailOpened = false;
+            var senderEmail = ResolveReminderSenderEmail();
+            if (string.IsNullOrWhiteSpace(senderEmail))
+            {
+                MessageBox.Show(
+                    "Aucun e-mail expéditeur n'est configuré dans l'onglet Données professionnelles.",
+                    "Factures — rappel",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var gmailUrl = BuildGmailComposeUrl(senderEmail, email, subject, body);
+            var composeOpened = false;
             try
             {
-                // 1) Priorité Gmail web.
+                // Gmail web uniquement : Outlook est volontairement ignoré pour les rappels de paiement.
                 Process.Start(new ProcessStartInfo(gmailUrl) { UseShellExecute = true });
-                emailOpened = true;
+                composeOpened = true;
             }
             catch (Exception ex)
             {
-                // 2) Fallback Outlook (si installé).
-                if (TryOpenOutlookCompose(email, subject, body, out _))
-                    emailOpened = true;
-                else
-                {
-                    try
-                    {
-                        // 3) Fallback client mail par défaut du PC (Thunderbird/autre).
-                        Process.Start(new ProcessStartInfo(mailto) { UseShellExecute = true });
-                        emailOpened = true;
-                    }
-                    catch
-                    {
-                        MessageBox.Show($"Impossible d'ouvrir Gmail, Outlook, ni un autre client e-mail.\n\n{ex.Message}", "Factures — rappel", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    }
-                }
+                MessageBox.Show(
+                    $"Impossible d'ouvrir Gmail dans le navigateur.\n\n{ex.Message}",
+                    "Factures — rappel",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
             }
 
-            if (emailOpened)
-                AppendReminderSentToInvoiceComment(row, "e-mail");
+            if (composeOpened)
+            {
+                MessageBox.Show(
+                    $"Message préparé.\n\n" +
+                    $"Destinataire : {email}\n" +
+                    $"Expéditeur attendu : {senderEmail}\n\n" +
+                    "Vérifiez le champ « De » dans Gmail, puis envoyez vous-même le message.",
+                    "Factures — rappel",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                TryBringMailClientToFront();
+            }
+
             return;
         }
 
@@ -1309,6 +1323,57 @@ public sealed class FacturesViewModel : NotifyBase
     private string ResolveSenderSignatureName()
         => ProfessionalProfileStore.Load().ReminderSenderDisplayName;
 
+    private string ResolveReminderSenderEmail()
+        => NormalizeEmailAddress(ProfessionalProfileStore.Load().Email);
+
+    private static string NormalizeEmailAddress(string? value)
+    {
+        var s = (value ?? "").Trim().Trim('\'', '"');
+        if (string.IsNullOrWhiteSpace(s))
+            return "";
+
+        var displayAddress = Regex.Match(s, @"<([^<>@\s]+@[^<>\s]+)>");
+        if (displayAddress.Success)
+            return displayAddress.Groups[1].Value.Trim().Trim('\'', '"');
+
+        return s;
+    }
+
+    private static string BuildGmailComposeUrl(string senderEmail, string to, string subject, string body)
+    {
+        return
+            "https://mail.google.com/mail/?view=cm&fs=1" +
+            $"&authuser={Uri.EscapeDataString(senderEmail)}" +
+            $"&from={Uri.EscapeDataString(senderEmail)}" +
+            $"&to={Uri.EscapeDataString(to)}" +
+            $"&su={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(body)}";
+    }
+
+    private static void TryBringMailClientToFront()
+    {
+        var processNames = new[] { "chrome", "msedge", "firefox", "brave" };
+        foreach (var processName in processNames)
+        {
+            try
+            {
+                foreach (var process in Process.GetProcessesByName(processName))
+                {
+                    var handle = process.MainWindowHandle;
+                    if (handle == IntPtr.Zero)
+                        continue;
+
+                    ShowWindow(handle, SwRestore);
+                    SetForegroundWindow(handle);
+                    return;
+                }
+            }
+            catch
+            {
+                // Focus best-effort: Windows peut refuser selon la fenêtre active.
+            }
+        }
+    }
+
     private static string BuildReminderMessage(InvoiceRow row, string senderDisplayName)
     {
         var dateLabel = DateTime.TryParseExact(
@@ -1330,7 +1395,7 @@ public sealed class FacturesViewModel : NotifyBase
             senderDisplayName;
     }
 
-    private static bool TryOpenOutlookCompose(string to, string subject, string body, out string error)
+    private static bool TryOpenOutlookCompose(string senderEmail, string to, string subject, string body, out string error)
     {
         error = "";
         Type? outlookType = null;
@@ -1364,9 +1429,26 @@ public sealed class FacturesViewModel : NotifyBase
                 return false;
             }
 
-            mail.GetType().InvokeMember("To", System.Reflection.BindingFlags.SetProperty, null, mail, new object[] { to });
+            mail.GetType().InvokeMember("To", System.Reflection.BindingFlags.SetProperty, null, mail, new object[] { "" });
+            mail.GetType().InvokeMember("CC", System.Reflection.BindingFlags.SetProperty, null, mail, new object[] { "" });
+            mail.GetType().InvokeMember("BCC", System.Reflection.BindingFlags.SetProperty, null, mail, new object[] { "" });
             mail.GetType().InvokeMember("Subject", System.Reflection.BindingFlags.SetProperty, null, mail, new object[] { subject });
             mail.GetType().InvokeMember("Body", System.Reflection.BindingFlags.SetProperty, null, mail, new object[] { body });
+            var recipients = mail.GetType().InvokeMember(
+                "Recipients",
+                System.Reflection.BindingFlags.GetProperty,
+                null,
+                mail,
+                Array.Empty<object>());
+            var recipient = recipients?.GetType().InvokeMember(
+                "Add",
+                System.Reflection.BindingFlags.InvokeMethod,
+                null,
+                recipients,
+                new object[] { NormalizeEmailAddress(to) });
+            recipient?.GetType().InvokeMember("Type", System.Reflection.BindingFlags.SetProperty, null, recipient, new object[] { 1 });
+            recipients?.GetType().InvokeMember("ResolveAll", System.Reflection.BindingFlags.InvokeMethod, null, recipients, Array.Empty<object>());
+            TryForceOutlookSender(outlook, mail, senderEmail);
             // Display() pour laisser l'utilisateur relire/modifier avant envoi.
             mail.GetType().InvokeMember("Display", System.Reflection.BindingFlags.InvokeMethod, null, mail, Array.Empty<object>());
             return true;
@@ -1388,6 +1470,84 @@ public sealed class FacturesViewModel : NotifyBase
                 if (outlook != null && Marshal.IsComObject(outlook)) Marshal.FinalReleaseComObject(outlook);
             }
             catch { }
+        }
+    }
+
+    private static void TryForceOutlookSender(object outlook, object mail, string senderEmail)
+    {
+        senderEmail = (senderEmail ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(senderEmail))
+            return;
+
+        try
+        {
+            var session = outlook.GetType().InvokeMember(
+                "Session",
+                System.Reflection.BindingFlags.GetProperty,
+                null,
+                outlook,
+                Array.Empty<object>());
+
+            var accounts = session?.GetType().InvokeMember(
+                "Accounts",
+                System.Reflection.BindingFlags.GetProperty,
+                null,
+                session,
+                Array.Empty<object>());
+
+            var countObj = accounts?.GetType().InvokeMember(
+                "Count",
+                System.Reflection.BindingFlags.GetProperty,
+                null,
+                accounts,
+                Array.Empty<object>());
+
+            var count = Convert.ToInt32(countObj, CultureInfo.InvariantCulture);
+            for (var i = 1; i <= count; i++)
+            {
+                var account = accounts!.GetType().InvokeMember(
+                    "Item",
+                    System.Reflection.BindingFlags.InvokeMethod,
+                    null,
+                    accounts,
+                    new object[] { i });
+
+                var smtpAddress = account?.GetType().InvokeMember(
+                    "SmtpAddress",
+                    System.Reflection.BindingFlags.GetProperty,
+                    null,
+                    account,
+                    Array.Empty<object>())?.ToString();
+
+                if (!string.Equals((smtpAddress ?? "").Trim(), senderEmail, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                mail.GetType().InvokeMember(
+                    "SendUsingAccount",
+                    System.Reflection.BindingFlags.SetProperty,
+                    null,
+                    mail,
+                    new[] { account });
+                return;
+            }
+        }
+        catch
+        {
+            // Selon le profil Outlook, l'accès au compte peut échouer; on tente le champ "De" délégué.
+        }
+
+        try
+        {
+            mail.GetType().InvokeMember(
+                "SentOnBehalfOfName",
+                System.Reflection.BindingFlags.SetProperty,
+                null,
+                mail,
+                new object[] { senderEmail });
+        }
+        catch
+        {
+            // Outlook affichera la composition; l'utilisateur verra si le compte n'est pas disponible.
         }
     }
 
