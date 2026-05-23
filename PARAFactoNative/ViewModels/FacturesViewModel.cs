@@ -1269,7 +1269,7 @@ public sealed class FacturesViewModel : NotifyBase
                     $"Message préparé.\n\n" +
                     $"Destinataire : {email}\n" +
                     $"Expéditeur attendu : {senderEmail}\n\n" +
-                    "Vérifiez le champ « De » dans Gmail, puis envoyez vous-même le message.",
+                    "Si Google demande un compte, choisissez cet expéditeur. Vérifiez le champ « De » dans Gmail, puis envoyez vous-même le message.",
                     "Factures — rappel",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
@@ -1341,12 +1341,15 @@ public sealed class FacturesViewModel : NotifyBase
 
     private static string BuildGmailComposeUrl(string senderEmail, string to, string subject, string body)
     {
-        return
-            "https://mail.google.com/mail/?view=cm&fs=1" +
-            $"&authuser={Uri.EscapeDataString(senderEmail)}" +
-            $"&from={Uri.EscapeDataString(senderEmail)}" +
+        var composeUrl =
+            $"https://mail.google.com/mail/u/{Uri.EscapeDataString(senderEmail)}/?view=cm&fs=1" +
             $"&to={Uri.EscapeDataString(to)}" +
             $"&su={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(body)}";
+
+        return
+            "https://accounts.google.com/AccountChooser" +
+            $"?Email={Uri.EscapeDataString(senderEmail)}" +
+            $"&continue={Uri.EscapeDataString(composeUrl)}";
     }
 
     private static void TryBringMailClientToFront()
