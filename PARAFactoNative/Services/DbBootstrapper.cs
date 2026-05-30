@@ -7,7 +7,7 @@ namespace PARAFactoNative.Services;
 public static class DbBootstrapper
 {
     // On garde simple: version "app" pour nos migrations.
-    private const int TargetSchemaVersion = 16;
+    private const int TargetSchemaVersion = 18;
 
     public static void EnsureDatabase()
     {
@@ -29,6 +29,8 @@ public static class DbBootstrapper
             EnsureInvoicesPeriodColumn(cn);
             EnsureInvoicesRecipientColumn(cn);
             EnsureInvoicesUserCommentColumn(cn);
+            EnsureInvoicesPaymentReferenceColumn(cn);
+            EnsureBankTransactionsTable(cn);
             EnsureAppointmentsTable(cn);
             EnsureAgendaUnavailabilityTable(cn);
             EnsureAgendaLunchDayOverrideTable(cn);
@@ -49,6 +51,8 @@ public static class DbBootstrapper
         EnsureInvoicesPeriodColumn(cn);
         EnsureInvoicesRecipientColumn(cn);
         EnsureInvoicesUserCommentColumn(cn);
+        EnsureInvoicesPaymentReferenceColumn(cn);
+        EnsureBankTransactionsTable(cn);
         EnsureAppointmentsTable(cn);
         EnsureAgendaUnavailabilityTable(cn);
         EnsureAgendaLunchDayOverrideTable(cn);
@@ -101,6 +105,49 @@ WHERE (period IS NULL OR trim(period)='') AND length(date_iso) >= 7;
     {
         if (ColumnExists(cn, "invoices", "user_comment")) return;
         cn.Execute("ALTER TABLE invoices ADD COLUMN user_comment TEXT;");
+    }
+
+    private static void EnsureInvoicesPaymentReferenceColumn(IDbConnection cn)
+    {
+        AddColumnIfMissing(cn, "invoices", "payment_reference", "TEXT");
+
+        var missing = cn.Query<(long Id, string? InvoiceNo)>(@"
+SELECT id AS Id, invoice_no AS InvoiceNo
+FROM invoices
+WHERE TRIM(COALESCE(payment_reference,'')) = ''
+  AND TRIM(COALESCE(invoice_no,'')) <> '';");
+        foreach (var row in missing)
+        {
+            cn.Execute(
+                "UPDATE invoices SET payment_reference=@r WHERE id=@id;",
+                new { id = row.Id, r = PaymentReferenceGenerator.GenerateStructuredCommunication(row.InvoiceNo, row.Id) });
+        }
+    }
+
+    private static void EnsureBankTransactionsTable(IDbConnection cn)
+    {
+        cn.Execute(@"
+CREATE TABLE IF NOT EXISTS bank_transactions(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  import_hash TEXT NOT NULL UNIQUE,
+  source_file TEXT,
+  line_no INTEGER NOT NULL DEFAULT 0,
+  booked_date TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  communication TEXT,
+  counterparty TEXT,
+  bank_reference TEXT,
+  raw_text TEXT,
+  status TEXT NOT NULL DEFAULT 'new',
+  invoice_id INTEGER,
+  decision_reason TEXT,
+  imported_at TEXT NOT NULL DEFAULT (datetime('now')),
+  decided_at TEXT,
+  FOREIGN KEY(invoice_id) REFERENCES invoices(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS ix_bank_transactions_status ON bank_transactions(status);
+CREATE INDEX IF NOT EXISTS ix_bank_transactions_invoice ON bank_transactions(invoice_id);
+");
     }
 
     private static void EnsureAppointmentsTable(IDbConnection cn)
@@ -254,6 +301,7 @@ CREATE TABLE IF NOT EXISTS invoices(
   ref_doc TEXT,
   recipient TEXT,
   user_comment TEXT,
+  payment_reference TEXT,
   period TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY(patient_id) REFERENCES patients(id) ON DELETE SET NULL,
@@ -284,6 +332,27 @@ CREATE TABLE IF NOT EXISTS payments(
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY(invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS bank_transactions(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  import_hash TEXT NOT NULL UNIQUE,
+  source_file TEXT,
+  line_no INTEGER NOT NULL DEFAULT 0,
+  booked_date TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  communication TEXT,
+  counterparty TEXT,
+  bank_reference TEXT,
+  raw_text TEXT,
+  status TEXT NOT NULL DEFAULT 'new',
+  invoice_id INTEGER,
+  decision_reason TEXT,
+  imported_at TEXT NOT NULL DEFAULT (datetime('now')),
+  decided_at TEXT,
+  FOREIGN KEY(invoice_id) REFERENCES invoices(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS ix_bank_transactions_status ON bank_transactions(status);
+CREATE INDEX IF NOT EXISTS ix_bank_transactions_invoice ON bank_transactions(invoice_id);
 
 CREATE TABLE IF NOT EXISTS audit_events(
   id INTEGER PRIMARY KEY AUTOINCREMENT,

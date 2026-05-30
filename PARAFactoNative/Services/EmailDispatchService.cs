@@ -23,7 +23,9 @@ public sealed class EmailDispatchService
         string subject,
         string body,
         IEnumerable<string> attachments,
-        out string error)
+        out string error,
+        bool isHtml = false,
+        string? inlineLogoPath = null)
     {
         error = "";
         var smtpReady = IsSmtpComplete(settings);
@@ -33,17 +35,17 @@ public sealed class EmailDispatchService
         {
             if (smtpReady)
             {
-                if (_smtp.TrySendMailWithAttachments(settings, subject, body, attachments, out var smtpErr))
+                if (_smtp.TrySendMailWithAttachments(settings, subject, body, attachments, out var smtpErr, isHtml, inlineLogoPath))
                     return true;
 
-                if (_outlook.TrySendMailWithAttachments(settings.RecipientEmail, subject, body, attachments, out var outlookErr))
+                if (_outlook.TrySendMailWithAttachments(settings.RecipientEmail, subject, body, attachments, out var outlookErr, isHtml, inlineLogoPath))
                     return true;
 
                 error = $"SMTP: {smtpErr}\n\nOutlook: {outlookErr}";
                 return false;
             }
 
-            if (_outlook.TrySendMailWithAttachments(settings.RecipientEmail, subject, body, attachments, out var outlookOnlyErr))
+            if (_outlook.TrySendMailWithAttachments(settings.RecipientEmail, subject, body, attachments, out var outlookOnlyErr, isHtml, inlineLogoPath))
                 return true;
 
             error =
@@ -53,12 +55,12 @@ public sealed class EmailDispatchService
         }
 
         // Par défaut : Outlook d’abord, puis SMTP si configuré (poste sans Outlook ou erreur COM).
-        if (_outlook.TrySendMailWithAttachments(settings.RecipientEmail, subject, body, attachments, out var outlookErr2))
+        if (_outlook.TrySendMailWithAttachments(settings.RecipientEmail, subject, body, attachments, out var outlookErr2, isHtml, inlineLogoPath))
             return true;
 
         if (smtpReady)
         {
-            if (_smtp.TrySendMailWithAttachments(settings, subject, body, attachments, out var smtpErr2))
+            if (_smtp.TrySendMailWithAttachments(settings, subject, body, attachments, out var smtpErr2, isHtml, inlineLogoPath))
                 return true;
 
             error = $"Outlook: {outlookErr2}\n\nSMTP: {smtpErr2}";

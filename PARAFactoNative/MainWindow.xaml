@@ -56,6 +56,27 @@
                 </EventTrigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="BusySpinnerStyle" TargetType="TextBlock">
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <RotateTransform Angle="0"/>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                    <BeginStoryboard>
+                        <Storyboard RepeatBehavior="Forever">
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                             From="0"
+                                             To="360"
+                                             Duration="0:0:1"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -683,6 +704,38 @@
                             HorizontalAlignment="Stretch"
                             FontSize="14"
                             Command="{Binding Legal.OpenTechnicalTabCommand}"/>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <Border Background="#66000000"
+                Panel.ZIndex="900"
+                Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+            <Border VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Background="White"
+                    BorderBrush="#CBD5E1"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="24"
+                    MinWidth="280"
+                    Margin="24">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="⌛"
+                               FontSize="40"
+                               HorizontalAlignment="Center"
+                               Style="{StaticResource BusySpinnerStyle}"/>
+                    <TextBlock Text="{Binding BusyText}"
+                               Margin="0,12,0,0"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"/>
+                    <ProgressBar IsIndeterminate="True"
+                                 Height="6"
+                                 Width="220"
+                                 Margin="0,16,0,0"/>
                 </StackPanel>
             </Border>
         </Border>

@@ -11,6 +11,9 @@ public sealed class ProfessionalProfile
     /// <summary>Nom / titre sur les factures patients et notes de crédit (ligne grasse sous l’en-tête).</summary>
     public string InvoiceProviderName { get; set; } = "Charles Edouard - Logopède";
 
+    /// <summary>Type de cabinet affiché dans les e-mails patients (ex. logopédie, kinésithérapie).</summary>
+    public string CabinetType { get; set; } = "logopédie";
+
     public string AddressLine1 { get; set; } = "1, Rue de la chaussée Pavée";
     public string AddressLine2 { get; set; } = "1004 Ougrée";
 

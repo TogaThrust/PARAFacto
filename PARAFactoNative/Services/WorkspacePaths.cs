@@ -30,6 +30,19 @@ public static class WorkspacePaths
     public static string JOURNALIERS_PDF_FOLDER()
         => EnsureFolder(Path.Combine(WORKSPACE_ROOT(), "JOURNALIERS PDF"));
 
+    public static string BANK_STATEMENTS_FOLDER()
+        => EnsureFolder(Path.Combine(WORKSPACE_ROOT(), "FICHIERS PAIEMENTS", "EXTRAITS BANCAIRES"));
+
+    public static void EnsureStandardFolders()
+    {
+        EnsureFolder(WORKSPACE_ROOT());
+        EnsureFolder(Path.Combine(WORKSPACE_ROOT(), "FICHIERS PAIEMENTS"));
+        BANK_STATEMENTS_FOLDER();
+        FACTURES_MENSUELLES_PATIENTS_ROOT();
+        FACTURES_MENSUELLES_MUTUELLES_ROOT();
+        JOURNALIERS_PDF_FOLDER();
+    }
+
     // New structured folders
     public static string FACTURES_MENSUELLES_PATIENTS_ROOT()
         => EnsureFolder(Path.Combine(WORKSPACE_ROOT(), "FACTURES MENSUELLES PATIENTS"));

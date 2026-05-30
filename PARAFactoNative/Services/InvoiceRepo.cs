@@ -40,6 +40,8 @@ SELECT
   i.reason        AS Reason,
   i.ref_doc       AS RefDoc,
   i.user_comment  AS UserComment,
+  i.payment_reference AS PaymentReference,
+  i.period        AS Period,
   (SELECT MAX(p.paid_date) FROM payments p WHERE p.invoice_id = CASE WHEN (i.status = 'modified' AND i.ref_invoice_id IS NOT NULL AND i.ref_invoice_id > 0) THEN i.ref_invoice_id ELSE i.id END) AS LastPaymentDateIso,
   CASE
     WHEN TRIM(COALESCE(i.recipient,'')) <> '' THEN TRIM(i.recipient)
@@ -398,6 +400,7 @@ SELECT
   reason         AS Reason,
   ref_doc        AS RefDoc,
   user_comment   AS UserComment,
+  payment_reference AS PaymentReference,
   period         AS Period,
   recipient      AS Recipient
 FROM invoices
@@ -450,6 +453,36 @@ SELECT rue, numero, adresse, cp, ville, pays FROM patients WHERE id = @id;", new
         public int AmountCents { get; init; }
         public string Method { get; init; } = "";
         public string Reference { get; init; } = "";
+    }
+
+    public sealed class BankPaymentCandidate
+    {
+        public long InvoiceId { get; init; }
+        public string InvoiceNo { get; init; } = "";
+        public string Recipient { get; init; } = "";
+        public string PaymentReference { get; init; } = "";
+        public int TotalCents { get; init; }
+        public int PaidCents { get; set; }
+        public int BalanceCents { get; set; }
+    }
+
+    public sealed class BankTransactionImportRow
+    {
+        public string ImportHash { get; init; } = "";
+        public string SourceFile { get; init; } = "";
+        public int LineNo { get; init; }
+        public string BookedDate { get; init; } = "";
+        public int AmountCents { get; init; }
+        public string Communication { get; init; } = "";
+        public string Counterparty { get; init; } = "";
+        public string BankReference { get; init; } = "";
+        public string RawText { get; init; } = "";
+    }
+
+    public sealed class BankTransactionRegistration
+    {
+        public bool Inserted { get; init; }
+        public string ExistingStatus { get; init; } = "";
     }
 
     public sealed class MutualRevisionDetails
@@ -561,6 +594,144 @@ VALUES (@invoice_id, @paid_date, @amount_cents, @method, @reference);
         }
 
         return new PaymentApplyResult { OverpaidCents = overPatient };
+    }
+
+    public List<BankPaymentCandidate> ListBankPaymentCandidates()
+    {
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+        var rows = cn.Query<Invoice>(@"
+SELECT
+  id             AS Id,
+  invoice_no     AS InvoiceNo,
+  kind           AS Kind,
+  patient_id     AS PatientId,
+  mutuelle       AS Mutuelle,
+  date_iso       AS DateIso,
+  total_cents    AS TotalCents,
+  paid_cents     AS PaidCents,
+  status         AS Status,
+  ref_invoice_id AS RefInvoiceId,
+  reason         AS Reason,
+  ref_doc        AS RefDoc,
+  recipient      AS Recipient,
+  payment_reference AS PaymentReference,
+  period         AS Period
+FROM invoices
+WHERE kind IN ('patient','mutuelle')
+  AND lower(trim(COALESCE(status,''))) <> 'superseded'
+ORDER BY date_iso DESC, invoice_no DESC;").ToList();
+
+        return rows
+            .Select(i => new BankPaymentCandidate
+            {
+                InvoiceId = i.Id,
+                InvoiceNo = (i.InvoiceNo ?? "").Trim(),
+                Recipient = (i.Recipient ?? i.Mutuelle ?? "").Trim(),
+                PaymentReference = EnsurePaymentReferenceValue(i.Id, i.InvoiceNo, i.PaymentReference),
+                TotalCents = i.TotalCents,
+                PaidCents = i.PaidCents,
+                BalanceCents = GetInvoiceBalanceDisplayCents(i.Id)
+            })
+            .Where(i => i.InvoiceId > 0 && i.InvoiceNo.Length > 0 && i.BalanceCents > 0)
+            .ToList();
+    }
+
+    public bool TryAddBankPaymentIfNotDuplicate(long invoiceId, string paidDateIso, int amountCents, string method, string reference)
+    {
+        if (invoiceId <= 0 || amountCents <= 0)
+            return false;
+
+        paidDateIso = (paidDateIso ?? "").Trim();
+        if (paidDateIso.Length >= 10)
+            paidDateIso = paidDateIso[..10];
+        if (paidDateIso.Length == 0)
+            paidDateIso = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+        method = string.IsNullOrWhiteSpace(method) ? "Virement" : method.Trim();
+        reference = (reference ?? "").Trim();
+
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+        var existing = cn.ExecuteScalar<long>(@"
+SELECT COUNT(1)
+FROM payments
+WHERE invoice_id = @invoiceId
+  AND paid_date = @paidDate
+  AND amount_cents = @amount
+  AND trim(COALESCE(reference,'')) = trim(COALESCE(@reference,''));",
+            new { invoiceId, paidDate = paidDateIso, amount = amountCents, reference });
+        if (existing > 0)
+            return false;
+
+        AddPayment(invoiceId, paidDateIso, amountCents, method, reference);
+        return true;
+    }
+
+    public BankTransactionRegistration RegisterBankTransaction(BankTransactionImportRow row)
+    {
+        if (string.IsNullOrWhiteSpace(row.ImportHash))
+            return new BankTransactionRegistration();
+
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+        var inserted = cn.Execute(@"
+INSERT OR IGNORE INTO bank_transactions(
+  import_hash, source_file, line_no, booked_date, amount_cents, communication, counterparty, bank_reference, raw_text, status
+)
+VALUES (
+  @ImportHash, @SourceFile, @LineNo, @BookedDate, @AmountCents, @Communication, @Counterparty, @BankReference, @RawText, 'new'
+);", row) > 0;
+
+        var status = cn.ExecuteScalar<string?>(
+            "SELECT status FROM bank_transactions WHERE import_hash=@hash;",
+            new { hash = row.ImportHash }) ?? "";
+        return new BankTransactionRegistration { Inserted = inserted, ExistingStatus = status };
+    }
+
+    public void UpdateBankTransactionDecision(string importHash, string status, long? invoiceId, string reason)
+    {
+        importHash = (importHash ?? "").Trim();
+        status = (status ?? "").Trim();
+        if (importHash.Length == 0 || status.Length == 0)
+            return;
+
+        using var cn = Db.Open();
+        cn.Execute("PRAGMA foreign_keys = ON;");
+        cn.Execute(@"
+UPDATE bank_transactions
+SET status=@status,
+    invoice_id=@invoiceId,
+    decision_reason=@reason,
+    decided_at=datetime('now')
+WHERE import_hash=@importHash;",
+            new
+            {
+                importHash,
+                status,
+                invoiceId,
+                reason = (reason ?? "").Trim()
+            });
+    }
+
+    private string EnsurePaymentReferenceValue(long invoiceId, string? invoiceNo, string? existing)
+    {
+        var current = (existing ?? "").Trim();
+        if (current.Length > 0)
+            return current;
+
+        var generated = PaymentReferenceGenerator.GenerateStructuredCommunication(invoiceNo, invoiceId);
+        if (invoiceId > 0)
+            UpdatePaymentReference(invoiceId, generated);
+        return generated;
+    }
+
+    public void UpdatePaymentReference(long invoiceId, string paymentReference)
+    {
+        if (invoiceId <= 0 || string.IsNullOrWhiteSpace(paymentReference))
+            return;
+        using var cn = Db.Open();
+        cn.Execute("UPDATE invoices SET payment_reference=@r WHERE id=@id;", new { id = invoiceId, r = paymentReference.Trim() });
     }
 
     /// <summary>Historique des paiements d'une facture (ordre chronologique).</summary>
@@ -818,7 +989,9 @@ VALUES (@invoice_no, 'credit_note', @patient_id, @mutuelle, @date_iso, @total_ce
             user_comment = userComment
         });
 
-        return cn.ExecuteScalar<long>("SELECT last_insert_rowid();");
+        var creditId = cn.ExecuteScalar<long>("SELECT last_insert_rowid();");
+        UpdatePaymentReference(creditId, PaymentReferenceGenerator.GenerateStructuredCommunication(ncNo, creditId));
+        return creditId;
     }
 
     /// <summary>Génère le PDF de la note de crédit et met à jour <c>ref_doc</c> (chemin relatif).</summary>
@@ -922,6 +1095,9 @@ VALUES (@invoice_no, 'mutuelle', NULL, @mutuelle, @date_iso, @total_cents, 0, 'm
             period = inv.Period,
             user_comment = BuildMutualModifiedInvoiceUserComment(reason, referenceDoc)
         });
+        var modifiedInvoiceId = cn.ExecuteScalar<long>("SELECT last_insert_rowid();");
+        var paymentReference = PaymentReferenceGenerator.GenerateStructuredCommunication(newNo, modifiedInvoiceId);
+        UpdatePaymentReference(modifiedInvoiceId, paymentReference);
 
         // PDF même sans lignes de récap (plus aucune séance AO pour la mutuelle / le mois) : le bloc « nouveau total AO » reste pertinent.
         try
@@ -938,7 +1114,9 @@ VALUES (@invoice_no, 'mutuelle', NULL, @mutuelle, @date_iso, @total_cents, 0, 'm
                 path,
                 isModification: true,
                 modifiedTotalAoCents: newTotalCents,
-                initialTotalAoCentsForModification: inv.TotalCents);
+                initialTotalAoCentsForModification: inv.TotalCents,
+                paymentReference: paymentReference,
+                invoiceNo: newNo);
 
             var root = WorkspacePaths.TryFindWorkspaceRoot();
             var rel = WorkspacePaths.MakeRelativeToRoot(root, path);
@@ -1741,6 +1919,7 @@ VALUES (@no,'patient',@pid,NULL,@date,@total,@paid,@status,NULL,NULL,NULL,@recip
                     });
 
                 var invoiceId = cn.ExecuteScalar<long>("SELECT last_insert_rowid();");
+                UpdatePaymentReference(invoiceId, PaymentReferenceGenerator.GenerateStructuredCommunication(invoiceNo, invoiceId));
 
                 foreach (var s in subset)
                 {
@@ -1778,9 +1957,12 @@ VALUES (@iid,@label,1,@unit,@total,@pp,@pm,@date,datetime('now'));",
                     subset.Select(s => (s.PatientPrenom ?? "").Trim())
                         .Where(n => n.Length > 0)
                         .Distinct());
-                pdf.GeneratePatientInvoicePdf(inv, lines, path, recipientAddress, patientNames, isAcquittedCash, DateTime.Today, totalPatientCentsForPdf);
+                var actualPath = pdf.GeneratePatientInvoicePdf(inv, lines, path, recipientAddress, patientNames, isAcquittedCash, DateTime.Today, totalPatientCentsForPdf);
+                var root = WorkspacePaths.TryFindWorkspaceRoot();
+                if (!string.IsNullOrWhiteSpace(root))
+                    UpdateRefDoc(inv.InvoiceNo, WorkspacePaths.MakeRelativeToRoot(root, actualPath));
 
-                pdfs.Add(path);
+                pdfs.Add(actualPath);
                 created++;
             }
         }
@@ -1889,11 +2071,24 @@ VALUES (@no,'mutuelle',NULL,@mut,@date,@total,0,'unpaid',NULL,NULL,NULL,@recipie
                     recipient = mut,
                     period = periodYYYYMM
                 });
+            var invoiceId = cn.ExecuteScalar<long>("SELECT last_insert_rowid();");
+            var paymentReference = PaymentReferenceGenerator.GenerateStructuredCommunication(invNo, invoiceId);
+            UpdatePaymentReference(invoiceId, paymentReference);
 
             var meta = new MutualRecapMeta("", "", "", invoiceDate);
 
             var path = pdf.BuildMutualRecapPdfPath(mut, periodYYYYMM);
-            pdf.GenerateMutualRecapPdf(mut, periodYYYYMM, rows, meta, path, isModification: false, modifiedTotalAoCents: null);
+            pdf.GenerateMutualRecapPdf(
+                mut,
+                periodYYYYMM,
+                rows,
+                meta,
+                path,
+                isModification: false,
+                modifiedTotalAoCents: null,
+                initialTotalAoCentsForModification: null,
+                paymentReference: paymentReference,
+                invoiceNo: invNo);
 
             pdfs.Add(path);
             created++;

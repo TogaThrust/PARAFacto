@@ -7,8 +7,10 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
+using Microsoft.Win32;
 using PARAFactoNative.Models;
 using PARAFactoNative.Services;
 using PARAFactoNative.Views;
@@ -324,6 +326,8 @@ public sealed class FacturesViewModel : NotifyBase
     public RelayCommand RefreshCommand { get; }
     public RelayCommand OpenPdfCommand { get; }
     public RelayCommand RelinkPatientsCommand { get; }
+    public RelayCommand AutoAssociatePaymentsCommand { get; }
+    public RelayCommand AutoAssociatePaymentsFolderCommand { get; }
     public RelayCommand AddPaymentCommand { get; }
     public RelayCommand AddLossCommand { get; }
     public RelayCommand ClearLossCommand { get; }
@@ -340,6 +344,8 @@ public sealed class FacturesViewModel : NotifyBase
         RefreshCommand = new RelayCommand(Refresh);
         OpenPdfCommand = new RelayCommand(OpenSelectedPdf, () => Selected != null);
         RelinkPatientsCommand = new RelayCommand(ExecuteRelinkPatientsWithSecurity);
+        AutoAssociatePaymentsCommand = new RelayCommand(() => _ = AutoAssociatePaymentsAsync());
+        AutoAssociatePaymentsFolderCommand = new RelayCommand(() => _ = AutoAssociatePaymentsFromFolderAsync());
 
         AddPaymentCommand = new RelayCommand(AddPayment, CanPay);
         AddLossCommand = new RelayCommand(AddLoss, CanDeclareLoss);
@@ -806,6 +812,173 @@ public sealed class FacturesViewModel : NotifyBase
 
         Refresh();
         OfferCreditNoteAfterTropPercu(inv.Id);
+    }
+
+    private async Task AutoAssociatePaymentsAsync()
+    {
+        var bankFolder = WorkspacePaths.BANK_STATEMENTS_FOLDER();
+        var dlg = new OpenFileDialog
+        {
+            Title = "Importer un extrait bancaire",
+            Filter = "Extraits bancaires|*.csv;*.txt;*.xml|CSV|*.csv|CAMT XML|*.xml|Tous les fichiers|*.*",
+            InitialDirectory = bankFolder,
+            Multiselect = false
+        };
+        if (dlg.ShowDialog() != true)
+            return;
+
+        try
+        {
+            BankPaymentImportService.ImportSummary summary;
+            using (var busy = BeginMainBusy("Import et association bancaire..."))
+            {
+                var dispatcher = Application.Current?.Dispatcher;
+                var importer = new BankPaymentImportService(_repo);
+                summary = await Task.Run(() => importer.ImportCsv(dlg.FileName, request =>
+                {
+                    if (dispatcher is null || dispatcher.CheckAccess())
+                        return AskBankPaymentReview(request);
+
+                    return dispatcher.Invoke(() => AskBankPaymentReview(request));
+                }));
+
+                SetMainBusyMessage(busy, "Mise à jour de la liste des factures...");
+                Refresh();
+            }
+
+            ShowBankImportSummary(summary);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                "L'import bancaire n'a pas pu etre traite.\n\n" + ex.Message,
+                "PARAFacto - Association auto",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+    }
+
+    private async Task AutoAssociatePaymentsFromFolderAsync()
+    {
+        try
+        {
+            var folder = WorkspacePaths.BANK_STATEMENTS_FOLDER();
+            var files = Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly)
+                .Count(f =>
+                {
+                    var ext = Path.GetExtension(f);
+                    return ext.Equals(".csv", StringComparison.OrdinalIgnoreCase)
+                           || ext.Equals(".txt", StringComparison.OrdinalIgnoreCase)
+                           || ext.Equals(".xml", StringComparison.OrdinalIgnoreCase);
+                });
+
+            if (files == 0)
+            {
+                MessageBox.Show(
+                    "Aucun extrait bancaire CSV/TXT n'a ete trouve.\n\n" +
+                    "Deposez les fichiers exportes de la banque (CSV/TXT ou CAMT XML) dans ce dossier, puis relancez ce bouton :\n\n" +
+                    folder,
+                    "PARAFacto - Association auto",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                TryOpenFolder(folder);
+                return;
+            }
+
+            BankPaymentImportService.ImportSummary summary;
+            using (var busy = BeginMainBusy("Import du dossier bancaire..."))
+            {
+                var dispatcher = Application.Current?.Dispatcher;
+                var importer = new BankPaymentImportService(_repo);
+                summary = await Task.Run(() => importer.ImportFolder(folder, request =>
+                {
+                    if (dispatcher is null || dispatcher.CheckAccess())
+                        return AskBankPaymentReview(request);
+
+                    return dispatcher.Invoke(() => AskBankPaymentReview(request));
+                }));
+
+                SetMainBusyMessage(busy, "Mise à jour de la liste des factures...");
+                Refresh();
+            }
+
+            ShowBankImportSummary(summary, folder);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                "L'import du dossier bancaire n'a pas pu etre traite.\n\n" + ex.Message,
+                "PARAFacto - Association auto",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+    }
+
+    private static IDisposable BeginMainBusy(string message)
+    {
+        if (Application.Current?.MainWindow?.DataContext is MainViewModel main)
+            return main.BeginBusy(message);
+
+        return NoopDisposable.Instance;
+    }
+
+    private static void SetMainBusyMessage(IDisposable busyScope, string message)
+    {
+        if (busyScope is NoopDisposable)
+            return;
+
+        if (Application.Current?.MainWindow?.DataContext is MainViewModel main)
+            main.SetBusyMessage(message);
+    }
+
+    private sealed class NoopDisposable : IDisposable
+    {
+        public static NoopDisposable Instance { get; } = new();
+        public void Dispose() { }
+    }
+
+    private static BankPaymentImportService.ReviewDecision AskBankPaymentReview(BankPaymentImportService.ReviewRequest request)
+    {
+        var review = new BankPaymentReviewWindow(request)
+        {
+            Owner = Application.Current?.MainWindow
+        };
+        return review.ShowDialog() == true
+            ? review.Decision
+            : new BankPaymentImportService.ReviewDecision
+            {
+                Action = BankPaymentImportService.ManualReviewAction.Stop
+            };
+    }
+
+    private static void ShowBankImportSummary(BankPaymentImportService.ImportSummary summary, string? folder = null)
+    {
+        MessageBox.Show(
+            (summary.StoppedByUser ? "Import bancaire interrompu.\n\n" : "Association automatique terminee.\n\n") +
+            (folder is null ? "" : $"Dossier traite : {folder}\n") +
+            $"Fichiers traites : {summary.FilesProcessed}\n" +
+            $"Transactions lues : {summary.TransactionsRead}\n" +
+            $"Paiements associes : {summary.Applied}\n" +
+            $"Doublons ignores : {summary.Duplicates}\n" +
+            $"Validations manuelles demandees : {summary.ManualReview}\n" +
+            $"Paiements passes : {summary.Skipped}\n" +
+            $"Lignes ignorees : {summary.Ignored}\n\n" +
+            $"Rapport :\n{summary.ReportPath}",
+            "PARAFacto - Association auto",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private static void TryOpenFolder(string folder)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(folder) { UseShellExecute = true });
+        }
+        catch
+        {
+            // L'information du chemin est deja affichee.
+        }
     }
 
     private void OfferCreditNoteAfterTropPercu(long patientInvoiceId)

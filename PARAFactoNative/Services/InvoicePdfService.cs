@@ -228,7 +228,7 @@ public sealed class InvoicePdfService
     /// <param name="isAcquittedCash">True si la facture a été payée en espèces au cabinet.</param>
     /// <param name="paidDate">Date de paiement en cash (si connue).</param>
     /// <param name="totalPatientCents">Total à afficher (part patient uniquement). Si null, utilise inv.TotalCents (legacy).</param>
-    public void GeneratePatientInvoicePdf(
+    public string GeneratePatientInvoicePdf(
         Invoice inv,
         List<InvoiceLineRow> lines,
         string outputPath,
@@ -247,8 +247,22 @@ public sealed class InvoicePdfService
         var effectivePaidDate = paidDate ?? issueDate;
         var pr = ProfessionalProfileStore.Load();
         var logoPath = ProfessionalProfileStore.ResolveLogoPath();
+        var paymentReference = string.IsNullOrWhiteSpace(inv.PaymentReference)
+            ? PaymentReferenceGenerator.GenerateStructuredCommunication(inv.InvoiceNo, inv.Id)
+            : inv.PaymentReference.Trim();
+        var totalDisplayCents = totalPatientCents ?? inv.TotalCents;
+        var paymentCommunication = paymentReference;
+        var paymentLabel = $"Facture {inv.InvoiceNo}";
+        var paymentQrPng = !isAcquittedCash && totalDisplayCents > 0
+            ? EpcQrCodeService.GeneratePaymentQrPng(
+                pr.InvoiceProviderName,
+                pr.Iban,
+                pr.Bic,
+                totalDisplayCents,
+                paymentCommunication)
+            : null;
 
-        EnsurePdfWritableOrThrow(outputPath);
+        outputPath = EnsurePdfWritableOrUseAlternative(outputPath);
 
         Document.Create(container =>
         {
@@ -329,7 +343,6 @@ public sealed class InvoicePdfService
                             header.Cell().Element(ThPatient).AlignRight().Text("Montant");
                         });
 
-                        var totalDisplayCents = totalPatientCents ?? inv.TotalCents;
                         foreach (var l in lines.OrderBy(x => x.DateIso))
                         {
                             table.Cell().Element(TdPatient).Text(FormatDate(l.DateIso));
@@ -370,11 +383,33 @@ public sealed class InvoicePdfService
                     var patientLabel = string.IsNullOrWhiteSpace(patientFirstNames)
                         ? "patient"
                         : patientFirstNames!;
-                    foot.Item().Text($"Paiement à effectuer dans les 7 jours sur le compte {pr.Iban}").FontSize(9);
-                    foot.Item().Text($"Communication : Séances de prise en charge {patientLabel} - {monthLabel}").FontSize(9);
+                    if (paymentQrPng is null)
+                    {
+                        foot.Item().Text($"Paiement à effectuer dans les 7 jours sur le compte {pr.Iban}").FontSize(9);
+                        foot.Item().Text($"Communication structurée : {paymentCommunication}").FontSize(9);
+                        foot.Item().Text(paymentLabel).FontSize(9);
+                        foot.Item().Text($"Concerne : Séances de prise en charge {patientLabel} - {monthLabel}").FontSize(9);
+                    }
+                    else
+                    {
+                        foot.Item().Row(row =>
+                        {
+                            row.RelativeItem().Column(left =>
+                            {
+                                left.Item().Text($"Paiement à effectuer dans les 7 jours sur le compte {pr.Iban}").FontSize(9);
+                                left.Item().Text($"Montant : {FormatEuro(totalDisplayCents, ci)}").FontSize(9);
+                                left.Item().Text($"Communication structurée : {paymentCommunication}").FontSize(9);
+                                left.Item().Text(paymentLabel).FontSize(9);
+                                left.Item().Text($"Concerne : Séances de prise en charge {patientLabel} - {monthLabel}").FontSize(9);
+                                left.Item().Text("Scannez le QR avec votre app bancaire pour préremplir le virement. Vérifiez avant validation.").FontSize(8).Italic();
+                            });
+                            row.ConstantItem(86).Height(86).Image(paymentQrPng).FitArea();
+                        });
+                    }
                 });
             });
         }).GeneratePdf(outputPath);
+        return outputPath;
     }
 
     /// <summary>Arrondi belge obligatoire pour les paiements en espèces (au multiple de 0,05 € le plus proche).</summary>
@@ -434,7 +469,7 @@ public sealed class InvoicePdfService
         var refNo = (refInvoice.InvoiceNo ?? "").Trim();
         var creditNoDisplay = FormatCreditNoteNoForPdfHeader(credit.InvoiceNo);
 
-        EnsurePdfWritableOrThrow(outputPath);
+        outputPath = EnsurePdfWritableOrUseAlternative(outputPath);
 
         Document.Create(container =>
         {
@@ -557,7 +592,9 @@ public sealed class InvoicePdfService
         string outputPath,
         bool isModification,
         int? modifiedTotalAoCents = null,
-        int? initialTotalAoCentsForModification = null)
+        int? initialTotalAoCentsForModification = null,
+        string? paymentReference = null,
+        string? invoiceNo = null)
     {
         QuestPDF.Settings.License = LicenseType.Community;
 
@@ -566,8 +603,31 @@ public sealed class InvoicePdfService
         var mutualAddr = string.IsNullOrWhiteSpace(pr.MutualRecapAddressLine)
             ? $"{pr.AddressLine1}, {pr.AddressLine2}".Trim(' ', ',')
             : pr.MutualRecapAddressLine!.Trim();
+        var totalAoFromRows = rows.Sum(x => x.AoCents);
+        var totalAo = isModification && initialTotalAoCentsForModification.HasValue
+            ? initialTotalAoCentsForModification.Value
+            : totalAoFromRows;
+        var paymentAmountCentsLong = isModification && modifiedTotalAoCents.HasValue
+            ? modifiedTotalAoCents.Value
+            : totalAoFromRows;
+        var paymentAmountCents = (int)Math.Clamp(paymentAmountCentsLong, 0, int.MaxValue);
+        var paymentCommunication = !string.IsNullOrWhiteSpace(paymentReference)
+            ? paymentReference.Trim()
+            : (meta.Reference ?? "").Trim();
+        var paymentLabel = !string.IsNullOrWhiteSpace(invoiceNo)
+            ? $"Facture {invoiceNo.Trim()}"
+            : string.IsNullOrWhiteSpace(meta.Reference) ? "" : $"Facture {meta.Reference.Trim()}";
+        var ibanMutuelle = string.IsNullOrWhiteSpace(pr.IbanMutuelle) ? pr.Iban : pr.IbanMutuelle;
+        var paymentQrPng = paymentAmountCents > 0 && !string.IsNullOrWhiteSpace(paymentCommunication)
+            ? EpcQrCodeService.GeneratePaymentQrPng(
+                pr.InvoiceProviderName,
+                ibanMutuelle,
+                pr.Bic,
+                paymentAmountCents,
+                paymentCommunication)
+            : null;
 
-        EnsurePdfWritableOrThrow(outputPath);
+        outputPath = EnsurePdfWritableOrUseAlternative(outputPath);
 
         Document.Create(container =>
         {
@@ -638,10 +698,6 @@ public sealed class InvoicePdfService
 
                         // Ligne de total : pour une modification, le total « initial » doit suivre la facture d’origine
                         // (total_cents), pas seulement la somme des lignes (souvent 0 s’il n’y a plus de séances AO ce mois).
-                        var totalAoFromRows = rows.Sum(x => x.AoCents);
-                        var totalAo = isModification && initialTotalAoCentsForModification.HasValue
-                            ? initialTotalAoCentsForModification.Value
-                            : totalAoFromRows;
                         var totalTicket = rows.Sum(x => x.TicketCents);
 
                         // Ligne de total "classique" (sans surlignage)
@@ -674,7 +730,7 @@ public sealed class InvoicePdfService
                     }
 
                     col.Item().PaddingTop(8).Text("Si nécessaire, vous pouvez ajouter des lignes à ce tableau.");
-                    col.Item().PaddingTop(8).Text($"*Numéro de compte bancaire (IBAN) : {pr.IbanMutuelle}");
+                    col.Item().PaddingTop(8).Text($"*Numéro de compte bancaire (IBAN) : {ibanMutuelle}");
                     col.Item().Row(r =>
                     {
                         r.RelativeItem().Text("Cachet : (à apposer à la main)");
@@ -682,11 +738,38 @@ public sealed class InvoicePdfService
                         r.RelativeItem().Text("*Signature : (manuscrite)");
                     });
                 });
+
+                page.Footer().Column(foot =>
+                {
+                    if (paymentQrPng is null)
+                    {
+                        foot.Item().Text($"Paiement à effectuer dans les 7 jours sur le compte {ibanMutuelle}").FontSize(9);
+                        foot.Item().Text($"Communication structurée : {paymentCommunication}").FontSize(9);
+                        if (!string.IsNullOrWhiteSpace(paymentLabel))
+                            foot.Item().Text(paymentLabel).FontSize(9);
+                    }
+                    else
+                    {
+                        foot.Item().Row(row =>
+                        {
+                            row.RelativeItem().Column(left =>
+                            {
+                                left.Item().Text($"Paiement à effectuer dans les 7 jours sur le compte {ibanMutuelle}").FontSize(9);
+                                left.Item().Text($"Montant : {FormatEuro(paymentAmountCents, ci)}").FontSize(9);
+                                left.Item().Text($"Communication structurée : {paymentCommunication}").FontSize(9);
+                                if (!string.IsNullOrWhiteSpace(paymentLabel))
+                                    left.Item().Text(paymentLabel).FontSize(9);
+                                left.Item().Text("Scannez le QR avec votre app bancaire pour préremplir le virement. Vérifiez avant validation.").FontSize(8).Italic();
+                            });
+                            row.ConstantItem(86).Height(86).Image(paymentQrPng).FitArea();
+                        });
+                    }
+                });
             });
         }).GeneratePdf(outputPath);
     }
 
-    private static void EnsurePdfWritableOrThrow(string outputPath)
+    private static string EnsurePdfWritableOrUseAlternative(string outputPath)
     {
         if (string.IsNullOrWhiteSpace(outputPath))
             throw new InvalidOperationException("Chemin de sortie PDF invalide.");
@@ -696,19 +779,32 @@ public sealed class InvoicePdfService
             Directory.CreateDirectory(dir);
 
         if (!File.Exists(outputPath))
-            return;
+            return outputPath;
 
-        // Si le PDF est ouvert (souvent dans Adobe/Edge), la suppression échoue -> on stoppe et on demande de fermer.
+        // Si le PDF est ouvert (souvent dans Adobe/Edge), Windows refuse l'écrasement.
+        // On génère alors un nouveau fichier au lieu de bloquer toute la régénération.
         try
         {
             File.Delete(outputPath);
+            return outputPath;
         }
         catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
         {
-            var file = Path.GetFileName(outputPath);
+            var dirPath = Path.GetDirectoryName(outputPath) ?? "";
+            var stem = Path.GetFileNameWithoutExtension(outputPath);
+            var ext = Path.GetExtension(outputPath);
+            for (var i = 1; i <= 99; i++)
+            {
+                var suffix = i == 1
+                    ? DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture)
+                    : DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture) + "_" + i.ToString(CultureInfo.InvariantCulture);
+                var candidate = Path.Combine(dirPath, $"{stem}_regen_{suffix}{ext}");
+                if (!File.Exists(candidate))
+                    return candidate;
+            }
+
             throw new InvalidOperationException(
-                $"Le fichier PDF « {file} » est en cours d'utilisation par une autre application (souvent Adobe).\n\n" +
-                "Veuillez fermer le PDF (et/ou Adobe) puis relancer la génération.",
+                "Impossible de trouver un nom de fichier libre pour générer le PDF.",
                 ex);
         }
     }

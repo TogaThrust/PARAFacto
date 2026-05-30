@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS invoices(
   ref_invoice_id INTEGER,
   reason TEXT,
   ref_doc TEXT,
+  payment_reference TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY(patient_id) REFERENCES patients(id) ON DELETE SET NULL,
   FOREIGN KEY(ref_invoice_id) REFERENCES invoices(id) ON DELETE SET NULL
@@ -119,6 +120,27 @@ CREATE TABLE IF NOT EXISTS payments(
   FOREIGN KEY(invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS bank_transactions(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  import_hash TEXT NOT NULL UNIQUE,
+  source_file TEXT,
+  line_no INTEGER NOT NULL DEFAULT 0,
+  booked_date TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  communication TEXT,
+  counterparty TEXT,
+  bank_reference TEXT,
+  raw_text TEXT,
+  status TEXT NOT NULL DEFAULT 'new',
+  invoice_id INTEGER,
+  decision_reason TEXT,
+  imported_at TEXT NOT NULL DEFAULT (datetime('now')),
+  decided_at TEXT,
+  FOREIGN KEY(invoice_id) REFERENCES invoices(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS ix_bank_transactions_status ON bank_transactions(status);
+CREATE INDEX IF NOT EXISTS ix_bank_transactions_invoice ON bank_transactions(invoice_id);
+
 CREATE TABLE IF NOT EXISTS losses(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   invoice_id INTEGER NOT NULL,
@@ -143,4 +165,4 @@ CREATE TABLE IF NOT EXISTS mutual_invoice_revisions(
 );
 
 -- Default meta
-INSERT OR IGNORE INTO app_meta(key, value) VALUES('schema_version', '10');
+INSERT OR IGNORE INTO app_meta(key, value) VALUES('schema_version', '18');

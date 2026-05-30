@@ -13,6 +13,7 @@ public sealed class ProfessionalDataViewModel : NotifyBase
 {
     private string _consoleHeaderTitle = "";
     private string _invoiceProviderName = "";
+    private string _cabinetType = "";
     private string _addressLine1 = "";
     private string _addressLine2 = "";
     private string _inami = "";
@@ -32,6 +33,25 @@ public sealed class ProfessionalDataViewModel : NotifyBase
 
     public string ConsoleHeaderTitle { get => _consoleHeaderTitle; set => Set(ref _consoleHeaderTitle, value ?? ""); }
     public string InvoiceProviderName { get => _invoiceProviderName; set => Set(ref _invoiceProviderName, value ?? ""); }
+    public string CabinetType { get => _cabinetType; set => Set(ref _cabinetType, value ?? ""); }
+    public List<string> CabinetTypes { get; } = new()
+    {
+        "logopédie",
+        "infirmerie",
+        "kinésithérapie",
+        "ostéopathie",
+        "psychologie",
+        "neuropsychologie",
+        "ergothérapie",
+        "psychomotricité",
+        "podologie",
+        "diététique",
+        "orthoptie",
+        "médecine générale",
+        "dentisterie",
+        "sage-femme",
+        "autre"
+    };
     public string AddressLine1 { get => _addressLine1; set => Set(ref _addressLine1, value ?? ""); }
     public string AddressLine2 { get => _addressLine2; set => Set(ref _addressLine2, value ?? ""); }
     public string Inami { get => _inami; set => Set(ref _inami, value ?? ""); }
@@ -108,6 +128,7 @@ public sealed class ProfessionalDataViewModel : NotifyBase
         var p = ProfessionalProfileStore.Load();
         ConsoleHeaderTitle = p.ConsoleHeaderTitle;
         InvoiceProviderName = p.InvoiceProviderName;
+        CabinetType = string.IsNullOrWhiteSpace(p.CabinetType) ? "logopédie" : p.CabinetType;
         AddressLine1 = p.AddressLine1;
         AddressLine2 = p.AddressLine2;
         Inami = p.Inami;
@@ -172,6 +193,7 @@ public sealed class ProfessionalDataViewModel : NotifyBase
             {
                 ConsoleHeaderTitle = ConsoleHeaderTitle.Trim(),
                 InvoiceProviderName = InvoiceProviderName.Trim(),
+                CabinetType = string.IsNullOrWhiteSpace(CabinetType) ? "logopédie" : CabinetType.Trim(),
                 AddressLine1 = AddressLine1.Trim(),
                 AddressLine2 = AddressLine2.Trim(),
                 Inami = Inami.Trim(),

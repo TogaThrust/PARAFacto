@@ -21,7 +21,9 @@ public sealed class OutlookEmailService
         string subject,
         string body,
         IEnumerable<string> attachments,
-        out string error)
+        out string error,
+        bool isHtml = false,
+        string? inlineLogoPath = null)
     {
         error = "";
         to = (to ?? "").Trim();
@@ -78,13 +80,37 @@ public sealed class OutlookEmailService
 
             SetComProperty(mail, "To", to);
             SetComProperty(mail, "Subject", subject ?? "");
-            SetComProperty(mail, "Body", body ?? "");
+            SetComProperty(mail, isHtml ? "HTMLBody" : "Body", body ?? "");
 
             var atts = GetComProperty(mail, "Attachments");
             if (atts is null)
             {
                 error = "Impossible d'accéder aux pièces jointes Outlook.";
                 return false;
+            }
+
+            if (isHtml && !string.IsNullOrWhiteSpace(inlineLogoPath) && File.Exists(inlineLogoPath))
+            {
+                try
+                {
+                    var inlineLogo = atts.GetType().InvokeMember("Add",
+                        System.Reflection.BindingFlags.InvokeMethod,
+                        null,
+                        atts,
+                        new object[] { inlineLogoPath });
+                    if (inlineLogo is null)
+                        throw new InvalidOperationException("Logo inline Outlook introuvable.");
+                    var propertyAccessor = GetComProperty(inlineLogo, "PropertyAccessor");
+                    propertyAccessor?.GetType().InvokeMember("SetProperty",
+                        System.Reflection.BindingFlags.InvokeMethod,
+                        null,
+                        propertyAccessor,
+                        new object[] { "http://schemas.microsoft.com/mapi/proptag/0x3712001F", "parafacto-logo" });
+                }
+                catch
+                {
+                    // Si l'attachement inline échoue, le mail part quand même sans logo.
+                }
             }
 
             foreach (var path in att)

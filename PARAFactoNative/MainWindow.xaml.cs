@@ -4,9 +4,12 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -43,6 +46,7 @@ public partial class MainWindow
         UiLanguageService.LanguageChanged += OnUiLanguageChanged;
         UpdateLanguageButtonsVisual();
         UpdateWindowTitle();
+        WorkspacePaths.EnsureStandardFolders();
 
         // Icône fenêtre (en code pour éviter XamlParseException si le fichier n'est pas trouvé au design time)
         try
@@ -289,7 +293,7 @@ public partial class MainWindow
             }
         };
 
-        vm.Console.RequestGeneratePatientInvoicesRequested += period =>
+        vm.Console.RequestGeneratePatientInvoicesRequested += async period =>
         {
             try
             {
@@ -302,10 +306,8 @@ public partial class MainWindow
                 period = dateWin.PeriodYYYYMM;
                 var invoiceDateIso = dateWin.InvoiceDateIso;
 
-                var repo = new InvoiceRepo();
-                var pdf = new InvoicePdfService();
-
                 var deleteExisting = false;
+                var repo = new InvoiceRepo();
                 if (repo.CountExistingForPeriod("patient", period) > 0)
                 {
 
@@ -320,31 +322,74 @@ public partial class MainWindow
                     deleteExisting = true;
                 }
 
-                var (created, folder, pdfs) = repo.GenerateMonthlyPatientInvoices(period, invoiceDateIso, deleteExisting, pdf);
-
-                vm.Factures.Reload();
-                vm.Console.ReloadRefs();
-
-                // Envoi automatique (tous les PDFs dans un seul e-mail) une fois générés
-                if (!string.IsNullOrWhiteSpace(vm.Console.RecipientEmail))
+                var recipientEmail = vm.Console.RecipientEmail;
+                (int created, string folder, List<string> pdfs) result;
+                using (vm.BeginBusy("Génération des factures patients..."))
                 {
-                    var label = BuildMonthYearLabelFr(period);
-                    var subject = $"PARAFacto — factures patients {label}";
-                    var body = $"Veuillez trouver ci-joint les factures patients — {label}.";
-                    var mailer = new EmailDispatchService();
-                    var settings = new AppSettingsStore().LoadMailSettings();
-                    settings.RecipientEmail = vm.Console.RecipientEmail;
-                    var primaryOk = mailer.TrySend(settings, subject, body, pdfs, out var err);
-                    if (!primaryOk)
-                        MessageBox.Show($"Les PDFs ont été générés, mais l'envoi e-mail a échoué.\n\n{err}", "PARAFacto - Email", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    result = await Task.Run(() =>
+                    {
+                        var backgroundRepo = new InvoiceRepo();
+                        var pdf = new InvoicePdfService();
+                        return backgroundRepo.GenerateMonthlyPatientInvoices(period, invoiceDateIso, deleteExisting, pdf);
+                    });
 
-                    // Envoi séparé de sauvegarde DB (uniquement la base)
-                    var dbBackup = new DatabaseBackupEmailService();
-                    if (!dbBackup.TrySendDatabaseBackupEmail(mailer, settings, out var dbErr))
-                        MessageBox.Show($"Envoi DB (sauvegarde) impossible.\n\n{dbErr}", "PARAFacto - Sauvegarde DB", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    vm.SetBusyMessage("Mise à jour des listes...");
+                    vm.Factures.Reload();
+                    vm.Console.ReloadRefs();
+                    await Dispatcher.Yield(DispatcherPriority.Background);
+
+                    // Envoi automatique (tous les PDFs dans un seul e-mail) une fois générés.
+                    // Gardé sur le thread UI pour préserver le comportement Outlook COM existant.
+                    if (!string.IsNullOrWhiteSpace(recipientEmail))
+                    {
+                        vm.SetBusyMessage("Envoi des e-mails de sauvegarde...");
+                        await Dispatcher.Yield(DispatcherPriority.Background);
+
+                        var label = BuildMonthYearLabelFr(period);
+                        var subject = $"PARAFacto — factures patients {label}";
+                        var body = $"Veuillez trouver ci-joint les factures patients — {label}.";
+                        var mailer = new EmailDispatchService();
+                        var settings = new AppSettingsStore().LoadMailSettings();
+                        settings.RecipientEmail = recipientEmail;
+                        var primaryOk = mailer.TrySend(settings, subject, body, result.pdfs, out var err);
+                        if (!primaryOk)
+                            MessageBox.Show($"Les PDFs ont été générés, mais l'envoi e-mail a échoué.\n\n{err}", "PARAFacto - Email", MessageBoxButton.OK, MessageBoxImage.Warning);
+
+                        vm.SetBusyMessage("Envoi de la sauvegarde base de données...");
+                        await Dispatcher.Yield(DispatcherPriority.Background);
+
+                        var dbBackup = new DatabaseBackupEmailService();
+                        if (!dbBackup.TrySendDatabaseBackupEmail(mailer, settings, out var dbErr))
+                            MessageBox.Show($"Envoi DB (sauvegarde) impossible.\n\n{dbErr}", "PARAFacto - Sauvegarde DB", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
                 }
 
-                PostGenAskPrintOrOpenFolder($"Factures patients générées : {created}", folder, pdfs);
+                if (result.created > 0 && ChoiceDialog.AskYesNo(
+                        "Envoi aux patients",
+                        "Souhaitez-vous envoyer les factures générées par e-mail aux patients dont l'adresse est renseignée dans leur fiche ?",
+                        "Envoyer aux patients",
+                        "Ne pas envoyer",
+                        this))
+                {
+                    PatientInvoiceEmailSummary sendSummary;
+                    using (vm.BeginBusy("Envoi des factures aux patients..."))
+                    {
+                        sendSummary = await Task.Run(() => SendGeneratedPatientInvoicesToPatients(period, result.pdfs));
+                    }
+
+                    MessageBox.Show(
+                        $"Envoi aux patients terminé.\n\n" +
+                        $"E-mails envoyés : {sendSummary.Sent}\n" +
+                        $"Sans adresse e-mail : {sendSummary.MissingEmail}\n" +
+                        $"PDF introuvables : {sendSummary.MissingPdf}\n" +
+                        $"Échecs d'envoi : {sendSummary.Failed}" +
+                        (sendSummary.Errors.Count == 0 ? "" : "\n\nDétails :\n" + string.Join("\n", sendSummary.Errors.Take(8))),
+                        "PARAFacto - Envoi patients",
+                        MessageBoxButton.OK,
+                        sendSummary.Failed == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                }
+
+                PostGenAskPrintOrOpenFolder($"Factures patients générées : {result.created}", result.folder, result.pdfs);
             }
             catch (Exception ex)
             {
@@ -352,7 +397,7 @@ public partial class MainWindow
             }
         };
 
-        vm.Console.RequestGenerateMutualRecapsRequested += period =>
+        vm.Console.RequestGenerateMutualRecapsRequested += async period =>
         {
             try
             {
@@ -365,10 +410,8 @@ public partial class MainWindow
                 period = dateWin.PeriodYYYYMM;
                 var invoiceDateIso = dateWin.InvoiceDateIso;
 
-                var repo = new InvoiceRepo();
-                var pdf = new InvoicePdfService();
-
                 var deleteExisting = false;
+                var repo = new InvoiceRepo();
                 if (repo.CountExistingForPeriod("mutuelle", period) > 0)
                 {
 
@@ -383,31 +426,49 @@ public partial class MainWindow
                     deleteExisting = true;
                 }
 
-                var (created, folder, pdfs) = repo.GenerateMonthlyMutualRecaps(period, invoiceDateIso, deleteExisting, pdf);
-
-                vm.Factures.Reload();
-                vm.Console.ReloadRefs();
-
-                // Envoi automatique (tous les PDFs dans un seul e-mail) une fois générés
-                if (!string.IsNullOrWhiteSpace(vm.Console.RecipientEmail))
+                var recipientEmail = vm.Console.RecipientEmail;
+                (int created, string folder, List<string> pdfs) result;
+                using (vm.BeginBusy("Génération des factures mutuelles..."))
                 {
-                    var label = BuildMonthYearLabelFr(period);
-                    var subject = $"PARAFacto — factures mutuelles {label}";
-                    var body = $"Veuillez trouver ci-joint les factures mutuelles — {label}.";
-                    var mailer = new EmailDispatchService();
-                    var settings = new AppSettingsStore().LoadMailSettings();
-                    settings.RecipientEmail = vm.Console.RecipientEmail;
-                    var primaryOk = mailer.TrySend(settings, subject, body, pdfs, out var err);
-                    if (!primaryOk)
-                        MessageBox.Show($"Les PDFs ont été générés, mais l'envoi e-mail a échoué.\n\n{err}", "PARAFacto - Email", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    result = await Task.Run(() =>
+                    {
+                        var backgroundRepo = new InvoiceRepo();
+                        var pdf = new InvoicePdfService();
+                        return backgroundRepo.GenerateMonthlyMutualRecaps(period, invoiceDateIso, deleteExisting, pdf);
+                    });
 
-                    // Envoi séparé de sauvegarde DB (uniquement la base)
-                    var dbBackup = new DatabaseBackupEmailService();
-                    if (!dbBackup.TrySendDatabaseBackupEmail(mailer, settings, out var dbErr))
-                        MessageBox.Show($"Envoi DB (sauvegarde) impossible.\n\n{dbErr}", "PARAFacto - Sauvegarde DB", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    vm.SetBusyMessage("Mise à jour des listes...");
+                    vm.Factures.Reload();
+                    vm.Console.ReloadRefs();
+                    await Dispatcher.Yield(DispatcherPriority.Background);
+
+                    // Envoi automatique (tous les PDFs dans un seul e-mail) une fois générés.
+                    // Gardé sur le thread UI pour préserver le comportement Outlook COM existant.
+                    if (!string.IsNullOrWhiteSpace(recipientEmail))
+                    {
+                        vm.SetBusyMessage("Envoi des e-mails de sauvegarde...");
+                        await Dispatcher.Yield(DispatcherPriority.Background);
+
+                        var label = BuildMonthYearLabelFr(period);
+                        var subject = $"PARAFacto — factures mutuelles {label}";
+                        var body = $"Veuillez trouver ci-joint les factures mutuelles — {label}.";
+                        var mailer = new EmailDispatchService();
+                        var settings = new AppSettingsStore().LoadMailSettings();
+                        settings.RecipientEmail = recipientEmail;
+                        var primaryOk = mailer.TrySend(settings, subject, body, result.pdfs, out var err);
+                        if (!primaryOk)
+                            MessageBox.Show($"Les PDFs ont été générés, mais l'envoi e-mail a échoué.\n\n{err}", "PARAFacto - Email", MessageBoxButton.OK, MessageBoxImage.Warning);
+
+                        vm.SetBusyMessage("Envoi de la sauvegarde base de données...");
+                        await Dispatcher.Yield(DispatcherPriority.Background);
+
+                        var dbBackup = new DatabaseBackupEmailService();
+                        if (!dbBackup.TrySendDatabaseBackupEmail(mailer, settings, out var dbErr))
+                            MessageBox.Show($"Envoi DB (sauvegarde) impossible.\n\n{dbErr}", "PARAFacto - Sauvegarde DB", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
                 }
 
-                PostGenAskPrintOrOpenFolder($"États récap mutuelles générés : {created}", folder, pdfs);
+                PostGenAskPrintOrOpenFolder($"États récap mutuelles générés : {result.created}", result.folder, result.pdfs);
             }
             catch (Exception ex)
             {
@@ -415,6 +476,132 @@ public partial class MainWindow
             }
         };
     }
+
+    private sealed class PatientInvoiceEmailSummary
+    {
+        public int Sent { get; set; }
+        public int MissingEmail { get; set; }
+        public int MissingPdf { get; set; }
+        public int Failed { get; set; }
+        public List<string> Errors { get; } = new();
+    }
+
+    private static PatientInvoiceEmailSummary SendGeneratedPatientInvoicesToPatients(string period, List<string> generatedPdfs)
+    {
+        var summary = new PatientInvoiceEmailSummary();
+        var pdfSet = new HashSet<string>(
+            (generatedPdfs ?? new List<string>())
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Select(p => Path.GetFullPath(p)),
+            StringComparer.OrdinalIgnoreCase);
+
+        var repo = new InvoiceRepo();
+        var patientRepo = new PatientRepo();
+        var mailer = new EmailDispatchService();
+        var baseSettings = new AppSettingsStore().LoadMailSettings();
+        var profile = ProfessionalProfileStore.Load();
+        var label = BuildMonthYearLabelFr(period);
+        var root = WorkspacePaths.TryFindWorkspaceRoot();
+        var invoices = repo.Search("patient", null, null, "ANY", "")
+            .Where(i => string.Equals((i.Period ?? "").Trim(), period, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var invoice in invoices)
+        {
+            var pdfPath = WorkspacePaths.ResolvePath(root, invoice.RefDoc);
+            if (string.IsNullOrWhiteSpace(invoice.RefDoc) || !File.Exists(pdfPath) || (pdfSet.Count > 0 && !pdfSet.Contains(Path.GetFullPath(pdfPath))))
+            {
+                summary.MissingPdf++;
+                continue;
+            }
+
+            var patient = invoice.PatientId is > 0 ? patientRepo.GetById(invoice.PatientId.Value) : null;
+            var email = (patient?.Email ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                summary.MissingEmail++;
+                continue;
+            }
+
+            var settings = new AppMailSettings
+            {
+                RecipientEmail = email,
+                DatabaseBackupRecipientEmail = baseSettings.DatabaseBackupRecipientEmail,
+                UseSmtp = baseSettings.UseSmtp,
+                SmtpHost = baseSettings.SmtpHost,
+                SmtpPort = baseSettings.SmtpPort,
+                SmtpEnableSsl = baseSettings.SmtpEnableSsl,
+                SmtpUsername = baseSettings.SmtpUsername,
+                SmtpFromEmail = baseSettings.SmtpFromEmail,
+                SmtpPassword = baseSettings.SmtpPassword
+            };
+
+            var subject = $"Votre facture - cabinet de {ResolveCabinetType(profile)} - {label}";
+            var body = BuildPatientInvoiceEmailHtml(profile, label);
+            var logoPath = ProfessionalProfileStore.ResolveLogoPath();
+            if (string.IsNullOrWhiteSpace(logoPath) || !File.Exists(logoPath))
+                logoPath = null;
+
+            if (mailer.TrySend(settings, subject, body, new[] { pdfPath }, out var err, isHtml: true, inlineLogoPath: logoPath))
+            {
+                summary.Sent++;
+                continue;
+            }
+
+            summary.Failed++;
+            summary.Errors.Add($"{invoice.InvoiceNo} ({email}) : {err}");
+        }
+
+        return summary;
+    }
+
+    private static string BuildPatientInvoiceEmailHtml(ProfessionalProfile profile, string monthLabel)
+    {
+        var cabinet = ResolveCabinetType(profile);
+        var provider = Html(profile.InvoiceProviderName);
+        var address1 = Html(profile.AddressLine1);
+        var address2 = Html(profile.AddressLine2);
+        var inami = Html(profile.Inami);
+        var phone = Html(profile.Phone);
+        var email = Html(profile.Email);
+        var logo = ProfessionalProfileStore.ResolveLogoPath() is { Length: > 0 } logoPath && File.Exists(logoPath)
+            ? """<img src="cid:parafacto-logo" alt="Logo du cabinet" style="max-width: 180px; max-height: 110px; display: block; margin: 0 0 12px 0;">"""
+            : "";
+
+        return $"""
+<!doctype html>
+<html>
+<body style="font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #222; line-height: 1.45;">
+  {logo}
+  <p style="font-weight: 600; margin: 14px 0 18px 0;">
+    Concerne : votre facture pour le cabinet de {Html(cabinet)} du mois {Html(monthLabel)}
+  </p>
+
+  <p>Bonjour,</p>
+  <p>Veuillez trouver en pièce jointe votre facture pour le cabinet de {Html(cabinet)} du mois {Html(monthLabel)}.</p>
+  <p>Bien à vous,</p>
+
+  <p style="margin-top: 22px;">
+    <strong>{provider}</strong><br>
+    {address1}<br>
+    {address2}<br>
+    N° INAMI : {inami}<br>
+    Tél. : {phone}<br>
+    E-mail : {email}
+  </p>
+</body>
+</html>
+""";
+    }
+
+    private static string ResolveCabinetType(ProfessionalProfile profile)
+    {
+        var value = (profile.CabinetType ?? "").Trim();
+        return string.IsNullOrWhiteSpace(value) ? "logopédie" : value;
+    }
+
+    private static string Html(string? value)
+        => WebUtility.HtmlEncode(value ?? "");
 
     private void OnUiLanguageChanged(string _)
     {

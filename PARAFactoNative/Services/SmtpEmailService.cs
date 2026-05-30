@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
+using System.Net.Mime;
 
 namespace PARAFactoNative.Services;
 
@@ -83,7 +84,9 @@ public sealed class SmtpEmailService
         string subject,
         string body,
         IEnumerable<string> attachments,
-        out string error)
+        out string error,
+        bool isHtml = false,
+        string? inlineLogoPath = null)
     {
         error = "";
 
@@ -134,6 +137,20 @@ public sealed class SmtpEmailService
             msg.To.Add(new MailAddress(to));
             msg.Subject = subject ?? "";
             msg.Body = body ?? "";
+            msg.IsBodyHtml = isHtml;
+
+            if (isHtml && !string.IsNullOrWhiteSpace(inlineLogoPath) && File.Exists(inlineLogoPath))
+            {
+                var htmlView = AlternateView.CreateAlternateViewFromString(body ?? "", null, MediaTypeNames.Text.Html);
+                var logo = new LinkedResource(inlineLogoPath)
+                {
+                    ContentId = "parafacto-logo",
+                    TransferEncoding = TransferEncoding.Base64
+                };
+                logo.ContentType.MediaType = ResolveImageMimeType(inlineLogoPath);
+                htmlView.LinkedResources.Add(logo);
+                msg.AlternateViews.Add(htmlView);
+            }
 
             foreach (var path in att)
                 msg.Attachments.Add(new Attachment(path));
@@ -157,6 +174,18 @@ public sealed class SmtpEmailService
             error = ex.Message;
             return false;
         }
+    }
+
+    private static string ResolveImageMimeType(string path)
+    {
+        var ext = Path.GetExtension(path).TrimStart('.').ToLowerInvariant();
+        return ext switch
+        {
+            "jpg" or "jpeg" => MediaTypeNames.Image.Jpeg,
+            "gif" => MediaTypeNames.Image.Gif,
+            "bmp" => "image/bmp",
+            _ => MediaTypeNames.Image.Png
+        };
     }
 }
 

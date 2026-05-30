@@ -22,6 +22,21 @@ public sealed class MainViewModel : NotifyBase
         set => Set(ref _statusText, value);
     }
 
+    private int _busyDepth;
+    private bool _isBusy;
+    public bool IsBusy
+    {
+        get => _isBusy;
+        private set => Set(ref _isBusy, value);
+    }
+
+    private string _busyText = "Traitement en cours...";
+    public string BusyText
+    {
+        get => _busyText;
+        private set => Set(ref _busyText, value);
+    }
+
     public MainViewModel()
     {
         var appBase = AppContext.BaseDirectory;
@@ -90,5 +105,47 @@ public sealed class MainViewModel : NotifyBase
         Factures.Reload();
         Agenda.ReloadRefs();
         Console.ReloadRefs();
+    }
+
+    public IDisposable BeginBusy(string message)
+    {
+        _busyDepth++;
+        SetBusyMessage(message);
+        IsBusy = true;
+        return new BusyScope(this);
+    }
+
+    public void SetBusyMessage(string message)
+    {
+        BusyText = string.IsNullOrWhiteSpace(message) ? "Traitement en cours..." : message.Trim();
+    }
+
+    private void EndBusy()
+    {
+        if (_busyDepth > 0)
+            _busyDepth--;
+
+        if (_busyDepth == 0)
+            IsBusy = false;
+    }
+
+    private sealed class BusyScope : IDisposable
+    {
+        private MainViewModel? _owner;
+
+        public BusyScope(MainViewModel owner)
+        {
+            _owner = owner;
+        }
+
+        public void Dispose()
+        {
+            var owner = _owner;
+            if (owner is null)
+                return;
+
+            _owner = null;
+            owner.EndBusy();
+        }
     }
 }

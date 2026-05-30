@@ -19,6 +19,7 @@ public sealed class Invoice
     public string? Reason { get; set; }
     public string? RefDoc { get; set; }
     public string? UserComment { get; set; }
+    public string? PaymentReference { get; set; }
 
     // Optional: YYYY-MM (used for monthly invoices)
     public string? Period { get; set; }
