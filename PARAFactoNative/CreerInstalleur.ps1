@@ -498,19 +498,42 @@ var
   BtnAdobe: TNewButton;
   BtnOutlook: TNewButton;
 
-function AcroReaderFound: Boolean;
+function AppPathExeFound(ExeName: String): Boolean;
 var
   P: String;
 begin
   Result := False;
-  if RegQueryStringValue(HKLM64, 'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\AcroRd32.exe', '', P) then
+  if RegQueryStringValue(HKLM64, 'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\' + ExeName, '', P) then
     if (Length(P) > 0) and FileExists(P) then Result := True;
   if Result then Exit;
-  if RegQueryStringValue(HKLM64, 'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\AcroRd64.exe', '', P) then
+  if RegQueryStringValue(HKCU64, 'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\' + ExeName, '', P) then
     if (Length(P) > 0) and FileExists(P) then Result := True;
   if Result then Exit;
-  if RegQueryStringValue(HKLM, 'SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths\AcroRd32.exe', '', P) then
+  if RegQueryStringValue(HKLM32, 'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\' + ExeName, '', P) then
     if (Length(P) > 0) and FileExists(P) then Result := True;
+  if Result then Exit;
+  if RegQueryStringValue(HKCU32, 'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\' + ExeName, '', P) then
+    if (Length(P) > 0) and FileExists(P) then Result := True;
+end;
+
+function KnownAdobeExeFound: Boolean;
+begin
+  Result :=
+    FileExists(ExpandConstant('{pf}\Adobe\Acrobat DC\Acrobat\Acrobat.exe')) or
+    FileExists(ExpandConstant('{pf}\Adobe\Acrobat Reader\Reader\AcroRd32.exe')) or
+    FileExists(ExpandConstant('{pf}\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe')) or
+    FileExists(ExpandConstant('{pf32}\Adobe\Acrobat DC\Acrobat\Acrobat.exe')) or
+    FileExists(ExpandConstant('{pf32}\Adobe\Acrobat Reader\Reader\AcroRd32.exe')) or
+    FileExists(ExpandConstant('{pf32}\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe'));
+end;
+
+function AcroReaderFound: Boolean;
+begin
+  Result :=
+    AppPathExeFound('AcroRd32.exe') or
+    AppPathExeFound('AcroRd64.exe') or
+    AppPathExeFound('Acrobat.exe') or
+    KnownAdobeExeFound;
 end;
 
 function OutlookExeFound: Boolean;
@@ -571,9 +594,9 @@ begin
 
   T := '';
   if R then
-    T := T + '- Adobe Acrobat Reader : detecte.' + #13#10
+    T := T + '- Adobe Acrobat / Reader : detecte.' + #13#10
   else
-    T := T + '- Adobe Acrobat Reader : non detecte (recommande pour les PDF).' + #13#10;
+    T := T + '- Adobe Acrobat / Reader : non detecte (recommande pour les PDF).' + #13#10;
   if O then
     T := T + '- Outlook (executable + automation COM) : detecte.' + #13#10
   else
