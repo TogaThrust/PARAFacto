@@ -11,6 +11,8 @@ public sealed class LegalComplianceViewModel : NotifyBase
     public const int TechnicalTabIndex = 7;
 
     private readonly AppSettingsStore _store;
+    private readonly LegalAcceptanceEmailService _proofEmail = new();
+    private readonly EmailDispatchService _emailDispatch = new();
     private readonly string _baseDir;
     private int _mainTabSelectedIndex;
 
@@ -35,6 +37,7 @@ public sealed class LegalComplianceViewModel : NotifyBase
         {
             LoadDocuments();
             ReloadAcceptanceUi();
+            _ = TrySendPendingProofEmailAsync();
             UiLanguageService.LanguageChanged += _ =>
             {
                 LoadDocuments();
@@ -309,13 +312,46 @@ public sealed class LegalComplianceViewModel : NotifyBase
     {
         if (!CanSaveAcceptance()) return;
 
-        _store.SaveLegalAcceptanceWithProof(PrivacyText, TermsText);
+        var entry = _store.SaveLegalAcceptanceWithProof(PrivacyText, TermsText);
         ReloadAcceptanceUi();
+
+        var proofSent = entry is not null && TrySendProofEmail(entry, out _);
+        var message = proofSent
+            ? "Votre acceptation a été enregistrée. Une preuve locale a été ajoutée au fichier d'audit et un e-mail de confirmation a été envoyé à PARAFacto."
+            : "Votre acceptation a été enregistrée localement (fichier d'audit). L'envoi de la preuve à PARAFacto a échoué : vérifiez la configuration e-mail dans cet onglet ; une nouvelle tentative sera faite automatiquement.";
+
         MessageBox.Show(
-            UiTextTranslator.Translate(
-                "Votre acceptation a été enregistrée. Une preuve locale (horodatage, versions des documents et empreintes des textes) a été ajoutée au fichier d'audit."),
+            UiTextTranslator.Translate(message),
             UiTextTranslator.Translate("PARAFacto — Conformité"),
             MessageBoxButton.OK,
-            MessageBoxImage.Information);
+            proofSent ? MessageBoxImage.Information : MessageBoxImage.Warning);
+    }
+
+    private async System.Threading.Tasks.Task TrySendPendingProofEmailAsync()
+    {
+        if (!_store.IsLegalAcceptanceProofEmailPending())
+            return;
+
+        var entry = _store.LoadLatestLegalAuditEvent();
+        if (entry is null)
+            return;
+
+        await System.Threading.Tasks.Task.Run(() =>
+        {
+            if (TrySendProofEmail(entry, out _))
+                return;
+        });
+    }
+
+    private bool TrySendProofEmail(LegalAcceptanceAuditEvent entry, out string error)
+    {
+        error = "";
+        var mail = _store.LoadMailSettings();
+        var profile = ProfessionalProfileStore.Load();
+        if (!_proofEmail.TrySendProofEmail(_emailDispatch, mail, entry, profile, out error))
+            return false;
+
+        _store.MarkLegalAcceptanceProofEmailed();
+        return true;
     }
 }

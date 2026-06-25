@@ -9,6 +9,7 @@
     0) ecrit csproj + app-version.json, puis (sauf -SkipGitCommitPush) dotnet build et git commit/push de ces fichiers
     1) publie PARAFactoNative (Release, win-x64, self-contained) dans publish_output\win-x64
     2) compile l'installateur Inno : seul PARAFactoNative_Installer.exe est ecrit dans installer_output
+    3) publie la release GitHub (gh) avec l installateur (sauf -SkipGitHubRelease ou -Vendeur)
 
   Prerequis :
     - .NET SDK installe (commande dotnet)
@@ -33,15 +34,17 @@
   app-version.json :
     Contient latestVersion, installerUrl (URL stable .../releases/latest/download/PARAFactoNative_Installer.exe),
     downloadPageUrl (page Netlify avec consignes).
-    Deploiement : publiez l installateur sur GitHub (release marquee Latest), puis augmentez latestVersion pour l annonce MAJ.
+    Deploiement : git push + release GitHub (gh) avec l installateur, puis redeploiement Netlify du site (subscription-site).
 #>
 
 param(
     [string]$AppVersion = "",
     [string]$Publisher = "PARAFacto",
     [string]$AppId = "{{95DA48C0-A83B-4F53-8A8A-7B81B81CC8E9}}",
+    [string]$GitHubRepo = "TogaThrust/PARAFacto",
     [switch]$SiteSeulement,
     [switch]$SkipGitCommitPush,
+    [switch]$SkipGitHubRelease,
     [switch]$Vendeur
 )
 
@@ -298,6 +301,58 @@ function Invoke-DotnetBuildAndGitCommitPushVersionFiles {
     }
 }
 
+function Invoke-GitHubReleasePublish {
+    param(
+        [string]$Repo,
+        [string]$VersionText,
+        [string]$InstallerPath
+    )
+    $gh = Get-Command gh -ErrorAction SilentlyContinue
+    if (-not $gh) {
+        Write-Warning "gh CLI introuvable : publication GitHub Release ignoree."
+        return
+    }
+    if (-not (Test-Path $InstallerPath)) {
+        Write-Warning "Installateur introuvable pour GitHub Release : $InstallerPath"
+        return
+    }
+
+    & gh auth status 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "gh non authentifie : publication GitHub Release ignoree (gh auth login)."
+        return
+    }
+
+    $tag = "v$VersionText"
+    $title = "v$VersionText"
+    $notes = "Version $VersionText`n`nTelecharger PARAFactoNative_Installer.exe ci-dessous ou via https://parafactoupdate.netlify.app/"
+
+    $releaseExists = $false
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & gh release view $tag --repo $Repo 2>$null | Out-Null
+        $releaseExists = ($LASTEXITCODE -eq 0)
+    }
+    finally {
+        $ErrorActionPreference = $prevEap
+    }
+
+    if ($releaseExists) {
+        Write-Host "GitHub Release $tag existe deja : mise a jour de l'asset installateur..."
+        & gh release upload $tag $InstallerPath --repo $Repo --clobber | Out-Host
+    }
+    else {
+        Write-Host "Creation GitHub Release $tag avec installateur..."
+        & gh release create $tag --repo $Repo --title $title --latest --notes $notes $InstallerPath | Out-Host
+    }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Publication GitHub Release a echoue. Verifiez gh auth et le depot $Repo."
+        return
+    }
+    Write-Host "GitHub Release publiee : https://github.com/$Repo/releases/tag/$tag"
+}
+
 $scriptDir = $PSScriptRoot
 $csproj = Resolve-Project -BaseDir $scriptDir
 if (-not $csproj) {
@@ -508,6 +563,14 @@ Write-Host ""
 Write-Host "OK - Installateur genere."
 Write-Host "  App (publish) : $publishDir"
 Write-Host "  Installateur  : $installerExe"
-Write-Host "  Pensez a publier l'installateur .exe comme asset GitHub Release."
+if ($Vendeur) {
+    Write-Host "  Build vendeur : pas de publication GitHub Release (utilisez -SkipGitHubRelease pour les builds clients si besoin)."
+}
+elseif ($SkipGitHubRelease) {
+    Write-Host "  SkipGitHubRelease : publiez manuellement l'installateur sur GitHub Releases."
+}
+else {
+    Invoke-GitHubReleasePublish -Repo $GitHubRepo -VersionText $AppVersion -InstallerPath $installerExe
+}
 Write-Host "  Si -SkipGitCommitPush : poussez vous-meme les fichiers de version ; sinon le push git vient d'etre fait avant publish."
 Show-VersionVerificationSummary -CsprojPath $csproj -JsonRootPath $appVersionJsonRepoRoot -JsonProjectPath $appVersionJsonNativeCopy -Title "Fin (installateur) - controle des 3 fichiers"

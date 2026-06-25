@@ -41,6 +41,8 @@ public sealed class AppSettingsStore
         public string? TermsDocVersionAccepted { get; set; }
         public string? PrivacyContentSha256Accepted { get; set; }
         public string? TermsContentSha256Accepted { get; set; }
+        /// <summary>Horodatage UTC (ISO) de la dernière acceptation pour laquelle la preuve a été envoyée par e-mail à PARAFacto.</summary>
+        public string? LegalAcceptanceProofEmailedAtUtc { get; set; }
         public string? UiLanguage { get; set; }
         /// <summary>Version d’assembly pour laquelle le rappel Reader/Outlook a déjà été affiché au lancement.</summary>
         public string? PrereqDesktopTipAcknowledgedForVersion { get; set; }
@@ -56,6 +58,8 @@ public sealed class AppSettingsStore
 
     private static string LegalAuditPath
         => Path.Combine(SettingsFolder, "legal_acceptance_audit.json");
+
+    public static string LegalAcceptanceAuditFilePath => LegalAuditPath;
 
     private static readonly JsonSerializerOptions AuditJsonOptions = new() { WriteIndented = true };
 
@@ -381,7 +385,7 @@ public sealed class AppSettingsStore
     /// Enregistre l'acceptation des deux documents, met à jour settings.json et ajoute une entrée d'audit
     /// (empreintes SHA-256 des textes acceptés, version d'app, utilisateur Windows).
     /// </summary>
-    public void SaveLegalAcceptanceWithProof(string privacyFullText, string termsFullText)
+    public LegalAcceptanceAuditEvent? SaveLegalAcceptanceWithProof(string privacyFullText, string termsFullText)
     {
         lock (Gate)
         {
@@ -396,16 +400,16 @@ public sealed class AppSettingsStore
                 s.TermsAcceptedAtUtc = nowIso;
                 s.PrivacyDocVersionAccepted = LegalDocuments.PrivacyPolicyVersion;
                 s.TermsDocVersionAccepted = LegalDocuments.TermsOfServiceVersion;
-                var settingsJson = JsonSerializer.Serialize(s, new JsonSerializerOptions { WriteIndented = true });
                 var privacyHash = Sha256HexUtf8(privacyFullText);
                 var termsHash = Sha256HexUtf8(termsFullText);
                 s.PrivacyContentSha256Accepted = privacyHash;
                 s.TermsContentSha256Accepted = termsHash;
-                settingsJson = JsonSerializer.Serialize(s, new JsonSerializerOptions { WriteIndented = true });
+                s.LegalAcceptanceProofEmailedAtUtc = null;
+                var settingsJson = JsonSerializer.Serialize(s, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(SettingsPath, settingsJson);
                 var appVer = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
 
-                AppendLegalAuditEvent(new LegalAcceptanceAuditEvent
+                var entry = new LegalAcceptanceAuditEvent
                 {
                     RecordedAtUtc = nowIso,
                     PrivacyDocumentVersion = LegalDocuments.PrivacyPolicyVersion,
@@ -415,11 +419,69 @@ public sealed class AppSettingsStore
                     AppAssemblyVersion = appVer,
                     WindowsUser = Environment.UserName,
                     MachineName = Environment.MachineName,
-                });
+                };
+                AppendLegalAuditEvent(entry);
+                return entry;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
+    public bool IsLegalAcceptanceProofEmailPending()
+    {
+        lock (Gate)
+        {
+            var s = LoadAllInternal();
+            if (s is null) return false;
+            if (string.IsNullOrWhiteSpace(s.PrivacyAcceptedAtUtc) || string.IsNullOrWhiteSpace(s.TermsAcceptedAtUtc))
+                return false;
+            if (!string.Equals(s.PrivacyDocVersionAccepted, LegalDocuments.PrivacyPolicyVersion, StringComparison.Ordinal)
+                || !string.Equals(s.TermsDocVersionAccepted, LegalDocuments.TermsOfServiceVersion, StringComparison.Ordinal))
+                return false;
+            return !string.Equals(s.PrivacyAcceptedAtUtc, s.LegalAcceptanceProofEmailedAtUtc, StringComparison.Ordinal);
+        }
+    }
+
+    public void MarkLegalAcceptanceProofEmailed()
+    {
+        lock (Gate)
+        {
+            try
+            {
+                var s = LoadAllInternal() ?? new AppSettings();
+                if (string.IsNullOrWhiteSpace(s.PrivacyAcceptedAtUtc))
+                    return;
+                s.LegalAcceptanceProofEmailedAtUtc = s.PrivacyAcceptedAtUtc;
+                var json = JsonSerializer.Serialize(s, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(SettingsPath, json);
             }
             catch
             {
                 /* ignore */
+            }
+        }
+    }
+
+    public LegalAcceptanceAuditEvent? LoadLatestLegalAuditEvent()
+    {
+        lock (Gate)
+        {
+            try
+            {
+                if (!File.Exists(LegalAuditPath))
+                    return null;
+                var existing = File.ReadAllText(LegalAuditPath);
+                var root = JsonSerializer.Deserialize<LegalAcceptanceAuditRoot>(existing);
+                if (root?.Events is not { Count: > 0 })
+                    return null;
+                return root.Events[^1];
+            }
+            catch
+            {
+                return null;
             }
         }
     }
