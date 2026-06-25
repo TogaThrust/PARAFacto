@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Mail;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,6 +36,25 @@ public partial class MainWindow
             var fr = CultureInfo.GetCultureInfo("fr-BE");
             var mois = d.ToString("MMMM", fr).ToLower(fr);
             return $"{mois} {d:yyyy}";
+        }
+        return periodYYYYMM;
+    }
+
+    private static string BuildMonthYearLabelLocalized(string periodYYYYMM)
+    {
+        periodYYYYMM = (periodYYYYMM ?? "").Trim();
+        if (DateTime.TryParseExact(periodYYYYMM + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
+        {
+            var culture = UiLanguageService.Current switch
+            {
+                UiLanguageService.En => CultureInfo.GetCultureInfo("en-GB"),
+                UiLanguageService.Nl => CultureInfo.GetCultureInfo("nl-BE"),
+                _ => CultureInfo.GetCultureInfo("fr-BE")
+            };
+            var label = d.ToString("MMMM yyyy", culture);
+            return UiLanguageService.Current == UiLanguageService.En
+                ? label
+                : label.ToLower(culture);
         }
         return periodYYYYMM;
     }
@@ -299,7 +319,7 @@ public partial class MainWindow
             {
                 // Choix de la période d'impression : défaut = mois précédent (année courante)
                 var defaultPeriod = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1).ToString("yyyy-MM");
-                var periodLabel = "Période des séances : " + FormatPeriodLabel(defaultPeriod);
+                var periodLabel = UiTextTranslator.Translate("Période des séances : ") + FormatPeriodLabel(defaultPeriod);
                 var dateWin = new InvoiceDateWindow(defaultPeriod, periodLabel) { Owner = this };
                 if (dateWin.ShowDialog() != true)
                     return;
@@ -345,22 +365,25 @@ public partial class MainWindow
                         vm.SetBusyMessage("Envoi des e-mails de sauvegarde...");
                         await Dispatcher.Yield(DispatcherPriority.Background);
 
-                        var label = BuildMonthYearLabelFr(period);
-                        var subject = $"PARAFacto — factures patients {label}";
-                        var body = $"Veuillez trouver ci-joint les factures patients — {label}.";
+                        var label = BuildMonthYearLabelLocalized(period);
+                        var subject = T($"PARAFacto — factures patients {label}", $"PARAFacto — patient invoices {label}", $"PARAFacto — patiëntfacturen {label}");
+                        var body = T(
+                            $"Veuillez trouver ci-joint les factures patients — {label}.",
+                            $"Please find attached the patient invoices — {label}.",
+                            $"In bijlage vindt u de patiëntfacturen — {label}.");
                         var mailer = new EmailDispatchService();
                         var settings = new AppSettingsStore().LoadMailSettings();
                         settings.RecipientEmail = recipientEmail;
                         var primaryOk = mailer.TrySend(settings, subject, body, result.pdfs, out var err);
                         if (!primaryOk)
-                            MessageBox.Show($"Les PDFs ont été générés, mais l'envoi e-mail a échoué.\n\n{err}", "PARAFacto - Email", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            LocalizedMessageBox.Show($"Les PDFs ont été générés, mais l'envoi e-mail a échoué.\n\n{err}", "PARAFacto - Email", MessageBoxButton.OK, MessageBoxImage.Warning);
 
                         vm.SetBusyMessage("Envoi de la sauvegarde base de données...");
                         await Dispatcher.Yield(DispatcherPriority.Background);
 
                         var dbBackup = new DatabaseBackupEmailService();
                         if (!dbBackup.TrySendDatabaseBackupEmail(mailer, settings, out var dbErr))
-                            MessageBox.Show($"Envoi DB (sauvegarde) impossible.\n\n{dbErr}", "PARAFacto - Sauvegarde DB", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            LocalizedMessageBox.Show($"Envoi DB (sauvegarde) impossible.\n\n{dbErr}", "PARAFacto - Sauvegarde DB", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
 
@@ -377,7 +400,7 @@ public partial class MainWindow
                         sendSummary = await Task.Run(() => SendGeneratedPatientInvoicesToPatients(period, result.pdfs));
                     }
 
-                    MessageBox.Show(
+                    LocalizedMessageBox.Show(
                         $"Envoi aux patients terminé.\n\n" +
                         $"E-mails envoyés : {sendSummary.Sent}\n" +
                         $"Sans adresse e-mail : {sendSummary.MissingEmail}\n" +
@@ -403,7 +426,7 @@ public partial class MainWindow
             {
                 // Choix de la période d'impression : défaut = mois précédent (année courante)
                 var defaultPeriod = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1).ToString("yyyy-MM");
-                var periodLabel = "Période des séances : " + FormatPeriodLabel(defaultPeriod);
+                var periodLabel = UiTextTranslator.Translate("Période des séances : ") + FormatPeriodLabel(defaultPeriod);
                 var dateWin = new InvoiceDateWindow(defaultPeriod, periodLabel) { Owner = this };
                 if (dateWin.ShowDialog() != true)
                     return;
@@ -449,22 +472,25 @@ public partial class MainWindow
                         vm.SetBusyMessage("Envoi des e-mails de sauvegarde...");
                         await Dispatcher.Yield(DispatcherPriority.Background);
 
-                        var label = BuildMonthYearLabelFr(period);
-                        var subject = $"PARAFacto — factures mutuelles {label}";
-                        var body = $"Veuillez trouver ci-joint les factures mutuelles — {label}.";
+                        var label = BuildMonthYearLabelLocalized(period);
+                        var subject = T($"PARAFacto — factures mutuelles {label}", $"PARAFacto — health fund invoices {label}", $"PARAFacto — mutualiteitsfacturen {label}");
+                        var body = T(
+                            $"Veuillez trouver ci-joint les factures mutuelles — {label}.",
+                            $"Please find attached the health fund invoices — {label}.",
+                            $"In bijlage vindt u de mutualiteitsfacturen — {label}.");
                         var mailer = new EmailDispatchService();
                         var settings = new AppSettingsStore().LoadMailSettings();
                         settings.RecipientEmail = recipientEmail;
                         var primaryOk = mailer.TrySend(settings, subject, body, result.pdfs, out var err);
                         if (!primaryOk)
-                            MessageBox.Show($"Les PDFs ont été générés, mais l'envoi e-mail a échoué.\n\n{err}", "PARAFacto - Email", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            LocalizedMessageBox.Show($"Les PDFs ont été générés, mais l'envoi e-mail a échoué.\n\n{err}", "PARAFacto - Email", MessageBoxButton.OK, MessageBoxImage.Warning);
 
                         vm.SetBusyMessage("Envoi de la sauvegarde base de données...");
                         await Dispatcher.Yield(DispatcherPriority.Background);
 
                         var dbBackup = new DatabaseBackupEmailService();
                         if (!dbBackup.TrySendDatabaseBackupEmail(mailer, settings, out var dbErr))
-                            MessageBox.Show($"Envoi DB (sauvegarde) impossible.\n\n{dbErr}", "PARAFacto - Sauvegarde DB", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            LocalizedMessageBox.Show($"Envoi DB (sauvegarde) impossible.\n\n{dbErr}", "PARAFacto - Sauvegarde DB", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
 
@@ -500,7 +526,9 @@ public partial class MainWindow
         var mailer = new EmailDispatchService();
         var baseSettings = new AppSettingsStore().LoadMailSettings();
         var profile = ProfessionalProfileStore.Load();
-        var label = BuildMonthYearLabelFr(period);
+        var label = BuildMonthYearLabelLocalized(period);
+        var practitionerEmail = NormalizeEmailAddress(profile.Email);
+        var preferSmtpForHtml = IsSmtpComplete(baseSettings);
         var root = WorkspacePaths.TryFindWorkspaceRoot();
         var invoices = repo.Search("patient", null, null, "ANY", "")
             .Where(i => string.Equals((i.Period ?? "").Trim(), period, StringComparison.OrdinalIgnoreCase))
@@ -527,7 +555,7 @@ public partial class MainWindow
             {
                 RecipientEmail = email,
                 DatabaseBackupRecipientEmail = baseSettings.DatabaseBackupRecipientEmail,
-                UseSmtp = baseSettings.UseSmtp,
+                UseSmtp = baseSettings.UseSmtp || preferSmtpForHtml,
                 SmtpHost = baseSettings.SmtpHost,
                 SmtpPort = baseSettings.SmtpPort,
                 SmtpEnableSsl = baseSettings.SmtpEnableSsl,
@@ -536,15 +564,20 @@ public partial class MainWindow
                 SmtpPassword = baseSettings.SmtpPassword
             };
 
-            var subject = $"Votre facture - cabinet de {ResolveCabinetType(profile)} - {label}";
+            var cabinet = ResolveCabinetType(profile);
+            var subject = T(
+                $"Votre facture {invoice.InvoiceNo} - cabinet de {cabinet} - {label}",
+                $"Your invoice {invoice.InvoiceNo} - {cabinet} practice - {label}",
+                $"Uw factuur {invoice.InvoiceNo} - praktijk {cabinet} - {label}");
             var body = BuildPatientInvoiceEmailHtml(profile, label);
             var logoPath = ProfessionalProfileStore.ResolveLogoPath();
             if (string.IsNullOrWhiteSpace(logoPath) || !File.Exists(logoPath))
                 logoPath = null;
 
-            if (mailer.TrySend(settings, subject, body, new[] { pdfPath }, out var err, isHtml: true, inlineLogoPath: logoPath))
+            if (mailer.TrySend(settings, subject, body, new[] { pdfPath }, out var err, isHtml: true, inlineLogoPath: logoPath, senderEmail: practitionerEmail))
             {
                 summary.Sent++;
+                Thread.Sleep(700); // évite une rafale d'e-mails identiques, surtout pendant les tests vers une même boîte Gmail.
                 continue;
             }
 
@@ -565,7 +598,7 @@ public partial class MainWindow
         var phone = Html(profile.Phone);
         var email = Html(profile.Email);
         var logo = ProfessionalProfileStore.ResolveLogoPath() is { Length: > 0 } logoPath && File.Exists(logoPath)
-            ? """<img src="cid:parafacto-logo" alt="Logo du cabinet" style="max-width: 180px; max-height: 110px; display: block; margin: 0 0 12px 0;">"""
+            ? $"""<img src="cid:parafacto-logo" alt="{Html(T("Logo du cabinet", "Practice logo", "Praktijklogo"))}" style="max-width: 180px; max-height: 110px; display: block; margin: 0 0 12px 0;">"""
             : "";
 
         return $"""
@@ -574,25 +607,39 @@ public partial class MainWindow
 <body style="font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #222; line-height: 1.45;">
   {logo}
   <p style="font-weight: 600; margin: 14px 0 18px 0;">
-    Concerne : votre facture pour le cabinet de {Html(cabinet)} du mois {Html(monthLabel)}
+    {Html(T(
+        $"Concerne : votre facture pour le cabinet de {cabinet} du mois {monthLabel}",
+        $"Subject: your invoice for the {cabinet} practice for {monthLabel}",
+        $"Betreft: uw factuur voor de praktijk {cabinet} voor {monthLabel}"))}
   </p>
 
-  <p>Bonjour,</p>
-  <p>Veuillez trouver en pièce jointe votre facture pour le cabinet de {Html(cabinet)} du mois {Html(monthLabel)}.</p>
-  <p>Bien à vous,</p>
+  <p>{Html(T("Bonjour,", "Hello,", "Beste,"))}</p>
+  <p>{Html(T(
+      $"Veuillez trouver en pièce jointe votre facture pour le cabinet de {cabinet} du mois {monthLabel}.",
+      $"Please find attached your invoice for the {cabinet} practice for {monthLabel}.",
+      $"In bijlage vindt u uw factuur voor de praktijk {cabinet} voor {monthLabel}."))}</p>
+  <p>{Html(T("Bien à vous,", "Kind regards,", "Met vriendelijke groeten,"))}</p>
 
   <p style="margin-top: 22px;">
     <strong>{provider}</strong><br>
     {address1}<br>
     {address2}<br>
-    N° INAMI : {inami}<br>
-    Tél. : {phone}<br>
-    E-mail : {email}
+    {Html(T("N° INAMI", "INAMI no.", "RIZIV-nr."))} : {inami}<br>
+    {Html(T("Tél.", "Phone", "Tel."))} : {phone}<br>
+    {Html(T("E-mail", "Email", "E-mail"))} : {email}
   </p>
 </body>
 </html>
 """;
     }
+
+    private static string T(string fr, string en, string nl)
+        => UiLanguageService.Current switch
+        {
+            UiLanguageService.En => en,
+            UiLanguageService.Nl => nl,
+            _ => fr
+        };
 
     private static string ResolveCabinetType(ProfessionalProfile profile)
     {
@@ -602,6 +649,28 @@ public partial class MainWindow
 
     private static string Html(string? value)
         => WebUtility.HtmlEncode(value ?? "");
+
+    private static string NormalizeEmailAddress(string? value)
+    {
+        var s = (value ?? "").Trim().Trim('\'', '"');
+        if (string.IsNullOrWhiteSpace(s))
+            return "";
+
+        try
+        {
+            return new MailAddress(s).Address.Trim();
+        }
+        catch
+        {
+            return s;
+        }
+    }
+
+    private static bool IsSmtpComplete(AppMailSettings? settings)
+        => settings is not null
+           && !string.IsNullOrWhiteSpace(settings.SmtpHost)
+           && !string.IsNullOrWhiteSpace(settings.SmtpUsername)
+           && !string.IsNullOrWhiteSpace(settings.SmtpPassword);
 
     private void OnUiLanguageChanged(string _)
     {
@@ -664,8 +733,8 @@ public partial class MainWindow
         // CANCEL = ouvrir dossier
         var msg =
             $"{title}\n\n" +
-            $"Dossier :\n{folder}\n\n" +
-            "Imprimer maintenant ?";
+            $"{UiTextTranslator.Translate("Dossier :")}\n{folder}\n\n" +
+            UiTextTranslator.Translate("Imprimer maintenant ?");
         var r = ChoiceDialog.AskThree(
             "PDF générés",
             msg,

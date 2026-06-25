@@ -108,8 +108,8 @@
                         <TextBlock FontSize="14" FontWeight="Bold" Text="{DynamicResource Factures.Actions}"/>
                         <WrapPanel Margin="0,6,0,0">
                             <Button Content="{DynamicResource Factures.Button.Payment}" Command="{Binding Factures.AddPaymentCommand}" Margin="0,0,8,8"/>
-                            <Button Content="Association auto" Command="{Binding Factures.AutoAssociatePaymentsCommand}" Margin="0,0,8,8"/>
-                            <Button Content="Importer dossier banque" Command="{Binding Factures.AutoAssociatePaymentsFolderCommand}" Margin="0,0,8,8"/>
+                            <Button Content="{DynamicResource Factures.Button.AutoAssociation}" Command="{Binding Factures.AutoAssociatePaymentsCommand}" Margin="0,0,8,8"/>
+                            <Button Content="{DynamicResource Factures.Button.ImportBankFolder}" Command="{Binding Factures.AutoAssociatePaymentsFolderCommand}" Margin="0,0,8,8"/>
                             <Button Content="{DynamicResource Factures.Button.Loss}" Command="{Binding Factures.AddLossCommand}" Margin="0,0,8,8"/>
                             <Button Content="{DynamicResource Factures.Button.CancelLoss}" Command="{Binding Factures.ClearLossCommand}" Margin="0,0,8,8"/>
                         </WrapPanel>

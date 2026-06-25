@@ -106,7 +106,7 @@ public static class UiVisualLocalizer
     {
         foreach (var c in dg.Columns)
         {
-            if (c.Header is string hs && ShouldLocalizeDataGridColumnHeader(c))
+            if (c.Header is string hs)
                 c.Header = TranslateFor(c, "Header", hs);
         }
     }

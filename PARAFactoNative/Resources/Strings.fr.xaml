@@ -18,6 +18,7 @@
     <sys:String x:Key="Professional.RemoveLogo" xmlns:sys="clr-namespace:System;assembly=mscorlib">Retirer le logo</sys:String>
     <sys:String x:Key="Professional.Label.ConsoleTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Console — titre à côté du logo</sys:String>
     <sys:String x:Key="Professional.Label.InvoiceName" xmlns:sys="clr-namespace:System;assembly=mscorlib">Factures / NC — nom ou titre du praticien (ligne principale)</sys:String>
+    <sys:String x:Key="Professional.Label.CabinetType" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cabinet de</sys:String>
     <sys:String x:Key="Professional.Label.ReminderSignature" xmlns:sys="clr-namespace:System;assembly=mscorlib">Rappels factures (signature WhatsApp / mail)</sys:String>
     <sys:String x:Key="Professional.Section.Address" xmlns:sys="clr-namespace:System;assembly=mscorlib">Adresse et coordonnées (bloc facture patient)</sys:String>
     <sys:String x:Key="Professional.Label.AddressLine1" xmlns:sys="clr-namespace:System;assembly=mscorlib">Adresse ligne 1</sys:String>
@@ -56,6 +57,8 @@
     <sys:String x:Key="Seances.TotalGeneral" xmlns:sys="clr-namespace:System;assembly=mscorlib">Total général:</sys:String>
     <sys:String x:Key="Factures.Actions" xmlns:sys="clr-namespace:System;assembly=mscorlib">Actions</sys:String>
     <sys:String x:Key="Factures.Button.Payment" xmlns:sys="clr-namespace:System;assembly=mscorlib">Paiement</sys:String>
+    <sys:String x:Key="Factures.Button.AutoAssociation" xmlns:sys="clr-namespace:System;assembly=mscorlib">Association auto</sys:String>
+    <sys:String x:Key="Factures.Button.ImportBankFolder" xmlns:sys="clr-namespace:System;assembly=mscorlib">Importer dossier banque</sys:String>
     <sys:String x:Key="Factures.Button.Loss" xmlns:sys="clr-namespace:System;assembly=mscorlib">Perte</sys:String>
     <sys:String x:Key="Factures.Button.CancelLoss" xmlns:sys="clr-namespace:System;assembly=mscorlib">Annuler perte</sys:String>
     <sys:String x:Key="Factures.Button.CreditNote" xmlns:sys="clr-namespace:System;assembly=mscorlib">Note de crédit</sys:String>

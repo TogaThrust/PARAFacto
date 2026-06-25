@@ -12,7 +12,12 @@ public static class ChoiceDialog
         string noLabel,
         Window? owner = null)
     {
-        var win = new ActionChoiceWindow(title, message, yesLabel, noLabel, null)
+        var win = new ActionChoiceWindow(
+            UiTextTranslator.Translate(title),
+            UiTextTranslator.Translate(message),
+            UiTextTranslator.Translate(yesLabel),
+            UiTextTranslator.Translate(noLabel),
+            null)
         {
             Owner = owner ?? Application.Current?.MainWindow
         };
@@ -27,7 +32,12 @@ public static class ChoiceDialog
         string cancelLabel,
         Window? owner = null)
     {
-        var win = new ActionChoiceWindow(title, message, primaryLabel, secondaryLabel, cancelLabel)
+        var win = new ActionChoiceWindow(
+            UiTextTranslator.Translate(title),
+            UiTextTranslator.Translate(message),
+            UiTextTranslator.Translate(primaryLabel),
+            UiTextTranslator.Translate(secondaryLabel),
+            string.IsNullOrWhiteSpace(cancelLabel) ? null : UiTextTranslator.Translate(cancelLabel))
         {
             Owner = owner ?? Application.Current?.MainWindow
         };

@@ -182,6 +182,26 @@ exports.handler = async (event) => {
     };
   }
 
+  const customerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer && session.customer.id
+        ? session.customer.id
+        : null;
+  if (customerId) {
+    try {
+      await stripe.customers.update(customerId, {
+        metadata: {
+          app: "parafacto",
+          product_line: "parafacto_native",
+          brand: "parafacto",
+        },
+      });
+    } catch {
+      // Non bloquant : l'e-mail a déjà été envoyé.
+    }
+  }
+
   return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
 };
 

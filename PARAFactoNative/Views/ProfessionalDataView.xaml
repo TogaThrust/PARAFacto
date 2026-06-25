@@ -41,7 +41,7 @@
                         <TextBox Text="{Binding Professional.ConsoleHeaderTitle, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
                         <TextBlock Text="Factures / NC — nom ou titre du praticien (ligne principale)" FontWeight="SemiBold" Margin="0,0,0,4"/>
                         <TextBox Text="{Binding Professional.InvoiceProviderName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                        <TextBlock Text="Cabinet de" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBlock Text="{DynamicResource Professional.Label.CabinetType}" FontWeight="SemiBold" Margin="0,0,0,4"/>
                         <ComboBox ItemsSource="{Binding Professional.CabinetTypes}"
                                   SelectedItem="{Binding Professional.CabinetType, UpdateSourceTrigger=PropertyChanged}"
                                   IsEditable="True"

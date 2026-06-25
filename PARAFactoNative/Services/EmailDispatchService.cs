@@ -25,50 +25,31 @@ public sealed class EmailDispatchService
         IEnumerable<string> attachments,
         out string error,
         bool isHtml = false,
-        string? inlineLogoPath = null)
+        string? inlineLogoPath = null,
+        string? senderEmail = null)
     {
         error = "";
         var smtpReady = IsSmtpComplete(settings);
 
-        // Case cochée : l'utilisateur veut passer par SMTP (Outlook absent, Gmail, ou Outlook HS).
-        if (settings.UseSmtp)
-        {
-            if (smtpReady)
-            {
-                if (_smtp.TrySendMailWithAttachments(settings, subject, body, attachments, out var smtpErr, isHtml, inlineLogoPath))
-                    return true;
-
-                if (_outlook.TrySendMailWithAttachments(settings.RecipientEmail, subject, body, attachments, out var outlookErr, isHtml, inlineLogoPath))
-                    return true;
-
-                error = $"SMTP: {smtpErr}\n\nOutlook: {outlookErr}";
-                return false;
-            }
-
-            if (_outlook.TrySendMailWithAttachments(settings.RecipientEmail, subject, body, attachments, out var outlookOnlyErr, isHtml, inlineLogoPath))
-                return true;
-
-            error =
-                "SMTP incomplet : renseignez le serveur (ex. smtp.gmail.com), l’identifiant et le mot de passe (mot de passe d’application Gmail).\n\n" +
-                $"Outlook: {outlookOnlyErr}";
-            return false;
-        }
-
-        // Par défaut : Outlook d’abord, puis SMTP si configuré (poste sans Outlook ou erreur COM).
-        if (_outlook.TrySendMailWithAttachments(settings.RecipientEmail, subject, body, attachments, out var outlookErr2, isHtml, inlineLogoPath))
-            return true;
-
+        // Priorité SMTP (toujours activée) : SMTP d'abord, secours Outlook si besoin.
         if (smtpReady)
         {
-            if (_smtp.TrySendMailWithAttachments(settings, subject, body, attachments, out var smtpErr2, isHtml, inlineLogoPath))
+            if (_smtp.TrySendMailWithAttachments(settings, subject, body, attachments, out var smtpErr, isHtml, inlineLogoPath, senderEmail))
                 return true;
 
-            error = $"Outlook: {outlookErr2}\n\nSMTP: {smtpErr2}";
+            if (_outlook.TrySendMailWithAttachments(settings.RecipientEmail, subject, body, attachments, out var outlookErr, isHtml, inlineLogoPath, senderEmail))
+                return true;
+
+            error = $"SMTP: {smtpErr}\n\nOutlook: {outlookErr}";
             return false;
         }
 
-        error = outlookErr2 +
-                "\n\nAstuce : configurez SMTP (onglet Données techniques) ou cochez « Utiliser SMTP » avec un compte Gmail (mot de passe d’application).";
+        if (_outlook.TrySendMailWithAttachments(settings.RecipientEmail, subject, body, attachments, out var outlookOnlyErr, isHtml, inlineLogoPath, senderEmail))
+            return true;
+
+        error =
+            "SMTP incomplet : renseignez le serveur (ex. smtp.gmail.com), l’identifiant et le mot de passe (mot de passe d’application Gmail).\n\n" +
+            $"Outlook: {outlookOnlyErr}";
         return false;
     }
 }

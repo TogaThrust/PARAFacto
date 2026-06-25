@@ -68,8 +68,14 @@ public sealed class DatabaseBackupEmailService
                 SmtpPassword = mailSettings.SmtpPassword
             };
 
-            var subject = $"PARAFacto — sauvegarde base {DateTime.Now:dd-MM-yyyy HH:mm}";
-            var body = $"Copie de la base de données ({DbFileName}) générée automatiquement par PARAFACTO.\n\nPièce jointe : {Path.GetFileName(tempPath)}";
+            var subject = T(
+                $"PARAFacto — sauvegarde base {DateTime.Now:dd-MM-yyyy HH:mm}",
+                $"PARAFacto — database backup {DateTime.Now:dd-MM-yyyy HH:mm}",
+                $"PARAFacto — databankback-up {DateTime.Now:dd-MM-yyyy HH:mm}");
+            var body = T(
+                $"Copie de la base de données ({DbFileName}) générée automatiquement par PARAFACTO.\n\nPièce jointe : {Path.GetFileName(tempPath)}",
+                $"Database copy ({DbFileName}) generated automatically by PARAFACTO.\n\nAttachment: {Path.GetFileName(tempPath)}",
+                $"Kopie van de databank ({DbFileName}) automatisch gegenereerd door PARAFACTO.\n\nBijlage: {Path.GetFileName(tempPath)}");
 
             if (!sender.TrySend(backupSettings, subject, body, attachments, out error))
                 return false;
@@ -109,5 +115,13 @@ public sealed class DatabaseBackupEmailService
         error = last;
         return false;
     }
+
+    private static string T(string fr, string en, string nl)
+        => UiLanguageService.Current switch
+        {
+            UiLanguageService.En => en,
+            UiLanguageService.Nl => nl,
+            _ => fr
+        };
 }
 

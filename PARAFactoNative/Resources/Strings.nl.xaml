@@ -18,6 +18,7 @@
     <sys:String x:Key="Professional.RemoveLogo" xmlns:sys="clr-namespace:System;assembly=mscorlib">Logo verwijderen</sys:String>
     <sys:String x:Key="Professional.Label.ConsoleTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Dashboard — titel naast het logo</sys:String>
     <sys:String x:Key="Professional.Label.InvoiceName" xmlns:sys="clr-namespace:System;assembly=mscorlib">Facturen / creditnota’s — naam of titel zorgverlener (hoofdlijn)</sys:String>
+    <sys:String x:Key="Professional.Label.CabinetType" xmlns:sys="clr-namespace:System;assembly=mscorlib">Praktijktype</sys:String>
     <sys:String x:Key="Professional.Label.ReminderSignature" xmlns:sys="clr-namespace:System;assembly=mscorlib">Factuurherinneringen (handtekening WhatsApp / e-mail)</sys:String>
     <sys:String x:Key="Professional.Section.Address" xmlns:sys="clr-namespace:System;assembly=mscorlib">Adres en contact (blok patiëntfactuur)</sys:String>
     <sys:String x:Key="Professional.Label.AddressLine1" xmlns:sys="clr-namespace:System;assembly=mscorlib">Adres regel 1</sys:String>
@@ -56,6 +57,8 @@
     <sys:String x:Key="Seances.TotalGeneral" xmlns:sys="clr-namespace:System;assembly=mscorlib">Algemeen totaal:</sys:String>
     <sys:String x:Key="Factures.Actions" xmlns:sys="clr-namespace:System;assembly=mscorlib">Acties</sys:String>
     <sys:String x:Key="Factures.Button.Payment" xmlns:sys="clr-namespace:System;assembly=mscorlib">Betaling</sys:String>
+    <sys:String x:Key="Factures.Button.AutoAssociation" xmlns:sys="clr-namespace:System;assembly=mscorlib">Automatische koppeling</sys:String>
+    <sys:String x:Key="Factures.Button.ImportBankFolder" xmlns:sys="clr-namespace:System;assembly=mscorlib">Bankmap importeren</sys:String>
     <sys:String x:Key="Factures.Button.Loss" xmlns:sys="clr-namespace:System;assembly=mscorlib">Verlies</sys:String>
     <sys:String x:Key="Factures.Button.CancelLoss" xmlns:sys="clr-namespace:System;assembly=mscorlib">Verlies annuleren</sys:String>
     <sys:String x:Key="Factures.Button.CreditNote" xmlns:sys="clr-namespace:System;assembly=mscorlib">Creditnota</sys:String>

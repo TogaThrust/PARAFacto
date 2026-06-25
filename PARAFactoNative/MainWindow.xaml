@@ -597,7 +597,8 @@
                                            Margin="0,0,0,8"/>
 
                                 <CheckBox Content="{DynamicResource Technical.Smtp.UseSmtpCheck}"
-                                          IsChecked="{Binding Console.UseSmtp}"
+                                          IsChecked="True"
+                                          IsEnabled="False"
                                           Margin="0,12,0,0"/>
                                 <TextBlock Text="{DynamicResource Technical.Smtp.Hint}"
                                            TextWrapping="Wrap"
@@ -631,7 +632,7 @@
                                                  Width="90"
                                                  HorizontalContentAlignment="Left"
                                                  TextAlignment="Left"/>
-                                        <CheckBox Grid.Column="2" Content="SSL/TLS" IsChecked="{Binding Console.SmtpEnableSsl}" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                        <CheckBox Grid.Column="2" Content="SSL/TLS" IsChecked="True" IsEnabled="False" Margin="12,0,0,0" VerticalAlignment="Center"/>
                                     </Grid>
 
                                     <Grid Margin="0,0,0,6">

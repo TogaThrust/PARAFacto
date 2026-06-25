@@ -334,17 +334,10 @@ public sealed class ConsoleViewModel : NotifyBase
         }
     }
 
-    private bool _useSmtp;
     public bool UseSmtp
     {
-        get => _useSmtp;
-        set
-        {
-            if (_useSmtp == value) return;
-            _useSmtp = value;
-            OnPropertyChanged();
-            if (!_isInitializing) PersistMailSettings();
-        }
+        get => true;
+        set { /* toujours activé : priorité SMTP */ }
     }
 
     private string? _smtpHost = "smtp.gmail.com";
@@ -361,11 +354,10 @@ public sealed class ConsoleViewModel : NotifyBase
         set { if (_smtpPort == value) return; _smtpPort = value; OnPropertyChanged(); if (!_isInitializing) PersistMailSettings(); }
     }
 
-    private bool _smtpEnableSsl = true;
     public bool SmtpEnableSsl
     {
-        get => _smtpEnableSsl;
-        set { if (_smtpEnableSsl == value) return; _smtpEnableSsl = value; OnPropertyChanged(); if (!_isInitializing) PersistMailSettings(); }
+        get => true;
+        set { /* toujours activé : SSL/TLS requis pour SMTP */ }
     }
 
     private string? _smtpUsername;
@@ -496,10 +488,8 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
         var ms = _settings.LoadMailSettings();
         _recipientEmail = ms.RecipientEmail;
         _databaseBackupRecipientEmail = ms.DatabaseBackupRecipientEmail;
-        _useSmtp = ms.UseSmtp;
         _smtpHost = string.IsNullOrWhiteSpace(ms.SmtpHost) ? _smtpHost : ms.SmtpHost;
         _smtpPort = ms.SmtpPort;
-        _smtpEnableSsl = ms.SmtpEnableSsl;
         _smtpUsername = ms.SmtpUsername;
         _smtpFromEmail = ms.SmtpFromEmail;
         _smtpPassword = ms.SmtpPassword;
@@ -516,6 +506,8 @@ OpenLastMutualMonthFolderCommand = new RelayCommand(() => RequestOpenLastMutualM
         OnPropertyChanged(nameof(SmtpUsername));
         OnPropertyChanged(nameof(SmtpFromEmail));
         OnPropertyChanged(nameof(SmtpPassword));
+
+        PersistMailSettings();
 
         BuildSeanceTimeSlots();
         SeanceStartTime = RoundToQuarter(DateTime.Now.Hour * 60 + DateTime.Now.Minute);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -23,7 +24,8 @@ public sealed class OutlookEmailService
         IEnumerable<string> attachments,
         out string error,
         bool isHtml = false,
-        string? inlineLogoPath = null)
+        string? inlineLogoPath = null,
+        string? senderEmail = null)
     {
         error = "";
         to = (to ?? "").Trim();
@@ -81,6 +83,7 @@ public sealed class OutlookEmailService
             SetComProperty(mail, "To", to);
             SetComProperty(mail, "Subject", subject ?? "");
             SetComProperty(mail, isHtml ? "HTMLBody" : "Body", body ?? "");
+            TryForceSender(outlook, mail, senderEmail);
 
             var atts = GetComProperty(mail, "Attachments");
             if (atts is null)
@@ -106,6 +109,11 @@ public sealed class OutlookEmailService
                         null,
                         propertyAccessor,
                         new object[] { "http://schemas.microsoft.com/mapi/proptag/0x3712001F", "parafacto-logo" });
+                    propertyAccessor?.GetType().InvokeMember("SetProperty",
+                        System.Reflection.BindingFlags.InvokeMethod,
+                        null,
+                        propertyAccessor,
+                        new object[] { "http://schemas.microsoft.com/mapi/proptag/0x7FFE000B", true });
                 }
                 catch
                 {
@@ -175,6 +183,54 @@ public sealed class OutlookEmailService
             null,
             comObj,
             new[] { value });
+    }
+
+    private static void TryForceSender(object outlook, object mail, string? senderEmail)
+    {
+        senderEmail = (senderEmail ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(senderEmail))
+            return;
+
+        try
+        {
+            var session = GetComProperty(outlook, "Session");
+            var accounts = session is null ? null : GetComProperty(session, "Accounts");
+            var countObj = accounts is null ? null : GetComProperty(accounts, "Count");
+            var count = Convert.ToInt32(countObj, CultureInfo.InvariantCulture);
+
+            for (var i = 1; i <= count; i++)
+            {
+                var account = accounts!.GetType().InvokeMember(
+                    "Item",
+                    System.Reflection.BindingFlags.InvokeMethod,
+                    null,
+                    accounts,
+                    new object[] { i });
+
+                if (account is null)
+                    continue;
+
+                var smtpAddress = GetComProperty(account, "SmtpAddress")?.ToString();
+                if (!string.Equals((smtpAddress ?? "").Trim(), senderEmail, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                SetComProperty(mail, "SendUsingAccount", account);
+                return;
+            }
+        }
+        catch
+        {
+            // Selon le profil Outlook, l'accès aux comptes peut échouer; on tente alors le champ "De" délégué.
+        }
+
+        try
+        {
+            SetComProperty(mail, "SentOnBehalfOfName", senderEmail);
+        }
+        catch
+        {
+            // Outlook refusera à l'envoi si le compte ou la délégation n'est pas autorisé.
+        }
     }
 }
 

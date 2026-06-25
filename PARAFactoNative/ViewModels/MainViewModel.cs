@@ -117,7 +117,7 @@ public sealed class MainViewModel : NotifyBase
 
     public void SetBusyMessage(string message)
     {
-        BusyText = string.IsNullOrWhiteSpace(message) ? "Traitement en cours..." : message.Trim();
+        BusyText = UiTextTranslator.Translate(string.IsNullOrWhiteSpace(message) ? "Traitement en cours..." : message.Trim());
     }
 
     private void EndBusy()

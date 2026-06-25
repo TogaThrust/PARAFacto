@@ -19,7 +19,7 @@ public sealed class AppSettingsStore
         public string? RecipientEmail { get; set; }
         /// <summary>Destinataire du mail de sauvegarde SQLite (vide = défaut parafacto@parafacto.be).</summary>
         public string? DatabaseBackupRecipientEmail { get; set; }
-        public bool UseSmtp { get; set; }
+        public bool UseSmtp { get; set; } = true;
         public string? SmtpHost { get; set; }
         public int SmtpPort { get; set; } = 587;
         public bool SmtpEnableSsl { get; set; } = true;
@@ -107,10 +107,10 @@ public sealed class AppSettingsStore
                 DatabaseBackupRecipientEmail = string.IsNullOrWhiteSpace(s.DatabaseBackupRecipientEmail)
                     ? null
                     : s.DatabaseBackupRecipientEmail!.Trim(),
-                UseSmtp = s.UseSmtp,
+                UseSmtp = true,
                 SmtpHost = string.IsNullOrWhiteSpace(s.SmtpHost) ? null : s.SmtpHost!.Trim(),
                 SmtpPort = s.SmtpPort <= 0 ? 587 : s.SmtpPort,
-                SmtpEnableSsl = s.SmtpEnableSsl,
+                SmtpEnableSsl = true,
                 SmtpUsername = string.IsNullOrWhiteSpace(s.SmtpUsername) ? null : s.SmtpUsername!.Trim(),
                 SmtpFromEmail = string.IsNullOrWhiteSpace(s.SmtpFromEmail) ? null : s.SmtpFromEmail!.Trim(),
                 SmtpPassword = UnprotectStringOrNull(s.SmtpPasswordProtectedBase64)
@@ -130,10 +130,10 @@ public sealed class AppSettingsStore
                 s.DatabaseBackupRecipientEmail = string.IsNullOrWhiteSpace(mail.DatabaseBackupRecipientEmail)
                     ? null
                     : mail.DatabaseBackupRecipientEmail!.Trim();
-                s.UseSmtp = mail.UseSmtp;
+                s.UseSmtp = true;
                 s.SmtpHost = string.IsNullOrWhiteSpace(mail.SmtpHost) ? null : mail.SmtpHost!.Trim();
                 s.SmtpPort = mail.SmtpPort <= 0 ? 587 : mail.SmtpPort;
-                s.SmtpEnableSsl = mail.SmtpEnableSsl;
+                s.SmtpEnableSsl = true;
                 s.SmtpUsername = string.IsNullOrWhiteSpace(mail.SmtpUsername) ? null : mail.SmtpUsername!.Trim();
                 s.SmtpFromEmail = string.IsNullOrWhiteSpace(mail.SmtpFromEmail) ? null : mail.SmtpFromEmail!.Trim();
                 s.SmtpPasswordProtectedBase64 = ProtectStringOrNull(mail.SmtpPassword);
@@ -506,7 +506,7 @@ public sealed class AppMailSettings
     public string? RecipientEmail { get; set; }
     /// <summary>Si vide, <see cref="DatabaseBackupEmailService.DefaultBackupRecipientEmail"/> est utilisé.</summary>
     public string? DatabaseBackupRecipientEmail { get; set; }
-    public bool UseSmtp { get; set; }
+    public bool UseSmtp { get; set; } = true;
     public string? SmtpHost { get; set; }
     public int SmtpPort { get; set; } = 587;
     public bool SmtpEnableSsl { get; set; } = true;

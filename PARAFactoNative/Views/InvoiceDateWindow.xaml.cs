@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using PARAFactoNative.Services;
 
 namespace PARAFactoNative.Views;
 
@@ -20,14 +21,15 @@ public partial class InvoiceDateWindow : Window
     public InvoiceDateWindow(string defaultPeriodYYYYMM, string periodLabel)
     {
         InitializeComponent();
+        ApplyLocalizedStaticText();
 
         var defaultPeriod = ParsePeriodOrDefault(defaultPeriodYYYYMM);
         SeedMonthYearPickers(defaultPeriod.Year, defaultPeriod.Month);
 
         // Texte de contexte (facultatif) + fallback sur format de période
         PeriodTextBlock.Text = !string.IsNullOrEmpty(periodLabel)
-            ? periodLabel
-            : "Période des séances : " + FormatPeriod($"{defaultPeriod.Year:0000}-{defaultPeriod.Month:00}");
+            ? UiTextTranslator.Translate(periodLabel)
+            : UiTextTranslator.Translate("Période des séances : ") + FormatPeriod($"{defaultPeriod.Year:0000}-{defaultPeriod.Month:00}");
 
         ApplySelectedPeriodToState();
     }
@@ -52,7 +54,7 @@ public partial class InvoiceDateWindow : Window
         else
             return p;
         var d = new DateTime(y, m, 1);
-        return d.ToString("MMMM yyyy", CultureInfo.GetCultureInfo("fr-BE"));
+        return d.ToString("MMMM yyyy", CurrentCulture());
     }
 
     private static DateTime GetFirstDayOfNextMonth(string periodYYYYMM)
@@ -84,7 +86,7 @@ public partial class InvoiceDateWindow : Window
 
         if (!InvoiceDatePicker.SelectedDate.HasValue)
         {
-            MessageBox.Show("Veuillez sélectionner une date.", "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
+            LocalizedMessageBox.Show("Veuillez sélectionner une date.", "PARAFacto", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         InvoiceDateIso = InvoiceDatePicker.SelectedDate.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -100,7 +102,7 @@ public partial class InvoiceDateWindow : Window
 
     private void SeedMonthYearPickers(int year, int month)
     {
-        var culture = CultureInfo.GetCultureInfo("fr-BE");
+        var culture = CurrentCulture();
         var months = Enumerable.Range(1, 12)
             .Select(m => new MonthItem(m, new DateTime(2000, m, 1).ToString("MMMM", culture)))
             .ToList();
@@ -126,8 +128,8 @@ public partial class InvoiceDateWindow : Window
         PeriodYYYYMM = $"{year:0000}-{month:00}";
 
         var d = new DateTime(year, month, 1);
-        var culture = CultureInfo.GetCultureInfo("fr-BE");
-        PeriodTextBlock.Text = $"Période des séances : {d.ToString("MMMM yyyy", culture)}";
+        var culture = CurrentCulture();
+        PeriodTextBlock.Text = UiTextTranslator.Translate("Période des séances : ") + d.ToString("MMMM yyyy", culture);
 
         if (updateInvoiceDateDefault || !InvoiceDatePicker.SelectedDate.HasValue)
             InvoiceDatePicker.SelectedDate = d.AddMonths(1); // par défaut : 1er jour du mois suivant la période
@@ -149,4 +151,22 @@ public partial class InvoiceDateWindow : Window
         }
         return fallback;
     }
+
+    private void ApplyLocalizedStaticText()
+    {
+        Title = UiTextTranslator.Translate("Factures - Période et date");
+        HeaderTextBlock.Text = UiTextTranslator.Translate("Choisir le mois et la date des factures");
+        PeriodLabelTextBlock.Text = UiTextTranslator.Translate("Période :");
+        InvoiceDateLabelTextBlock.Text = UiTextTranslator.Translate("Date des factures :");
+        CancelButton.Content = UiTextTranslator.Translate("Annuler");
+        GenerateButton.Content = UiTextTranslator.Translate("Générer");
+    }
+
+    private static CultureInfo CurrentCulture()
+        => UiLanguageService.Current switch
+        {
+            UiLanguageService.En => CultureInfo.GetCultureInfo("en-GB"),
+            UiLanguageService.Nl => CultureInfo.GetCultureInfo("nl-BE"),
+            _ => CultureInfo.GetCultureInfo("fr-BE")
+        };
 }
