@@ -79,6 +79,9 @@ public static class WorkspacePaths
     public static string MutualMonthFolderNc(string periodYYYYMM)
         => EnsureFolder(Path.Combine(MutualMonthFolder(periodYYYYMM), "NC"));
 
+    public static string PatientMonthEmailCopiesFolder(string periodYYYYMM)
+        => EnsureFolder(Path.Combine(PatientMonthFolder(periodYYYYMM), "COPIES ENVOIS EMAIL"));
+
     public static string MutualMonthFolder(string periodYYYYMM)
         => EnsureFolder(Path.Combine(FACTURES_MENSUELLES_MUTUELLES_ROOT(), ToMMYYYY(periodYYYYMM)));
 

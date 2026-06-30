@@ -401,15 +401,10 @@ public partial class MainWindow
                     }
 
                     LocalizedMessageBox.Show(
-                        $"Envoi aux patients terminé.\n\n" +
-                        $"E-mails envoyés : {sendSummary.Sent}\n" +
-                        $"Sans adresse e-mail : {sendSummary.MissingEmail}\n" +
-                        $"PDF introuvables : {sendSummary.MissingPdf}\n" +
-                        $"Échecs d'envoi : {sendSummary.Failed}" +
-                        (sendSummary.Errors.Count == 0 ? "" : "\n\nDétails :\n" + string.Join("\n", sendSummary.Errors.Take(8))),
+                        BuildPatientInvoiceSendSummaryMessage(sendSummary),
                         "PARAFacto - Envoi patients",
                         MessageBoxButton.OK,
-                        sendSummary.Failed == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                        sendSummary.Failed == 0 && sendSummary.CopyFailed == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
                 }
 
                 PostGenAskPrintOrOpenFolder($"Factures patients générées : {result.created}", result.folder, result.pdfs);
@@ -509,12 +504,17 @@ public partial class MainWindow
         public int MissingEmail { get; set; }
         public int MissingPdf { get; set; }
         public int Failed { get; set; }
+        public int CopyFailed { get; set; }
+        public string? CopiesFolder { get; set; }
+        public List<string> SentDetails { get; } = new();
         public List<string> Errors { get; } = new();
     }
 
     private static PatientInvoiceEmailSummary SendGeneratedPatientInvoicesToPatients(string period, List<string> generatedPdfs)
     {
         var summary = new PatientInvoiceEmailSummary();
+        var copyService = new PatientInvoiceEmailCopyService();
+        summary.CopiesFolder = copyService.GetCopiesFolder(period);
         var pdfSet = new HashSet<string>(
             (generatedPdfs ?? new List<string>())
                 .Where(p => !string.IsNullOrWhiteSpace(p))
@@ -574,9 +574,36 @@ public partial class MainWindow
             if (string.IsNullOrWhiteSpace(logoPath) || !File.Exists(logoPath))
                 logoPath = null;
 
+            var fromEmail = ResolvePatientInvoiceFromEmail(baseSettings, practitionerEmail);
+
             if (mailer.TrySend(settings, subject, body, new[] { pdfPath }, out var err, isHtml: true, inlineLogoPath: logoPath, senderEmail: practitionerEmail))
             {
+                var patientName = patient is null
+                    ? invoice.InvoiceNo
+                    : $"{patient.Nom} {patient.Prenom}".Trim();
+                var copyPath = copyService.TrySaveSentEmailCopy(
+                    period,
+                    invoice.InvoiceNo,
+                    patientName,
+                    email,
+                    fromEmail,
+                    practitionerEmail,
+                    subject,
+                    body,
+                    pdfPath,
+                    logoPath);
+
                 summary.Sent++;
+                var detail = $"{invoice.InvoiceNo} → {email}";
+                if (!string.IsNullOrWhiteSpace(copyPath))
+                    detail += $"\n   {UiTextTranslator.Translate("Copie :")} {copyPath}";
+                else
+                {
+                    summary.CopyFailed++;
+                    detail += $"\n   {UiTextTranslator.Translate("Copie locale non enregistrée.")}";
+                }
+
+                summary.SentDetails.Add(detail);
                 Thread.Sleep(700); // évite une rafale d'e-mails identiques, surtout pendant les tests vers une même boîte Gmail.
                 continue;
             }
@@ -664,6 +691,56 @@ public partial class MainWindow
         {
             return s;
         }
+    }
+
+    private static string ResolvePatientInvoiceFromEmail(AppMailSettings baseSettings, string practitionerEmail)
+    {
+        var preferred = (practitionerEmail ?? "").Trim();
+        var configured = (baseSettings.SmtpFromEmail ?? "").Trim();
+        var user = (baseSettings.SmtpUsername ?? "").Trim();
+        if (!string.IsNullOrWhiteSpace(preferred) &&
+            (string.Equals(preferred, configured, StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(preferred, user, StringComparison.OrdinalIgnoreCase)))
+            return preferred;
+        if (!string.IsNullOrWhiteSpace(configured))
+            return configured;
+        if (!string.IsNullOrWhiteSpace(user))
+            return user;
+        return preferred;
+    }
+
+    private static string BuildPatientInvoiceSendSummaryMessage(PatientInvoiceEmailSummary sendSummary)
+    {
+        var msg =
+            $"{UiTextTranslator.Translate("Envoi aux patients terminé.")}\n\n" +
+            $"{UiTextTranslator.Translate("E-mails envoyés :")} {sendSummary.Sent}\n" +
+            $"{UiTextTranslator.Translate("Sans adresse e-mail :")} {sendSummary.MissingEmail}\n" +
+            $"{UiTextTranslator.Translate("PDF introuvables :")} {sendSummary.MissingPdf}\n" +
+            $"{UiTextTranslator.Translate("Échecs d'envoi :")} {sendSummary.Failed}";
+
+        if (sendSummary.CopyFailed > 0)
+            msg += $"\n{UiTextTranslator.Translate("Copies locales non enregistrées :")} {sendSummary.CopyFailed}";
+
+        if (!string.IsNullOrWhiteSpace(sendSummary.CopiesFolder))
+            msg += $"\n\n{UiTextTranslator.Translate("Dossier des copies :")}\n{sendSummary.CopiesFolder}";
+
+        if (sendSummary.SentDetails.Count > 0)
+        {
+            msg += $"\n\n{UiTextTranslator.Translate("Détail des envois :")}\n";
+            msg += string.Join("\n", sendSummary.SentDetails.Take(12));
+            if (sendSummary.SentDetails.Count > 12)
+                msg += $"\n... {UiTextTranslator.Translate("et")} {sendSummary.SentDetails.Count - 12} {UiTextTranslator.Translate("autre(s).")}";
+        }
+
+        if (sendSummary.Errors.Count > 0)
+        {
+            msg += $"\n\n{UiTextTranslator.Translate("Échecs :")}\n";
+            msg += string.Join("\n", sendSummary.Errors.Take(8));
+            if (sendSummary.Errors.Count > 8)
+                msg += $"\n... {UiTextTranslator.Translate("et")} {sendSummary.Errors.Count - 8} {UiTextTranslator.Translate("autre(s).")}";
+        }
+
+        return msg;
     }
 
     private static bool IsSmtpComplete(AppMailSettings? settings)
@@ -768,7 +845,6 @@ public partial class MainWindow
     private void PrintAll(List<string> pdfs, bool confirmEach)
     {
         var failed = new List<string>();
-        var startedProcesses = new List<Process>();
         foreach (var path in pdfs)
         {
             if (!File.Exists(path)) continue;
@@ -787,15 +863,8 @@ public partial class MainWindow
             if (!TryPrintPdf(path, out var started))
                 failed.Add(Path.GetFileName(path));
             else
-            {
-                if (started != null)
-                    startedProcesses.Add(started);
-                Thread.Sleep(600);
-            }
+                WaitForPrintJobComplete(started);
         }
-
-        // Best effort : fermer Adobe/lecteur PDF si PARAFacto l'a lancé lui-même
-        CloseStartedProcesses(startedProcesses);
 
         if (failed.Count > 0)
         {
@@ -810,6 +879,33 @@ public partial class MainWindow
         }
     }
 
+    /// <summary>Attend la fin du job d'impression avant de lancer le PDF suivant (Adobe n'accepte qu'une instance).</summary>
+    private static void WaitForPrintJobComplete(Process? started)
+    {
+        if (started != null)
+        {
+            try
+            {
+                if (!started.HasExited && !started.WaitForExit(180_000))
+                {
+                    try { started.Kill(entireProcessTree: true); } catch { /* ignore */ }
+                }
+            }
+            catch { /* ignore */ }
+            finally
+            {
+                try { started.Dispose(); } catch { /* ignore */ }
+            }
+        }
+        else
+        {
+            // Verbe shell « print » : pas de Process ; laisser le spooler absorber le job.
+            Thread.Sleep(4000);
+        }
+
+        Thread.Sleep(800);
+    }
+
     /// <summary>
     /// Envoie un PDF à l'impression. Essaie d'abord un lecteur connu (Adobe) pour pouvoir le fermer ensuite,
     /// puis le shell et enfin le registre.
@@ -819,7 +915,7 @@ public partial class MainWindow
         startedProcess = null;
         if (string.IsNullOrEmpty(pdfPath) || !File.Exists(pdfPath)) return false;
 
-        // 1) Adobe Acrobat Reader ( /p = imprimer ) - permet de récupérer un Process
+        // 1) Adobe Acrobat Reader (/t = imprimer sur imprimante par défaut puis fermer)
         var adobePaths = new[]
         {
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Adobe", "Acrobat Reader DC", "Reader", "AcroRd32.exe"),
@@ -828,7 +924,7 @@ public partial class MainWindow
         };
         foreach (var exe in adobePaths)
         {
-            if (File.Exists(exe) && TryRunPrint(exe, pdfPath, "/p", out startedProcess)) return true;
+            if (File.Exists(exe) && TryRunAdobeSilentPrint(exe, pdfPath, out startedProcess)) return true;
         }
 
         // 2) App Paths (registre) pour AcroRd32
@@ -836,7 +932,7 @@ public partial class MainWindow
         {
             using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\AcroRd32.exe");
             var exe = key?.GetValue(null) as string;
-            if (!string.IsNullOrEmpty(exe) && File.Exists(exe) && TryRunPrint(exe, pdfPath, "/p", out startedProcess)) return true;
+            if (!string.IsNullOrEmpty(exe) && File.Exists(exe) && TryRunAdobeSilentPrint(exe, pdfPath, out startedProcess)) return true;
         }
         catch { }
 
@@ -922,6 +1018,26 @@ public partial class MainWindow
         catch { return false; }
     }
 
+    private static bool TryRunAdobeSilentPrint(string exePath, string pdfPath, out Process? startedProcess)
+    {
+        startedProcess = null;
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = exePath,
+                // /t = imprimer sur l'imprimante par défaut puis quitter (indispensable pour une série de PDF).
+                Arguments = $"/t \"{pdfPath}\" \"\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            startedProcess = Process.Start(psi);
+            return true;
+        }
+        catch { return false; }
+    }
+
     private static bool TryRunPrint(string exePath, string pdfPath, string printSwitch, out Process? startedProcess)
     {
         startedProcess = null;
@@ -939,30 +1055,6 @@ public partial class MainWindow
             return true;
         }
         catch { return false; }
-    }
-
-    private static void CloseStartedProcesses(List<Process> processes)
-    {
-        if (processes.Count == 0) return;
-
-        // Laisser un court délai pour que l'impression soit envoyée au spooler
-        Thread.Sleep(1200);
-
-        foreach (var p in processes)
-        {
-            try
-            {
-                if (p.HasExited) continue;
-
-                // Tentative de fermeture propre
-                try { p.CloseMainWindow(); } catch { }
-                if (!p.WaitForExit(1500))
-                {
-                    try { p.Kill(entireProcessTree: true); } catch { }
-                }
-            }
-            catch { /* ignore */ }
-        }
     }
 
     /// <summary>Découpe une ligne de commande en arguments (gère les guillemets).</summary>
