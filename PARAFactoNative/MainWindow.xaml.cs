@@ -587,11 +587,8 @@ public partial class MainWindow
                     patientName,
                     email,
                     fromEmail,
-                    practitionerEmail,
                     subject,
-                    body,
-                    pdfPath,
-                    logoPath);
+                    pdfPath);
 
                 summary.Sent++;
                 var detail = $"{invoice.InvoiceNo} → {email}";
