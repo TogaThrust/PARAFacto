@@ -879,15 +879,23 @@ public partial class MainWindow
         }
     }
 
-    /// <summary>Attend la fin du job d'impression avant de lancer le PDF suivant (Adobe n'accepte qu'une instance).</summary>
+    /// <summary>Délai max pour qu'Adobe/Sumatra remette le job au spooler puis se ferme (pas l'impression physique).</summary>
+    private const int PrintHandoffTimeoutMs = 12_000;
+
+    private const int ShellPrintPauseMs = 1_500;
+
+    private const int PrintGapMs = 300;
+
+    /// <summary>Attend la remise au spooler puis libère le lecteur PDF (Adobe = une instance à la fois).</summary>
     private static void WaitForPrintJobComplete(Process? started)
     {
         if (started != null)
         {
             try
             {
-                if (!started.HasExited && !started.WaitForExit(180_000))
+                if (!started.HasExited && !started.WaitForExit(PrintHandoffTimeoutMs))
                 {
+                    // Ne pas bloquer la série : tuer le lecteur s'il reste ouvert.
                     try { started.Kill(entireProcessTree: true); } catch { /* ignore */ }
                 }
             }
@@ -899,21 +907,22 @@ public partial class MainWindow
         }
         else
         {
-            // Verbe shell « print » : pas de Process ; laisser le spooler absorber le job.
-            Thread.Sleep(4000);
+            Thread.Sleep(ShellPrintPauseMs);
         }
 
-        Thread.Sleep(800);
+        Thread.Sleep(PrintGapMs);
     }
 
     /// <summary>
-    /// Envoie un PDF à l'impression. Essaie d'abord un lecteur connu (Adobe) pour pouvoir le fermer ensuite,
-    /// puis le shell et enfin le registre.
+    /// Envoie un PDF à l'impression. SumatraPDF (si installé) puis Adobe, shell, registre.
     /// </summary>
     private static bool TryPrintPdf(string pdfPath, out Process? startedProcess)
     {
         startedProcess = null;
         if (string.IsNullOrEmpty(pdfPath) || !File.Exists(pdfPath)) return false;
+
+        // 0) SumatraPDF : idéal pour enchaîner les PDF (impression silencieuse, fermeture rapide).
+        if (TryRunSumatraSilentPrint(pdfPath, out startedProcess)) return true;
 
         // 1) Adobe Acrobat Reader (/t = imprimer sur imprimante par défaut puis fermer)
         var adobePaths = new[]
@@ -1016,6 +1025,37 @@ public partial class MainWindow
             return true;
         }
         catch { return false; }
+    }
+
+    private static bool TryRunSumatraSilentPrint(string pdfPath, out Process? startedProcess)
+    {
+        startedProcess = null;
+        var candidates = new[]
+        {
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "SumatraPDF", "SumatraPDF.exe"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SumatraPDF", "SumatraPDF.exe"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "SumatraPDF", "SumatraPDF.exe"),
+        };
+        foreach (var exe in candidates)
+        {
+            if (!File.Exists(exe)) continue;
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = exe,
+                    Arguments = $"-print-to-default -silent \"{pdfPath}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+                startedProcess = Process.Start(psi);
+                return true;
+            }
+            catch { /* essayer autre chemin */ }
+        }
+
+        return false;
     }
 
     private static bool TryRunAdobeSilentPrint(string exePath, string pdfPath, out Process? startedProcess)
